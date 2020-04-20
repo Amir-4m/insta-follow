@@ -1,15 +1,18 @@
-from django.db import models
+import logging
+from hashlib import md5
+
+from django.db import models, connection
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
+
+
+logger = logging.getLogger(__name__)
 
 
 class Action(models.TextChoices):
     LIKE = 'L', _('Like')
     FOLLOW = 'F', _('Follow')
     COMMENT = 'C', _('Comment')
-
-    class Meta:
-        db_table = "instagram_action"
 
 
 class Category(models.Model):
@@ -61,7 +64,8 @@ class Package(models.Model):
     slug = models.SlugField(_("slug"), unique=True)
     name = models.CharField(_("package name"), max_length=100)
     follow_target_no = models.IntegerField(_("follow target"))
-    like_comment_target_no = models.IntegerField(_("like and comment target"))
+    like_target_no = models.IntegerField(_("like target"))
+    comment_target_no = models.IntegerField(_("comment target"))
     is_enable = models.BooleanField(_('is enable'), default=True)
 
     class Meta:
@@ -96,21 +100,21 @@ class Order(models.Model):
     class Meta:
         db_table = "instagram_order"
 
-    @property
-    def package_target(self):
-        if self.action_type == Action.FOLLOW:
-            return self.user_package.package.follow_target_no
-        elif self.action_type == Action.COMMENT or self.action_type == Action.LIKE:
-            return self.user_package.package.like_comment_target_no
+    def __str__(self):
+        return f"{self.id} - {self.action_type} for {self.user_package.user_page}"
 
     def clean(self):
         if self.target_no >= self.package_target:
             raise ValidationError(_("order target number should not be higher than your package target number !"))
-        return super(Order, self).clean()
 
-
-def __str__(self):
-    return f"{self.id} - {self.action_type} for {self.user_package.user_page}"
+    @property
+    def package_target(self):
+        if self.action_type == Action.FOLLOW:
+            return self.user_package.package.follow_target_no
+        elif self.action_type == Action.COMMENT:
+            return self.user_package.package.comment_target_no
+        elif self.action_type == Action.LIKE:
+            return self.user_package.package.like_target_no
 
 
 class UserAssignment(models.Model):
@@ -121,6 +125,14 @@ class UserAssignment(models.Model):
     validated_time = models.DateTimeField(_("validated time"), null=True)
     last_check_time = models.DateTimeField(_("last check time"), null=True)
     check_type = models.CharField(_("type to check"), choices=Action.choices, db_index=True)
+
+    class Meta:
+        db_table = "instagram_user_assignment"
+
+    def __str__(self):
+        # TODO: will change
+        return f"{self.user_page_id} action: {self.check_type}"
+
 
 
 class CoinTransaction(models.Model):
@@ -134,3 +146,73 @@ class CoinTransaction(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.amount}"
+
+
+class BaseInstaEntity(models.Model):
+    created_time = models.DateTimeField(auto_now_add=True)
+    media_url = models.CharField(max_length=150)
+    media_id = models.BigIntegerField()
+    action_type = models.CharField(max_length=10, choices=Action.choices)
+    username = models.CharField(max_length=100)
+    user_id = models.BigIntegerField()
+    comment = models.TextField(null=True)
+    comment_id = models.BigIntegerField(null=True)
+    comment_time = models.DateTimeField(null=True)
+    # TODO: add follow needed fields
+
+    class Meta:
+        managed = False
+        abstract = True
+        unique_together = ('media_id', 'user_id', 'action_type')
+
+    @classmethod
+    def _get_table_model(cls, target_link, create=True):
+        table_name_hash = md5(target_link.encode('utf-8')).hexdigest()
+        table_name = f"entity_{table_name_hash}"
+        model_name = f"Entity{table_name_hash}"
+        app_models = cls._meta.apps.all_models[cls._meta.app_label]
+        if model_name not in app_models:
+            model = type(model_name, (cls,), {'__module__': cls.__module__})
+            model._meta.db_table = table_name
+            if create:
+                all_tables = connection.introspection.table_names()
+                with connection.schema_editor() as schema:
+                    try:
+                        if model._meta.db_table not in all_tables:
+                            schema.create_model(model)
+                    except Exception as e:
+                        logger.error(f"create table got exception: {e}")
+                        return None
+        else:
+            model = app_models[model_name]
+        return model
+
+    @classmethod
+    def get_model(cls, post_link):
+        try:
+            model = cls._get_table_model(post_link)
+        except Exception as e:
+            logger.error(f"hash table got exception: {e}")
+            return None
+
+        return model
+
+    @classmethod
+    def drop_model(cls, post_link):
+        try:
+            model = cls._get_table_model(post_link, False)
+            all_tables = connection.introspection.table_names()
+        except Exception as e:
+            logger.error(f"hash table got exception: {e}")
+            return False
+
+        with connection.schema_editor() as schema:
+            try:
+                if model._meta.db_table in all_tables:
+                    schema.delete_model(model)
+            except Exception as e:
+                logger.error(f"create table got exception: {e}")
+                return False
+
+        return True
+
