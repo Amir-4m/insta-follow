@@ -5,7 +5,6 @@ from django.db import models, connection
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -34,7 +33,7 @@ class InstaPage(models.Model):
     followers = models.IntegerField(_("page followers"))
     following = models.IntegerField(_("page following"))
     post_no = models.IntegerField(_("posts number"))
-    is_banned = models.BooleanField(_("is baned"), default=False)
+    is_banned = models.BooleanField(_("is banned"), default=False)
 
     category = models.ManyToManyField(Category)
     owner = models.ManyToManyField("telegram_app.TelegramUser", related_name="insta_pages", through='UserPage')
@@ -89,7 +88,7 @@ class UserPackage(models.Model):
 
 class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    action_type = models.CharField(_('action type'), choices=Action.choices)
+    action_type = models.CharField(_('action type'), max_length=10, choices=Action.choices)
     link = models.URLField(_("link"))
     user_package = models.ForeignKey(UserPackage, on_delete=models.CASCADE)
     target_no = models.IntegerField(_("target like, comment or follower"), blank=True)
@@ -124,7 +123,7 @@ class UserAssignment(models.Model):
     user_page = models.ForeignKey(UserPage, on_delete=models.CASCADE)
     validated_time = models.DateTimeField(_("validated time"), null=True)
     last_check_time = models.DateTimeField(_("last check time"), null=True)
-    check_type = models.CharField(_("type to check"), choices=Action.choices, db_index=True)
+    check_type = models.CharField(_("type to check"), max_length=10, choices=Action.choices, db_index=True)
 
     class Meta:
         db_table = "instagram_user_assignment"
@@ -134,10 +133,9 @@ class UserAssignment(models.Model):
         return f"{self.user_page_id} action: {self.check_type}"
 
 
-
 class CoinTransaction(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    user = models.ForeignKey('telegram_app.User', related_name='coin_transactions', on_delete=models.CASCADE)
+    user = models.ForeignKey('telegram_app.TelegramUser', related_name='coin_transactions', on_delete=models.CASCADE)
     action = models.CharField(_("action"), max_length=120, blank=True)
     amount = models.IntegerField(_('coin amount'), null=False, blank=False, default=0)
 
@@ -158,6 +156,7 @@ class BaseInstaEntity(models.Model):
     comment = models.TextField(null=True)
     comment_id = models.BigIntegerField(null=True)
     comment_time = models.DateTimeField(null=True)
+
     # TODO: add follow needed fields
 
     class Meta:
@@ -215,4 +214,3 @@ class BaseInstaEntity(models.Model):
                 return False
 
         return True
-

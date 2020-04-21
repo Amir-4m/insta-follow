@@ -12,7 +12,7 @@ class CategoryModelAdmin(admin.ModelAdmin):
 
 @admin.register(InstaPage)
 class InstaPageModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'instagram_username', 'instagram_user_id', 'category', 'updated_time', 'created_time')
+    list_display = ('id', 'instagram_username', 'instagram_user_id', 'updated_time', 'created_time')
     list_filter = ('category',)
     search_fields = ('instagram_username', 'instagram_user_id')
     sortable_by = ('-created_time',)
@@ -46,5 +46,5 @@ class OrderModelAdmin(admin.ModelAdmin):
 
 @admin.register(UserAssignment)
 class UserAssignmentModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'order', 'user_page', 'validated_time ', 'last_check_time', 'updated_time', 'created_time')
+    list_display = ('id', 'order', 'user_page', 'last_check_time', 'updated_time', 'created_time')
     sortable_by = ('-created_time',)

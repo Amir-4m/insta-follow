@@ -31,6 +31,8 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost', cast=Csv())
 # Application definition
 INSTALLED_APPS = [
     'accounts',
+    'instagram_app',
+    'telegram_app',
 
     'django.contrib.admin',
     'django.contrib.auth',
