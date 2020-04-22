@@ -36,7 +36,7 @@ class InstaPage(models.Model):
     is_banned = models.BooleanField(_("is banned"), default=False)
 
     category = models.ManyToManyField(Category)
-    owner = models.ManyToManyField("accounts.User", related_name="insta_pages", through='UserPage')
+    owner = models.ManyToManyField("accounts.User", through='UserPage')
 
     class Meta:
         db_table = "instagram_pages"
@@ -48,7 +48,7 @@ class InstaPage(models.Model):
 class UserPage(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
-    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE)
+    user = models.ForeignKey("accounts.User", related_name='user_pages', on_delete=models.CASCADE)
     page = models.ForeignKey(InstaPage, related_name='user_pages', on_delete=models.PROTECT)
 
     class Meta:

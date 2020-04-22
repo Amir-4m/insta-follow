@@ -1,8 +1,9 @@
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-
+import json
 from apps.instagram_app.models import InstaPage, UserPage
+from apps.accounts.models import User
 from ..services import InstagramAppService
 
 
@@ -18,6 +19,10 @@ class UserPageSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserPage
         fields = ('page',)
+
+    def to_representation(self, instance):
+        pages = [up.page.instagram_username for up in UserPage.objects.filter(user=instance.user)]
+        return {"user_pages": pages}
 
     def validate(self, attrs):
         page_id = attrs['page'].get('instagram_username')
@@ -40,6 +45,7 @@ class UserPageSerializer(serializers.ModelSerializer):
                 "post_no": posts_count
             }
         )
+        page.save()
         return UserPage.objects.create(user=user, page=page)
 
 
