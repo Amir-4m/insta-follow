@@ -8,7 +8,8 @@ from ..services import InstagramAppService
 class InstaPageSerializer(serializers.ModelSerializer):
     class Meta:
         model = InstaPage
-        fields = ('instagram_username',)
+        fields = ('instagram_username', 'id')
+        read_only_fields = ['id']
 
 
 class UserPageSerializer(serializers.ModelSerializer):
