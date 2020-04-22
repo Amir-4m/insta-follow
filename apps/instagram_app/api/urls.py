@@ -8,6 +8,6 @@ urlpatterns = [
 
 ]
 router = routers.DefaultRouter()
-router.register('user/page/', UserPageViewSet)
+router.register('user/page/', UserPageViewSet, basename="UserPage")
 
 urlpatterns += router.urls
