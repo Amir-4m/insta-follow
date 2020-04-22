@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/3.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
+from datetime import timedelta
 
 from decouple import config, Csv
 from pathlib import Path
@@ -135,6 +136,12 @@ TELEGRAM_BOT = {
     'MODE': config('TELEGRAM_BOT_MODE', default='POLLING'),
     'WEBHOOK_SITE': config('TELEGRAM_BOT_WEBHOOK_SITE', default=''),
     'PROXY': f"http://{PROXY4TELEGRAM_HOST}:{PROXY4TELEGRAM_PORT}" if PROXY4TELEGRAM_HOST else '',
+}
+
+SIMPLE_JWT = {
+    'ROTATE_REFRESH_TOKENS': True,
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('ACCESS_TOKEN_LIFETIME_MINUTES', default=30, cast=int)),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=config('ACCESS_TOKEN_LIFETIME_DAYS', default=90, cast=int)),
 }
 
 # Internationalization

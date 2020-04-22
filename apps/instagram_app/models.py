@@ -28,7 +28,7 @@ class Category(models.Model):
 class InstaPage(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
-    instagram_username = models.CharField(_("instagram username"), max_length=50, unique=True)
+    instagram_username = models.CharField(_("instagram username"), max_length=50)
     instagram_user_id = models.BigIntegerField(_("instagram id"), unique=True)
     followers = models.IntegerField(_("page followers"))
     following = models.IntegerField(_("page following"))
@@ -36,7 +36,7 @@ class InstaPage(models.Model):
     is_banned = models.BooleanField(_("is banned"), default=False)
 
     category = models.ManyToManyField(Category)
-    owner = models.ManyToManyField("accounts.User", through='UserPage')
+    owner = models.ManyToManyField("accounts.User", through='UserPage', related_name='insta_pages')
 
     class Meta:
         db_table = "instagram_pages"
@@ -53,6 +53,7 @@ class UserPage(models.Model):
 
     class Meta:
         db_table = "instagram_user_pages"
+        unique_together = ['user', 'page']
 
     def __str__(self):
         return f"{self.user.username} with instagram page {self.page.instagram_username}"
