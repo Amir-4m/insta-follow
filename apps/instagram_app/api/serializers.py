@@ -1,9 +1,7 @@
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-import json
 from apps.instagram_app.models import InstaPage, UserPage
-from apps.accounts.models import User
 from ..services import InstagramAppService
 
 
