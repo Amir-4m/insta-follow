@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class TelegramAppConfig(AppConfig):
-    name = 'telegram_app'
+    name = 'apps.telegram_app'

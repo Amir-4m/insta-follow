@@ -2,7 +2,7 @@ import logging
 
 from django.core.cache import cache
 
-from telegram_app.models import TelegramUser
+from apps.telegram_app.models import TelegramUser
 
 logger = logging.getLogger(__name__)
 

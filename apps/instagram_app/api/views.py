@@ -2,15 +2,14 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from rest_framework.generics import CreateAPIView, ListAPIView, DestroyAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from .serializers import UserPageSerializer, LikedPageSerializer
-from instagram_app.models import InstaPage, UserPage
+from apps.instagram_app.models import UserPage
 
 
-class UserPageAPIView(viewsets.ModelViewSet):
+class UserPageViewSet(viewsets.ModelViewSet):
     serializer_class = UserPageSerializer
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)

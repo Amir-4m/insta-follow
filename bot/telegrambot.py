@@ -4,7 +4,7 @@ from telegram.ext.dispatcher import run_async
 
 from .decorators import add_session
 from . import texts
-from instagram_app.models import InstaPage
+from apps.instagram_app.models import InstaPage
 
 logger = logging.getLogger(__name__)
 

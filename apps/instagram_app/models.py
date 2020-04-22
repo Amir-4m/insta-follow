@@ -36,7 +36,7 @@ class InstaPage(models.Model):
     is_banned = models.BooleanField(_("is banned"), default=False)
 
     category = models.ManyToManyField(Category)
-    owner = models.ManyToManyField("accounts.User", related_name="insta_pages", through='UserPage')
+    owner = models.ManyToManyField("apps.accounts.User", related_name="insta_pages", through='UserPage')
 
     class Meta:
         db_table = "instagram_pages"
@@ -48,8 +48,8 @@ class InstaPage(models.Model):
 class UserPage(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
-    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE)
-    page = models.ForeignKey(InstaPage, related_name='user_pages', on_delete=models.CASCADE)
+    user = models.ForeignKey("apps.accounts.User", on_delete=models.CASCADE)
+    page = models.ForeignKey(InstaPage, related_name='user_pages', on_delete=models.PROTECT)
 
     class Meta:
         db_table = "instagram_user_pages"
@@ -135,7 +135,7 @@ class UserAssignment(models.Model):
 
 class CoinTransaction(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    user = models.ForeignKey('telegram_app.TelegramUser', related_name='coin_transactions', on_delete=models.CASCADE)
+    user = models.ForeignKey('apps.telegram_app.TelegramUser', related_name='coin_transactions', on_delete=models.CASCADE)
     action = models.CharField(_("action"), max_length=120, blank=True)
     amount = models.IntegerField(_('coin amount'), null=False, blank=False, default=0)
 

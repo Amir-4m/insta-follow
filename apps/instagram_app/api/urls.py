@@ -1,13 +1,13 @@
 from django.urls import path
 from rest_framework import routers
 
-from .views import UserPageAPIView, LikedPageAPIVIEW
+from .views import UserPageViewSet, LikedPageAPIVIEW
 
 urlpatterns = [
     path('user/liked/', LikedPageAPIVIEW.as_view(), name="liked"),
 
 ]
+router = routers.DefaultRouter()
+router.register('user/page/', UserPageViewSet)
 
-router = routers.SimpleRouter()
-router.register(r'page', UserPageAPIView, basename='UserPage')
 urlpatterns += router.urls
