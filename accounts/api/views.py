@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.views import TokenViewBase
 
-from apps.accounts.api.serializers import MyTokenObtainPairSerializer, MyTokenRefreshSerializer
+from accounts.api.serializers import MyTokenObtainPairSerializer, MyTokenRefreshSerializer
 
 
 class TokenObtainPairView(TokenViewBase):

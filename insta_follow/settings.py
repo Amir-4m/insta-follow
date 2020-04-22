@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'accounts',
     'instagram_app',
     'telegram_app',
+    'bot',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -124,7 +125,10 @@ CELERY_BROKER_URL = 'amqp://%(USER)s:%(PASS)s@%(HOST)s' % {
 
 PROXY4TELEGRAM_HOST = config('PROXY4TELEGRAM_HOST', default='')
 PROXY4TELEGRAM_PORT = config('PROXY4TELEGRAM_PORT', default=0, cast=int)
-
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'accounts.backends.GoogleAuthBackend',
+]
 TELEGRAM_BOT = {
     'TOKEN': config('TELEGRAM_BOT_TOKEN'),
     'MODE': config('TELEGRAM_BOT_MODE', default='POLLING'),
@@ -134,7 +138,7 @@ TELEGRAM_BOT = {
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
-LANGUAGE_CODE = 'fa'
+LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Tehran'
 USE_I18N = True
 USE_L10N = False
@@ -157,63 +161,63 @@ LOCALE_PATHS = [
 ]
 
 LOG_DIR = BASE_DIR / 'logs'
-LOGGING = ({
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'simple': {
-            'format': '[%(asctime)s] %(levelname)s %(message)s',
-            'datefmt': '%Y-%m-%d %H:%M:%S'
-        },
-        'verbose': {
-            'format': '[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s',
-            'datefmt': '%Y-%m-%d %H:%M:%S'
-        },
-    },
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse',
-        },
-        'require_debug_true': {
-            '()': 'django.utils.log.RequireDebugTrue',
-        },
-    },
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'filters': ['require_debug_true'],
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose'
-        },
-        'file': {
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'class': 'logging.FileHandler',
-            'formatter': 'verbose' if DEBUG else 'simple',
-            'filename': LOG_DIR / 'django.log',
-        },
-        'db_queries': {
-            'level': 'DEBUG',
-            'filters': ['require_debug_true'],
-            'class': 'logging.FileHandler',
-            'filename': LOG_DIR / 'db_queries.log',
-        },
-    },
-    'loggers': {
-        'django.db.backends': {
-            'level': 'DEBUG',
-            'handlers': ['db_queries'],
-            'propagate': False,
-        },
-        'instagram_app': {
-            'level': 'DEBUG',
-            'handlers': ['file', 'console']
-        },
-        # 'telegram.ext.dispatcher': {
-        #     'level': 'DEBUG',
-        #     'handlers': ['file'],
-        # },
-    },
-})
+# LOGGING = ({
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'formatters': {
+#         'simple': {
+#             'format': '[%(asctime)s] %(levelname)s %(message)s',
+#             'datefmt': '%Y-%m-%d %H:%M:%S'
+#         },
+#         'verbose': {
+#             'format': '[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s',
+#             'datefmt': '%Y-%m-%d %H:%M:%S'
+#         },
+#     },
+#     'filters': {
+#         'require_debug_false': {
+#             '()': 'django.utils.log.RequireDebugFalse',
+#         },
+#         'require_debug_true': {
+#             '()': 'django.utils.log.RequireDebugTrue',
+#         },
+#     },
+#     'handlers': {
+#         'console': {
+#             'level': 'DEBUG',
+#             'filters': ['require_debug_true'],
+#             'class': 'logging.StreamHandler',
+#             'formatter': 'verbose'
+#         },
+#         'file': {
+#             'level': 'DEBUG' if DEBUG else 'INFO',
+#             'class': 'logging.FileHandler',
+#             'formatter': 'verbose' if DEBUG else 'simple',
+#             'filename': LOG_DIR / 'django.log',
+#         },
+#         'db_queries': {
+#             'level': 'DEBUG',
+#             'filters': ['require_debug_true'],
+#             'class': 'logging.FileHandler',
+#             'filename': LOG_DIR / 'db_queries.log',
+#         },
+#     },
+#     'loggers': {
+#         'django.db.backends': {
+#             'level': 'DEBUG',
+#             'handlers': ['db_queries'],
+#             'propagate': False,
+#         },
+#         'instagram_app': {
+#             'level': 'DEBUG',
+#             'handlers': ['file', 'console']
+#         },
+#         # 'telegram.ext.dispatcher': {
+#         #     'level': 'DEBUG',
+#         #     'handlers': ['file'],
+#         # },
+#     },
+# })
 
 # TODO: use when sentry add for this project
 # if DEVEL is False:
