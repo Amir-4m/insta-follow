@@ -8,8 +8,16 @@ class InstaPageSerializer(serializers.ModelSerializer):
         model = InstaPage
         fields = ('instagram_username',)
 
+
+class UserPageSerializer(InstaPageSerializer):
+    page = InstaPageSerializer()
+
+    class Meta:
+        model = UserPage
+        fields = ('page',)
+
     def create(self, validated_data):
-        username = validated_data.get('instagram_username')
+        username = validated_data['page'].get('instagram_username')
         user = validated_data.get('user')
         response = requests.get(f"https://www.instagram.com/{username}/?__a=1").json()
         temp = response['graphql']['user']
@@ -25,11 +33,15 @@ class InstaPageSerializer(serializers.ModelSerializer):
             following=following,
             post_no=posts_count,
         )
-        UserPage.objects.create(
+        user_page = UserPage.objects.create(
             user=user,
             page=page
         )
-        return page
+        return user_page
+
+    def validate(self, attrs):
+        print(attrs)
+        return super(UserPageSerializer, self).validate(attrs)
 
 
 class LikedPageSerializer(serializers.Serializer):

@@ -9,7 +9,6 @@ https://docs.djangoproject.com/en/3.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
-import os
 
 from decouple import config, Csv
 from pathlib import Path
@@ -35,6 +34,7 @@ INSTALLED_APPS = [
     'instagram_app',
     'telegram_app',
     'bot',
+    'rest_framework',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -81,8 +81,12 @@ AUTH_USER_MODEL = 'accounts.User'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': config('DB_ENGINE'),
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASS'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
     }
 }
 if DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':

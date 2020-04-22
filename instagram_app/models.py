@@ -49,7 +49,7 @@ class UserPage(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     user = models.ForeignKey("accounts.User", on_delete=models.CASCADE)
-    page = models.ForeignKey(InstaPage, on_delete=models.CASCADE)
+    page = models.ForeignKey(InstaPage, related_name='user_pages', on_delete=models.CASCADE)
 
     class Meta:
         db_table = "instagram_user_pages"
