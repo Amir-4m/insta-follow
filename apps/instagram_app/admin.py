@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, InstaPage, UserPage, Package, UserPackage, Order, UserAssignment
+from .models import Category, InstaPage, UserPage, Package, UserPackage, Order, UserInquiry
 
 
 @admin.register(Category)
@@ -21,19 +21,24 @@ class InstaPageModelAdmin(admin.ModelAdmin):
 @admin.register(UserPage)
 class UserPageModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'page', 'updated_time', 'created_time')
+    list_select_related = ['user', 'page']
     sortable_by = ('-created_time',)
 
 
 @admin.register(Package)
 class PackageModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'created_time')
+    list_display = (
+        'id', 'name', 'follow_target_no', 'like_target_no',
+        'comment_target_no', 'coins', 'is_enable'
+    )
     search_fields = ('name',)
     sortable_by = ('-created_time',)
 
 
 @admin.register(UserPackage)
 class UserPackageModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user_page', 'package', 'created_time')
+    list_display = ('id', 'user', 'package', 'created_time')
+    list_select_related = ['user']
     sortable_by = ('-created_time',)
 
 
@@ -41,10 +46,12 @@ class UserPackageModelAdmin(admin.ModelAdmin):
 class OrderModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'user_package', 'action_type', 'link', 'is_enable', 'created_time')
     list_filter = ('action_type',)
+    list_select_related = ['user_package']
     sortable_by = ('-created_time',)
 
 
-@admin.register(UserAssignment)
+@admin.register(UserInquiry)
 class UserAssignmentModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'order', 'user_page', 'last_check_time', 'updated_time', 'created_time')
+    list_select_related = ['order', 'user_page']
     sortable_by = ('-created_time',)

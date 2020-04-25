@@ -19,7 +19,7 @@ class Category(models.Model):
     name = models.CharField(_("category name"), max_length=100, unique=True)
 
     class Meta:
-        db_table = "instagram_category"
+        db_table = "categories"
 
     def __str__(self):
         return f"{self.name}"
@@ -39,7 +39,7 @@ class InstaPage(models.Model):
     owner = models.ManyToManyField("accounts.User", through='UserPage', related_name='insta_pages')
 
     class Meta:
-        db_table = "instagram_pages"
+        db_table = "insta_pages"
 
     def __str__(self):
         return self.instagram_username
@@ -52,7 +52,7 @@ class UserPage(models.Model):
     page = models.ForeignKey(InstaPage, related_name='user_pages', on_delete=models.PROTECT)
 
     class Meta:
-        db_table = "instagram_user_pages"
+        db_table = "insta_user_pages"
         unique_together = ['user', 'page']
 
     def __str__(self):
@@ -66,10 +66,11 @@ class Package(models.Model):
     follow_target_no = models.IntegerField(_("follow target"))
     like_target_no = models.IntegerField(_("like target"))
     comment_target_no = models.IntegerField(_("comment target"))
+    coins = models.PositiveIntegerField(_('coins'))
     is_enable = models.BooleanField(_('is enable'), default=True)
 
     class Meta:
-        db_table = "instagram_package"
+        db_table = "insta_packages"
 
     def __str__(self):
         return f"{self.slug} {self.name}"
@@ -77,34 +78,34 @@ class Package(models.Model):
 
 class UserPackage(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    user_page = models.ForeignKey(UserPage, on_delete=models.CASCADE)
-    package = models.ForeignKey(Package, on_delete=models.CASCADE)
+    user = models.ForeignKey("accounts.User", on_delete=models.PROTECT)
+    package = models.ForeignKey(Package, on_delete=models.PROTECT)
 
     class Meta:
-        db_table = "instagram_user_package"
+        db_table = "insta_user_packages"
 
     def __str__(self):
-        return f"{self.user_page.id} - {self.package.name}"
+        return f"{self.user_id} - {self.package.name}"
 
 
 class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     action_type = models.CharField(_('action type'), max_length=10, choices=Action.choices)
     link = models.URLField(_("link"))
-    user_package = models.ForeignKey(UserPackage, on_delete=models.CASCADE)
+    user_package = models.ForeignKey(UserPackage, on_delete=models.PROTECT)
     target_no = models.IntegerField(_("target like, comment or follower"), blank=True)
     achieved_no = models.IntegerField(_("achieved like, comment or follower"), default=0)
     description = models.TextField(_("description"), blank=True, default='')
     is_enable = models.BooleanField(_("is enable"), default=True)
 
     class Meta:
-        db_table = "instagram_order"
+        db_table = "insta_user_orders"
 
     def __str__(self):
-        return f"{self.id} - {self.action_type} for {self.user_package.user_page}"
+        return f"{self.id} - {self.action_type} for {self.user_package_id}"
 
     def clean(self):
-        if self.target_no >= self.package_target:
+        if self.target_no > self.package_target:
             raise ValidationError(_("order target number should not be higher than your package target number !"))
 
     @property
@@ -117,7 +118,7 @@ class Order(models.Model):
             return self.user_package.package.like_target_no
 
 
-class UserAssignment(models.Model):
+class UserInquiry(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
@@ -127,21 +128,20 @@ class UserAssignment(models.Model):
     check_type = models.CharField(_("type to check"), max_length=10, choices=Action.choices, db_index=True)
 
     class Meta:
-        db_table = "instagram_user_assignment"
+        db_table = "insta_inquiries"
 
     def __str__(self):
-        # TODO: will change
         return f"{self.user_page_id} action: {self.check_type}"
 
 
 class CoinTransaction(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    user = models.ForeignKey('telegram_app.TelegramUser', related_name='coin_transactions', on_delete=models.CASCADE)
+    user = models.ForeignKey('accounts.User', related_name='coin_transactions', on_delete=models.CASCADE)
     action = models.CharField(_("action"), max_length=120, blank=True)
     amount = models.IntegerField(_('coin amount'), null=False, blank=False, default=0)
 
     class Meta:
-        db_table = "instagram_coin_transaction"
+        db_table = "insta_transactions"
 
     def __str__(self):
         return f"{self.user} - {self.amount}"
@@ -158,8 +158,6 @@ class BaseInstaEntity(models.Model):
     comment_id = models.BigIntegerField(null=True)
     comment_time = models.DateTimeField(null=True)
     follow_time = models.DateTimeField(null=True)
-
-    # TODO: add follow needed fields
 
     class Meta:
         managed = False
