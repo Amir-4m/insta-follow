@@ -59,7 +59,7 @@ static/*
 db.sqlite3
 .idea
 *.tmp
-*/migrations/0*.py
+apps/*/migrations/0*.py
 
 # Flask stuff:
 instance/
