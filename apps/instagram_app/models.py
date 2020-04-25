@@ -88,6 +88,7 @@ class UserPackage(models.Model):
         return f"{self.user_id} - {self.package.name}"
 
 
+# Inventory
 class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     action_type = models.CharField(_('action type'), max_length=10, choices=Action.choices)

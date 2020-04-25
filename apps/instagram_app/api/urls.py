@@ -9,6 +9,6 @@ urlpatterns = [
 ]
 
 router = routers.DefaultRouter()
-router.register('user/page', InstaPageViewSet, basename="InstaPage")
+router.register('pages', InstaPageViewSet)
 
-urlpatterns += router.urls
+urlpatterns = router.urls

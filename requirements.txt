@@ -1,24 +1,14 @@
-asgiref==3.2.7
-certifi==2020.4.5.1
-cffi==1.14.0
-chardet==3.0.4
-cryptography==2.9
-decorator==4.4.2
-Django==3.0.5
-djangorestframework==3.11.0
-djangorestframework-simplejwt==4.4.0
-future==0.18.2
-idna==2.9
-Pillow==7.1.1
-psycopg2==2.8.4
-pycparser==2.20
-PyJWT==1.7.1
-python-decouple==3.3
-python-memcached==1.59
-python-telegram-bot==12.6.1
-pytz==2019.3
-requests==2.23.0
-six==1.14.0
-sqlparse==0.3.1
-tornado==6.0.4
-urllib3==1.25.9
+Django>=3.0, <3.1
+djangorestframework>=3.11, <4.0
+djangorestframework-simplejwt
+
+celery>=4.3, <4.4
+python-decouple
+python-telegram-bot>=12.0, <13.0
+
+PyJWT>=1.7, <1.8
+psycopg2-binary
+python-memcached
+requests
+Pillow
+
