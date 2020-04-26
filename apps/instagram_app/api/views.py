@@ -4,11 +4,12 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from .serializers import InstaPageSerializer, LikedPageSerializer
-from apps.instagram_app.models import InstaPage, UserPage, Order
+from .serializers import InstaPageSerializer, LikedPageSerializer, UserPackageSerializer, PackageSerializer
+from apps.instagram_app.models import InstaPage, UserPage, Order, UserPackage, Package
 
 
 class InstaPageViewSet(mixins.CreateModelMixin,
+                       mixins.RetrieveModelMixin,
                        mixins.DestroyModelMixin,
                        mixins.ListModelMixin,
                        viewsets.GenericViewSet):
@@ -58,3 +59,27 @@ class UserInquiryLikeAPIView(APIView):
             pass
 
         return Response({'msg': True})
+
+
+class PackageViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = PackageSerializer
+    queryset = Package.objects.all()
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(is_enable=True)
+
+
+class UserPackageViewSet(mixins.CreateModelMixin,
+                         mixins.RetrieveModelMixin,
+                         mixins.ListModelMixin,
+                         viewsets.GenericViewSet):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = UserPackageSerializer
+    queryset = UserPackage.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
