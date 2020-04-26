@@ -39,6 +39,7 @@ class PackageModelAdmin(admin.ModelAdmin):
 class UserPackageModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'package', 'created_time')
     list_select_related = ['user']
+    readonly_fields = ('remaining_follow', 'remaining_comment', 'remaining_like')
     sortable_by = ('-created_time',)
 
 

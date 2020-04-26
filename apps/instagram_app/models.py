@@ -80,6 +80,9 @@ class UserPackage(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     user = models.ForeignKey("accounts.User", on_delete=models.PROTECT)
     package = models.ForeignKey(Package, on_delete=models.PROTECT)
+    remaining_follow = models.IntegerField(_("follow remaining"), null=True, blank=True)
+    remaining_comment = models.IntegerField(_("comment remaining"), null=True, blank=True)
+    remaining_like = models.IntegerField(_("like remaining"), null=True, blank=True)
 
     class Meta:
         db_table = "insta_user_packages"
