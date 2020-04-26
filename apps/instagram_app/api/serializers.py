@@ -1,7 +1,8 @@
 from django.utils.translation import ugettext_lazy as _
+from django.forms.models import model_to_dict
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from apps.instagram_app.models import InstaPage, UserPage, UserPackage, Package
+from apps.instagram_app.models import InstaPage, UserPage, UserPackage, Package, Order
 from ..services import InstagramAppService
 
 
@@ -53,3 +54,26 @@ class UserPackageSerializer(serializers.ModelSerializer):
         package_id = validated_data.get('package')
         user = validated_data.get('user')
         return UserPackage.objects.create(user=user, package=package_id)
+
+
+class OrderSerializer(serializers.Serializer):
+    follow = serializers.IntegerField(allow_null=True)
+    like = serializers.IntegerField(allow_null=True)
+    comment = serializers.IntegerField(allow_null=True)
+    link = serializers.URLField(allow_null=False, allow_blank=False)
+    page_id = serializers.CharField(max_length=100, allow_blank=False, allow_null=True)
+
+    def to_representation(self, data):
+        lst = []
+        if not isinstance(data, list):
+            return model_to_dict(data)
+        else:
+            for ins in data:
+                lst.append(model_to_dict(ins))
+            return {'created_orders': lst}
+
+    def create(self, validated_data):
+        return InstagramAppService.create_order(**validated_data)
+
+    def update(self, instance, validated_data):
+        raise NotImplementedError('`update()` must be implemented.')

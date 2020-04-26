@@ -1,10 +1,15 @@
-from rest_framework import status, mixins, viewsets
+from rest_framework import status, mixins, viewsets, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.views import APIView
 from rest_framework.response import Response
-
-from .serializers import InstaPageSerializer, LikedPageSerializer, UserPackageSerializer, PackageSerializer
+from .serializers import (
+    InstaPageSerializer,
+    LikedPageSerializer,
+    UserPackageSerializer,
+    PackageSerializer,
+    OrderSerializer
+)
 from apps.instagram_app.models import InstaPage, UserPage, Order, UserPackage, Package
 
 
@@ -80,6 +85,16 @@ class UserPackageViewSet(mixins.CreateModelMixin,
     permission_classes = (IsAuthenticated,)
     serializer_class = UserPackageSerializer
     queryset = UserPackage.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class OrderViewSet(viewsets.ModelViewSet):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = OrderSerializer
+    queryset = Order.objects.all()
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
