@@ -57,9 +57,9 @@ class UserPackageSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.Serializer):
-    follow = serializers.IntegerField(allow_null=True)
-    like = serializers.IntegerField(allow_null=True)
-    comment = serializers.IntegerField(allow_null=True)
+    follow = serializers.IntegerField(allow_null=True, required=False)
+    like = serializers.IntegerField(allow_null=True, required=False)
+    comment = serializers.IntegerField(allow_null=True, required=False)
     link = serializers.URLField(allow_null=False, allow_blank=False)
     page_id = serializers.CharField(max_length=100, allow_blank=False, allow_null=True)
 
