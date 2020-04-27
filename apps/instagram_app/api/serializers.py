@@ -2,7 +2,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from apps.instagram_app.models import InstaPage, UserPage, UserPackage, Package, Order
+from apps.instagram_app.models import InstaPage, UserPage, UserPackage, Package, UserInquiry
 from ..services import InstagramAppService
 
 
@@ -77,3 +77,11 @@ class OrderSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         raise NotImplementedError('`update()` must be implemented.')
+
+
+class UserInquirySerializer(serializers.ModelSerializer):
+    link = serializers.ReadOnlyField(source="order.link")
+
+    class Meta:
+        model = UserInquiry
+        fields = ('id', 'link')

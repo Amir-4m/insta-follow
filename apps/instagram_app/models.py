@@ -129,13 +129,10 @@ class UserInquiry(models.Model):
     user_page = models.ForeignKey(UserPage, on_delete=models.CASCADE)
     validated_time = models.DateTimeField(_("validated time"), null=True)
     last_check_time = models.DateTimeField(_("last check time"), null=True)
-    check_type = models.CharField(_("type to check"), max_length=10, choices=Action.choices, db_index=True)
 
     class Meta:
         db_table = "insta_inquiries"
-
-    def __str__(self):
-        return f"{self.user_page_id} action: {self.check_type}"
+        unique_together = ('order', 'user_page')
 
 
 class CoinTransaction(models.Model):
