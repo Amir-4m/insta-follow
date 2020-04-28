@@ -1,10 +1,8 @@
 from itertools import accumulate
-
-from rest_framework import status, mixins, viewsets
+from rest_framework import status, mixins, viewsets, views
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import (
     InstaPageSerializer,
@@ -12,12 +10,13 @@ from .serializers import (
     UserPackageSerializer,
     PackageSerializer,
     OrderSerializer,
-    UserInquirySerializer
+    UserInquirySerializer,
+    CoinTransactionSerializer
 )
 from apps.instagram_app.models import (
     InstaPage, UserPage, Order,
     UserPackage, Package, UserInquiry,
-    Action
+    Action, CoinTransaction
 )
 
 
@@ -49,7 +48,7 @@ class InstaPageViewSet(mixins.CreateModelMixin,
         UserPage.objects.filter(page=instance, user=self.request.user).delete()
 
 
-class LikedPageAPIVIEW(APIView):
+class LikedPageAPIVIEW(views.APIView):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
 
@@ -130,3 +129,13 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
     @action(methods=['post'], detail=False, url_path="follow")
     def follow(self, request, *args, **kwargs):
         return self.get_inquiry(request, Action.FOLLOW)
+
+
+class CoinTransactionAPIView(views.APIView):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        transactions = CoinTransaction.objects.filter(user=self.request.user)
+        serializer = CoinTransactionSerializer(transactions)
+        return Response(serializer.data)

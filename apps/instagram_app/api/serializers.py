@@ -2,7 +2,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from apps.instagram_app.models import InstaPage, UserPage, UserPackage, Package, UserInquiry
+from apps.instagram_app.models import InstaPage, UserPage, UserPackage, Package, UserInquiry, CoinTransaction
 from ..services import InstagramAppService
 
 
@@ -85,3 +85,12 @@ class UserInquirySerializer(serializers.ModelSerializer):
     class Meta:
         model = UserInquiry
         fields = ('id', 'link')
+
+
+class CoinTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CoinTransaction
+        fields = '__all__'
+
+    def to_representation(self, queryset):
+        return {'user_balance': sum([instance.amount for instance in queryset])}

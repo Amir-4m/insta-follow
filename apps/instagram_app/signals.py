@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-
-from .models import UserPackage
+from apps.accounts.models import User
+from .models import UserPackage, CoinTransaction
 
 
 @receiver(post_save, sender=UserPackage)
@@ -21,3 +21,9 @@ def save_remaining(sender, instance, **kwargs):
         remaining_comment=comment,
         remaining_like=like
     )
+
+
+@receiver(post_save, sender=User)
+def user_coin_transaction(sender, instance, **kwargs):
+    if not instance.coin_transactions.exists():
+        CoinTransaction.objects.create(user=instance)
