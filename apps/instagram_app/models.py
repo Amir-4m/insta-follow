@@ -109,8 +109,10 @@ class Order(models.Model):
         return f"{self.id} - {self.action_type} for {self.user_package_id}"
 
     def clean(self):
-        if self.target_no > self.package_target:
+        if self.target_no and self.target_no > self.package_target:
             raise ValidationError(_("order target number should not be higher than your package target number !"))
+        elif self.target_no is None:
+            self.target_no = self.package_target
 
     @property
     def package_target(self):
@@ -127,8 +129,8 @@ class UserInquiry(models.Model):
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     user_page = models.ForeignKey(UserPage, on_delete=models.CASCADE)
-    validated_time = models.DateTimeField(_("validated time"), null=True)
-    last_check_time = models.DateTimeField(_("last check time"), null=True)
+    validated_time = models.DateTimeField(_("validated time"), null=True, blank=True)
+    last_check_time = models.DateTimeField(_("last check time"), null=True, blank=True)
 
     class Meta:
         db_table = "insta_inquiries"

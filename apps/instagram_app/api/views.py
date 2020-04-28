@@ -1,6 +1,7 @@
 from itertools import accumulate
 from rest_framework import status, mixins, viewsets, views
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
@@ -100,10 +101,13 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
     serializer_class = UserInquirySerializer
 
     def get_inquiry(self, request, action_type):
-        page_id = request.data.get('page_id')
+        page_id = request.query_params.get('page_id')
         if not page_id:
             return Response({'Error': 'page_id is required'})
-        user_page = UserPage.objects.get(page_id=page_id)
+        try:
+            user_page = UserPage.objects.get(page_id=page_id, user=self.request.user)
+        except UserPage.DoesNotExist:
+            raise ValidationError({'Error': 'user and page does not match together !'})
         valid_orders = Order.objects.filter(is_enable=True, action_type=action_type).order_by('-id')
 
         valid_inquiries = []
@@ -118,17 +122,23 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
         serializer = self.serializer_class(valid_inquiries, many=True)
         return Response(serializer.data)
 
-    @action(methods=["post"], detail=False, url_path="like")
+    @action(methods=["get"], detail=False, url_path="like")
     def like(self, request, *args, **kwargs):
         return self.get_inquiry(request, Action.LIKE)
 
-    @action(methods=['post'], detail=False, url_path="comment")
+    @action(methods=['get'], detail=False, url_path="comment")
     def comment(self, request, *args, **kwargs):
         return self.get_inquiry(request, Action.COMMENT)
 
-    @action(methods=['post'], detail=False, url_path="follow")
+    @action(methods=['get'], detail=False, url_path="follow")
     def follow(self, request, *args, **kwargs):
         return self.get_inquiry(request, Action.FOLLOW)
+
+    def post(self, request, *args, **kwargs):
+        serializer = UserInquirySerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response()
 
 
 class CoinTransactionAPIView(views.APIView):

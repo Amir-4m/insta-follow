@@ -81,10 +81,36 @@ class OrderSerializer(serializers.Serializer):
 
 class UserInquirySerializer(serializers.ModelSerializer):
     link = serializers.ReadOnlyField(source="order.link")
+    page_id = serializers.CharField(source='user_page.page', write_only=True)
+    id = serializers.ListField(child=serializers.IntegerField(), write_only=True)
 
     class Meta:
         model = UserInquiry
-        fields = ('id', 'link')
+        fields = ('id', 'link', 'page_id')
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+        page = attrs['user_page'].get('page')
+        id_list = attrs.get('id')
+        try:
+            user_page = UserPage.objects.get(page__instagram_username=page, user=user)
+            user_inquiry = UserInquiry.objects.get(id=id_list[0], user_page=user_page)
+        except UserPage.DoesNotExist:
+            raise ValidationError({'Error': 'user and page does not match together !'})
+        except UserInquiry.DoesNotExist:
+            raise ValidationError({'Error': 'user page and inquiry does not match together !'})
+
+        v_data = {
+            'user_page': user_page,
+            'user_inquiry': user_inquiry
+        }
+        return v_data
+
+    def create(self, validated_data):
+        user_page = validated_data.get('user_page')
+        user_inquiry = validated_data.get('user_inquiry')
+        InstagramAppService.check_user_action(user_inquiry, user_page)
+        return True
 
 
 class CoinTransactionSerializer(serializers.ModelSerializer):
