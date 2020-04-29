@@ -120,3 +120,6 @@ class CoinTransactionSerializer(serializers.ModelSerializer):
 
     def to_representation(self, queryset):
         return {'user_balance': sum([instance.amount for instance in queryset])}
+
+    def get_user_balance(self, obj):
+        return sum([obj.amount for obj in queryset])

@@ -115,7 +115,7 @@ CACHES = {
     'default': {
         'BACKEND': config('CACHE_BACKEND', default='django.core.cache.backends.locmem.LocMemCache'),
         'LOCATION': config('CACHE_HOST', default=''),
-        'KEY_PREFIX': 'INSTAFOLLOW',
+        'KEY_PREFIX': 'INSTA_FOLLOW',
     },
 }
 
@@ -140,8 +140,8 @@ TELEGRAM_BOT = {
 
 SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('ACCESS_TOKEN_LIFETIME_MINUTES', default=30, cast=int)),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=config('ACCESS_TOKEN_LIFETIME_DAYS', default=90, cast=int)),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('ACCESS_TOKEN_LIFETIME', default=30, cast=int)),
+    'REFRESH_TOKEN_LIFETIME': timedelta(minutes=config('REFRESH_TOKEN_LIFETIME', default=90, cast=int)),
 }
 
 APPEND_SLASH = config('APPEND_SLASH', default=False)
@@ -152,7 +152,7 @@ LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Tehran'
 USE_I18N = True
 USE_L10N = False
-USE_TZ = True
+USE_TZ = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
@@ -162,15 +162,15 @@ STATIC_URL = '/static/'
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
 
-FIXTURE_DIRS = [
-    BASE_DIR / 'fixtures',
-]
+# FIXTURE_DIRS = [
+#     BASE_DIR / 'fixtures',
+# ]
+#
+# LOCALE_PATHS = [
+#     BASE_DIR / 'locale',
+# ]
 
-LOCALE_PATHS = [
-    BASE_DIR / 'locale',
-]
-
-LOG_DIR = BASE_DIR / 'logs'
+# LOG_DIR = BASE_DIR / 'logs'
 # LOGGING = ({
 #     'version': 1,
 #     'disable_existing_loggers': False,

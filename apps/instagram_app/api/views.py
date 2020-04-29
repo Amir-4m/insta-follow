@@ -102,6 +102,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
 
     def get_inquiry(self, request, action_type):
         page_id = request.query_params.get('page_id')
+        limit = min(request.query_params.get('limit', 0), 100)
         if not page_id:
             return Response({'Error': 'page_id is required'})
         try:
@@ -115,8 +116,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
             user_inquiry, _c = UserInquiry.objects.get_or_create(order=order, defaults=dict(user_page=user_page))
             if _c or user_inquiry.validated_time is None:
                 valid_inquiries.append(user_inquiry)
-            # TODO: condition will change duo to package
-            if len(valid_inquiries) == 5:
+            if len(valid_inquiries) == limit:
                 break
 
         serializer = self.serializer_class(valid_inquiries, many=True)
