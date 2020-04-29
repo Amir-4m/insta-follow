@@ -83,7 +83,7 @@ class OrderSerializer(serializers.Serializer):
 
 class UserInquirySerializer(serializers.ModelSerializer):
     link = serializers.ReadOnlyField(source="order.link")
-    page_id = serializers.CharField(source='user_page.page', write_only=True)
+    page_id = serializers.IntegerField(write_only=True)
     done_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True)
 
     class Meta:
@@ -92,10 +92,10 @@ class UserInquirySerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         user = self.context['request'].user
-        page = attrs['user_page'].get('page')
+        page_id = attrs.get('page_id')
         id_list = attrs.get('done_ids')
         try:
-            user_page = UserPage.objects.get(page__instagram_username=page, user=user)
+            user_page = UserPage.objects.get(page=page_id, user=user)
             user_inquiry_ids = [obj.id for obj in UserInquiry.objects.filter(id__in=id_list, user_page=user_page)]
         except UserPage.DoesNotExist:
             raise ValidationError({'Error': 'user and page does not match together !'})
