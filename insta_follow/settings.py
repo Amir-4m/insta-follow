@@ -144,7 +144,7 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(minutes=config('REFRESH_TOKEN_LIFETIME', default=90, cast=int)),
 }
 
-APPEND_SLASH = config('APPEND_SLASH', default=False)
+APPEND_SLASH = False
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
