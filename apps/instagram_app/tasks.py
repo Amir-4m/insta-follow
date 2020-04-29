@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 @shared_task
 def check_user_action(user_inquiry_ids, user_page_id):
     user_page = UserPage.objects.get(id=user_page_id)
-    achieved = 0
     with transaction.atomic():
         for user_inquiry in UserInquiry.objects.select_for_update().filter(id__in=user_inquiry_ids):
             user_inquiry.last_check_time = timezone.now()
@@ -31,13 +30,11 @@ def check_user_action(user_inquiry_ids, user_page_id):
                     user_page.user.username,
                     user_inquiry.order.action_type):
                 user_inquiry.validated_time = timezone.now()
-                achieved += 1
+                Order.objects.select_for_update().filter(
+                    id=user_inquiry.order.id,
+                ).update(
+                    achieved_no=F('achieved_no') + 1)
             user_inquiry.save()
-        if achieved >= 1:
-            Order.objects.select_for_update().filter(
-                id=user_inquiry.order.id,
-            ).update(
-                achieved_no=F('achieved_no') + achieved)
 
 
 @shared_task
