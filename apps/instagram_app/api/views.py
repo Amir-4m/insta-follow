@@ -117,7 +117,8 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
         valid_inquiries = []
         for order in valid_orders:
             user_inquiry, _c = UserInquiry.objects.get_or_create(order=order, defaults=dict(user_page=user_page))
-            if _c or user_inquiry.validated_time is None:
+            # if _c or user_inquiry.validated_time is None:
+            if _c:
                 valid_inquiries.append(user_inquiry)
             if len(valid_inquiries) == limit:
                 break
