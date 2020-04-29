@@ -2,16 +2,11 @@ import json
 import logging
 import re
 import time
-import urllib.parse
-
 import requests
 
-from django.db.models import F
-from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
 from .models import Order, Action
-from .endpoints import LIKES_BY_SHORTCODE, COMMENTS_BY_SHORTCODE
 
 logger = logging.getLogger(__name__)
 
@@ -135,66 +130,3 @@ class InstagramAppService(object):
         except Exception as e:
             logger.error(f"sending request to instagram got error: {e}")
             return
-
-    @staticmethod
-    def check_user_action(user_inquiry, user_page):
-        link = user_inquiry.order.link
-        mode = user_inquiry.order.action_type
-        variables = {
-            "shortcode": InstagramAppService.get_shortcode(link),
-            "first": 50,
-        }
-        mode_links = {
-            'L': LIKES_BY_SHORTCODE,
-            'C': COMMENTS_BY_SHORTCODE
-        }
-        mode_key = {
-            'L': 'edge_liked_by',
-            'C': 'edge_media_to_parent_comment'
-        }
-
-        search_mode = mode_key[mode]
-        found = False
-        has_next_page = True
-        while not found and has_next_page:
-            try:
-                response = InstagramAppService.req(
-                    mode_links[mode] % urllib.parse.quote_plus(
-                        json.dumps(
-                            variables, separators=(',', ':')
-                        )
-                    )
-                )
-                response = response['data']['shortcode_media']
-                response_data = response[search_mode]
-                page_info = response_data['page_info']
-                edges = response_data['edges']
-                if mode == Action.LIKE:
-                    for edge in edges:
-                        user = edge['node']
-                        username = user['username']
-                        if username == user_page.page.instagram_username:
-                            found = True
-                            # TODO: async task for creating BaseEntity object for like
-                elif mode == Action.COMMENT:
-                    for edge in edges:
-                        user = edge['node']
-                        username = user['owner']['username']
-                        text = user['text']
-                        if username == user_page.page.instagram_username:
-                            found = True
-                            # TODO: async task for creating BaseEntity object for comment
-                max_id = page_info['end_cursor']
-                variables["after"] = max_id
-                has_next_page = page_info['has_next_page']
-
-            except Exception as e:
-                logger.error(f"got error while getting {link} {mode}s {e}")
-                break
-
-        user_inquiry.last_check_time = timezone.now()
-        if found:
-            user_inquiry.validated_time = timezone.now()
-            Order.objects.filter(id=user_inquiry.order.id).update(achieved_no=F('achieved_no') + 1)
-
-        user_inquiry.save()

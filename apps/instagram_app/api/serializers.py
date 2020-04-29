@@ -5,6 +5,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from apps.instagram_app.models import InstaPage, UserPage, UserPackage, Package, UserInquiry, CoinTransaction
 from ..services import InstagramAppService
+from .. import tasks
 
 
 class InstaPageSerializer(serializers.ModelSerializer):
@@ -110,7 +111,12 @@ class UserInquirySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user_page = validated_data.get('user_page')
         user_inquiry = validated_data.get('user_inquiry')
-        InstagramAppService.check_user_action(user_inquiry, user_page)
+        tasks.check_user_action.delay(
+            user_inquiry.id,
+            user_page.id,
+            user_inquiry.order.link,
+            user_inquiry.order.action_type
+        )
         return True
 
 

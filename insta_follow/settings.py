@@ -161,7 +161,9 @@ STATIC_URL = '/static/'
 
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
-
+FOLLOW_COIN = 15
+LIKE_COIN = 5
+COMMENT_COIN = 10
 # FIXTURE_DIRS = [
 #     BASE_DIR / 'fixtures',
 # ]
