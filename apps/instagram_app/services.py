@@ -6,7 +6,7 @@ import requests
 
 from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
-from .models import Order, Action
+from .models import Order, Action, BaseInstaEntity
 
 logger = logging.getLogger(__name__)
 
@@ -130,3 +130,34 @@ class InstagramAppService(object):
         except Exception as e:
             logger.error(f"sending request to instagram got error: {e}")
             return
+
+    @staticmethod
+    def get_post_info(post_link):
+        try:
+            response = requests.get(f"https://api.instagram.com/oembed/?callback=&url={post_link}")
+            response.raise_for_status()
+            response = response.json()
+            media_id = response['media_id'].split('_')[0]
+            return media_id
+        except requests.HTTPError as e:
+            logger.error(f"error while getting post: {post_link} information HTTPError: {e}")
+        except Exception as e:
+            logger.error(f"error while getting post: {post_link} information {e}")
+
+        return False
+
+    @staticmethod
+    def check_activity_from_db(post_link, username, check_type):
+        model = BaseInstaEntity.get_model(post_link)
+        if not model:
+            return False
+
+        if check_type == Action.LIKE:
+            like_query = model.objects.filter(username=username, action_type=Action.LIKE)
+            if like_query.exists():
+                return True
+        else:
+            comment_query = model.objects.filter(username=username, action_type=Action.COMMENT)
+            if comment_query.exists():
+                return True
+        return False

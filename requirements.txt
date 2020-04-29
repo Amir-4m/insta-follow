@@ -3,8 +3,10 @@ djangorestframework>=3.11, <4.0
 djangorestframework-simplejwt
 
 celery>=4.3, <4.4
+django-celery-beat
 python-decouple
 python-telegram-bot>=12.0, <13.0
+drf-yasg==1.17.1
 
 PyJWT>=1.7, <1.8
 psycopg2-binary

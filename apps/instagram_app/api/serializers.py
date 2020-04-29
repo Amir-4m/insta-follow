@@ -96,27 +96,24 @@ class UserInquirySerializer(serializers.ModelSerializer):
         id_list = attrs.get('done_ids')
         try:
             user_page = UserPage.objects.get(page__instagram_username=page, user=user)
-            user_inquiry = UserInquiry.objects.get(id=id_list[0], user_page=user_page)
+            user_inquiry_ids = [obj.id for obj in UserInquiry.objects.filter(id__in=id_list, user_page=user_page)]
         except UserPage.DoesNotExist:
             raise ValidationError({'Error': 'user and page does not match together !'})
-        except UserInquiry.DoesNotExist:
-            raise ValidationError({'Error': 'user page and inquiry does not match together !'})
+        except Exception as e:
+            raise ValidationError({'Error': f"{e}"})
+        if len(user_inquiry_ids) != len(id_list):
+            raise ValidationError({'Error': 'invalid id for user inquiries'})
 
         v_data = {
             'user_page': user_page,
-            'user_inquiry': user_inquiry
+            'user_inquiry_ids': user_inquiry_ids
         }
         return v_data
 
     def create(self, validated_data):
         user_page = validated_data.get('user_page')
-        user_inquiry = validated_data.get('user_inquiry')
-        tasks.check_user_action.delay(
-            user_inquiry.id,
-            user_page.id,
-            user_inquiry.order.link,
-            user_inquiry.order.action_type
-        )
+        user_inquiry_ids = validated_data.get('user_inquiry_ids')
+        tasks.check_user_action.delay(user_inquiry_ids, user_page.id)
         return True
 
 

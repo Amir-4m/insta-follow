@@ -36,6 +36,8 @@ INSTALLED_APPS = [
     'apps.telegram_app',
     'bot',
     'rest_framework',
+    'drf_yasg',
+    'django_celery_beat',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -164,6 +166,7 @@ MEDIA_URL = '/media/'
 FOLLOW_COIN = 15
 LIKE_COIN = 5
 COMMENT_COIN = 10
+
 # FIXTURE_DIRS = [
 #     BASE_DIR / 'fixtures',
 # ]
@@ -255,3 +258,14 @@ COMMENT_COIN = 10
 #         debug=DEBUG,
 #         environment=SENTRY_ENV
 #     )
+
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
+    'SECURITY_DEFINITIONS': {
+        'JWT': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    },
+}
