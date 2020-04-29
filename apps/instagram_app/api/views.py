@@ -102,7 +102,10 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
 
     def get_inquiry(self, request, action_type):
         page_id = request.query_params.get('page_id')
-        limit = min(request.query_params.get('limit', 0), 100)
+        try:
+            limit = min(int(request.query_params.get('limit', 0)), 100)
+        except TypeError:
+            raise ValidationError('make sure the limit value is correct !')
         if not page_id:
             return Response({'Error': 'page_id is required'})
         try:

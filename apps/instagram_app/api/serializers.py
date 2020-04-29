@@ -1,3 +1,4 @@
+from django.db.models import Sum
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
 from rest_framework import serializers
@@ -82,16 +83,16 @@ class OrderSerializer(serializers.Serializer):
 class UserInquirySerializer(serializers.ModelSerializer):
     link = serializers.ReadOnlyField(source="order.link")
     page_id = serializers.CharField(source='user_page.page', write_only=True)
-    id = serializers.ListField(child=serializers.IntegerField(), write_only=True)
+    done_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True)
 
     class Meta:
         model = UserInquiry
-        fields = ('id', 'link', 'page_id')
+        fields = ('id', 'link', 'page_id', 'done_ids')
 
     def validate(self, attrs):
         user = self.context['request'].user
         page = attrs['user_page'].get('page')
-        id_list = attrs.get('id')
+        id_list = attrs.get('done_ids')
         try:
             user_page = UserPage.objects.get(page__instagram_username=page, user=user)
             user_inquiry = UserInquiry.objects.get(id=id_list[0], user_page=user_page)
@@ -114,12 +115,11 @@ class UserInquirySerializer(serializers.ModelSerializer):
 
 
 class CoinTransactionSerializer(serializers.ModelSerializer):
+    user_balance = serializers.SerializerMethodField()
+
     class Meta:
         model = CoinTransaction
-        fields = '__all__'
-
-    def to_representation(self, queryset):
-        return {'user_balance': sum([instance.amount for instance in queryset])}
+        fields = ('id', 'user_balance', 'action')
 
     def get_user_balance(self, obj):
-        return sum([obj.amount for obj in queryset])
+        return obj.aggregate(Sum('amount'))
