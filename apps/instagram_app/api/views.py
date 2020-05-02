@@ -1,5 +1,5 @@
 from itertools import accumulate
-from rest_framework import status, mixins, viewsets, views
+from rest_framework import status, mixins, viewsets, views, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
@@ -145,11 +145,12 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
         return Response()
 
 
-class CoinTransactionAPIView(views.APIView):
+class CoinTransactionAPIView(generics.ListAPIView):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
+    queryset = CoinTransaction.objects.all()
+    serializer_class = CoinTransactionSerializer
 
-    def get(self, request, *args, **kwargs):
-        transactions = CoinTransaction.objects.filter(user=self.request.user)
-        serializer = CoinTransactionSerializer(transactions)
-        return Response(serializer.data)
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(user=self.request.user).order_by('-created_time')
