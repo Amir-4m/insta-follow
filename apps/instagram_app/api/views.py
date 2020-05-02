@@ -94,7 +94,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
-class UserInquiryViewSet(viewsets.GenericViewSet):
+class UserInquiryViewSet(viewsets.ViewSet):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
     queryset = UserInquiry.objects.all()
@@ -102,16 +102,18 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
 
     def get_inquiry(self, request, action_type):
         page_id = request.query_params.get('page_id')
-        try:
-            limit = min(int(request.query_params.get('limit', 0)), 100)
-        except TypeError:
-            raise ValidationError('make sure the limit value is correct !')
         if not page_id:
             return Response({'Error': 'page_id is required'})
+
+        try:
+            limit = abs(min(int(request.query_params.get('limit', 0)), 100))
+        except TypeError:
+            raise ValidationError('make sure the limit value is a positive number!')
+
         try:
             user_page = UserPage.objects.get(page_id=page_id, user=self.request.user)
         except UserPage.DoesNotExist:
-            raise ValidationError({'Error': 'user and page does not match together !'})
+            raise ValidationError({'Error': 'user and page does not match!'})
         valid_orders = Order.objects.filter(is_enable=True, action_type=action_type).order_by('-id')
 
         valid_inquiries = []
@@ -138,6 +140,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
     def follow(self, request, *args, **kwargs):
         return self.get_inquiry(request, Action.FOLLOW)
 
+    @action(methods=['post'], detail=False, url_path="done")
     def post(self, request, *args, **kwargs):
         serializer = UserInquirySerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
