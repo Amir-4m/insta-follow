@@ -42,16 +42,13 @@ class InstagramAppService(object):
             order_create_list = []
             if follow:
                 page_url = 'https://www.instagram.com/%s' % instagram_page.instagram_username
-                response = requests.get(f"https://www.instagram.com/{instagram_page.instagram_username}/?__a=1").json()
-                media_url = response['graphql']['user']['profile_pic_url_hd']
-                follow_order = Order(
-                    action_type=Action.FOLLOW,
-                    link=page_url,
-                    media_url=media_url,
-                    target_no=follow,
-                    user_package=user_package,
-                )
-                if follow_order.user_package.remaining_follow >= follow:
+                if user_package.remaining_follow >= follow:
+                    follow_order = Order.objects.create(
+                        action_type=Action.FOLLOW,
+                        link=page_url,
+                        target_no=follow,
+                        user_package=user_package,
+                    )
                     follow_order.user_package.remaining_follow -= follow
                     follow_order.user_package.save()
                     order_create_list.append(follow_order)
@@ -59,18 +56,14 @@ class InstagramAppService(object):
                     raise ValidationError(_("Your follow target number should not be more than your package's"))
 
             if link:
-                shortcode = InstagramAppService.get_shortcode(link)
-                media_url = InstagramAppService.get_post_media_url(shortcode)
-
                 if like:
-                    like_order = Order(
-                        action_type=Action.LIKE,
-                        link=link,
-                        media_url=media_url,
-                        target_no=like,
-                        user_package=user_package,
-                    )
-                    if like_order.user_package.remaining_like >= like:
+                    if user_package.remaining_like >= like:
+                        like_order = Order.objects.create(
+                            action_type=Action.LIKE,
+                            link=link,
+                            target_no=like,
+                            user_package=user_package,
+                        )
                         like_order.user_package.remaining_like -= like
                         like_order.user_package.save()
                         order_create_list.append(like_order)
@@ -78,14 +71,13 @@ class InstagramAppService(object):
                         raise ValidationError(_("Your like target number should not be more than your package's"))
 
                 if comment:
-                    comment_order = Order(
-                        action_type=Action.COMMENT,
-                        link=link,
-                        media_url=media_url,
-                        target_no=comment,
-                        user_package=user_package,
-                    )
-                    if comment_order.user_package.remaining_comment >= comment:
+                    if user_package.remaining_comment >= comment:
+                        comment_order = Order.objects.create(
+                            action_type=Action.COMMENT,
+                            link=link,
+                            target_no=comment,
+                            user_package=user_package,
+                        )
                         comment_order.user_package.remaining_comment -= comment
                         comment_order.user_package.save()
                         order_create_list.append(comment_order)
@@ -94,9 +86,8 @@ class InstagramAppService(object):
 
             else:
                 raise ValidationError(_("No link were entered for the post !"))
-            objs = Order.objects.bulk_create(order_create_list)
             InstagramAppService.check_user_package_expired(user_package)
-            return objs
+            return order_create_list
         else:
             # TODO: change validation errors to non field error
             raise ValidationError(_("You have no active package !"))
@@ -117,7 +108,7 @@ class InstagramAppService(object):
         pattern = "^https:\/\/www\.instagram\.com\/([A-Za-z0-9-_\.]+)(?:\/)?(\?.*)?$"
         try:
             result = re.match(pattern, url)
-            page_id = result.groups()[1]
+            page_id = result.groups()[0]
             return page_id
         except Exception as e:
             logger.error(f"extract shortcode for url got exception: {url} error: {e}")
