@@ -48,6 +48,7 @@ class OrderModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'user_package', 'action_type', 'link', 'is_enable', 'created_time')
     list_filter = ('action_type',)
     list_select_related = ['user_package']
+    readonly_fields = ('media_url',)
     sortable_by = ('-created_time',)
 
 

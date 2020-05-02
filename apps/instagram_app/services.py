@@ -6,7 +6,8 @@ import requests
 
 from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
-from .models import Order, Action, BaseInstaEntity
+
+from .models import Order, Action, BaseInstaEntity, InstaPage
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,6 @@ class InstagramAppService(object):
             followers = temp['edge_followed_by']['count']
             following = temp['edge_follow']['count']
             posts_count = temp['edge_owner_to_timeline_media']['count']
-
             return user_id, name, followers, following, posts_count
 
         except json.JSONDecodeError:
@@ -37,13 +37,17 @@ class InstagramAppService(object):
     @staticmethod
     def create_order(user, follow=None, like=None, comment=None, link=None, page_id=None):
         user_package = user.user_packages.all().last()
-        if user_package:
+        instagram_page = InstaPage.objects.get(id=page_id)
+        if user_package and instagram_page:
             order_create_list = []
             if follow:
-                page_url = 'https://www.instagram.com/%s' % page_id
+                page_url = 'https://www.instagram.com/%s' % instagram_page.instagram_username
+                response = requests.get(f"https://www.instagram.com/{instagram_page.instagram_username}/?__a=1").json()
+                media_url = response['graphql']['user']['profile_pic_url_hd']
                 follow_order = Order(
                     action_type=Action.FOLLOW,
                     link=page_url,
+                    media_url=media_url,
                     target_no=follow,
                     user_package=user_package,
                 )
@@ -55,10 +59,14 @@ class InstagramAppService(object):
                     raise ValidationError(_("Your follow target number should not be more than your package's"))
 
             if link:
+                shortcode = InstagramAppService.get_shortcode(link)
+                media_url = InstagramAppService.get_post_media_url(shortcode)
+
                 if like:
                     like_order = Order(
                         action_type=Action.LIKE,
                         link=link,
+                        media_url=media_url,
                         target_no=like,
                         user_package=user_package,
                     )
@@ -73,6 +81,7 @@ class InstagramAppService(object):
                     comment_order = Order(
                         action_type=Action.COMMENT,
                         link=link,
+                        media_url=media_url,
                         target_no=comment,
                         user_package=user_package,
                     )
@@ -132,19 +141,31 @@ class InstagramAppService(object):
             return
 
     @staticmethod
-    def get_post_info(post_link):
+    def get_post_info(short_code):
         try:
-            response = requests.get(f"https://api.instagram.com/oembed/?callback=&url={post_link}")
+            response = requests.get(f"https://api.instagram.com/oembed/?callback=&url={short_code}")
             response.raise_for_status()
             response = response.json()
             media_id = response['media_id'].split('_')[0]
             return media_id
         except requests.HTTPError as e:
-            logger.error(f"error while getting post: {post_link} information HTTPError: {e}")
+            logger.error(f"error while getting post: {short_code} information HTTPError: {e}")
         except Exception as e:
-            logger.error(f"error while getting post: {post_link} information {e}")
+            logger.error(f"error while getting post: {short_code} information {e}")
 
         return False
+
+    @staticmethod
+    def get_post_media_url(short_code):
+        try:
+            response = requests.get(f"https://www.instagram.com/p/{short_code}/?__a=1")
+            response.raise_for_status()
+            response = response.json()
+            return response['graphql']['shortcode_media']['display_url']
+        except requests.HTTPError as e:
+            logger.error(f"error while getting post: {short_code} information HTTPError: {e}")
+        except Exception as e:
+            logger.error(f"error while getting post: {short_code} information {e}")
 
     @staticmethod
     def check_activity_from_db(post_link, username, check_type):

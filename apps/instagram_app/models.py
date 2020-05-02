@@ -96,6 +96,7 @@ class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     action_type = models.CharField(_('action type'), max_length=10, choices=Action.choices)
     link = models.URLField(_("link"))
+    media_url = models.URLField(_("media url"))
     user_package = models.ForeignKey(UserPackage, on_delete=models.CASCADE)
     target_no = models.IntegerField(_("target like, comment or follower"), blank=True)
     achieved_no = models.IntegerField(_("achieved like, comment or follower"), default=0)
