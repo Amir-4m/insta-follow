@@ -7,15 +7,15 @@ from .views import (
 )
 
 urlpatterns = [
-    path('user/liked/', LikedPageAPIVIEW.as_view(), name="liked"),
+    # path('user/liked/', LikedPageAPIVIEW.as_view(), name="liked"),
     path('coin-transaction/', CoinTransactionAPIView.as_view(), name='coin-transaction')
 ]
 
 router = routers.DefaultRouter()
 router.register('pages', InstaPageViewSet)
 router.register('packages', PackageViewSet)
-router.register('user/packages', UserPackageViewSet)
 router.register('orders', OrderViewSet)
 router.register('inquiries', UserInquiryViewSet)
+# router.register('user/packages', UserPackageViewSet)
 
 urlpatterns += router.urls
