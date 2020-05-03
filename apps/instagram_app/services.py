@@ -6,7 +6,8 @@ import requests
 
 from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
-from .models import Order, Action, BaseInstaEntity
+
+from .models import Order, Action, BaseInstaEntity, InstaPage
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,6 @@ class InstagramAppService(object):
             followers = temp['edge_followed_by']['count']
             following = temp['edge_follow']['count']
             posts_count = temp['edge_owner_to_timeline_media']['count']
-
             return user_id, name, followers, following, posts_count
 
         except json.JSONDecodeError:
@@ -37,17 +37,18 @@ class InstagramAppService(object):
     @staticmethod
     def create_order(user, follow=None, like=None, comment=None, link=None, page_id=None):
         user_package = user.user_packages.all().last()
-        if user_package:
+        instagram_page = InstaPage.objects.get(id=page_id)
+        if user_package and instagram_page:
             order_create_list = []
             if follow:
-                page_url = 'https://www.instagram.com/%s' % page_id
-                follow_order = Order(
-                    action_type=Action.FOLLOW,
-                    link=page_url,
-                    target_no=follow,
-                    user_package=user_package,
-                )
-                if follow_order.user_package.remaining_follow >= follow:
+                page_url = 'https://www.instagram.com/%s' % instagram_page.instagram_username
+                if user_package.remaining_follow >= follow:
+                    follow_order = Order.objects.create(
+                        action_type=Action.FOLLOW,
+                        link=page_url,
+                        target_no=follow,
+                        user_package=user_package,
+                    )
                     follow_order.user_package.remaining_follow -= follow
                     follow_order.user_package.save()
                     order_create_list.append(follow_order)
@@ -56,13 +57,13 @@ class InstagramAppService(object):
 
             if link:
                 if like:
-                    like_order = Order(
-                        action_type=Action.LIKE,
-                        link=link,
-                        target_no=like,
-                        user_package=user_package,
-                    )
-                    if like_order.user_package.remaining_like >= like:
+                    if user_package.remaining_like >= like:
+                        like_order = Order.objects.create(
+                            action_type=Action.LIKE,
+                            link=link,
+                            target_no=like,
+                            user_package=user_package,
+                        )
                         like_order.user_package.remaining_like -= like
                         like_order.user_package.save()
                         order_create_list.append(like_order)
@@ -70,13 +71,13 @@ class InstagramAppService(object):
                         raise ValidationError(_("Your like target number should not be more than your package's"))
 
                 if comment:
-                    comment_order = Order(
-                        action_type=Action.COMMENT,
-                        link=link,
-                        target_no=comment,
-                        user_package=user_package,
-                    )
-                    if comment_order.user_package.remaining_comment >= comment:
+                    if user_package.remaining_comment >= comment:
+                        comment_order = Order.objects.create(
+                            action_type=Action.COMMENT,
+                            link=link,
+                            target_no=comment,
+                            user_package=user_package,
+                        )
                         comment_order.user_package.remaining_comment -= comment
                         comment_order.user_package.save()
                         order_create_list.append(comment_order)
@@ -85,9 +86,8 @@ class InstagramAppService(object):
 
             else:
                 raise ValidationError(_("No link were entered for the post !"))
-            objs = Order.objects.bulk_create(order_create_list)
             InstagramAppService.check_user_package_expired(user_package)
-            return objs
+            return order_create_list
         else:
             # TODO: change validation errors to non field error
             raise ValidationError(_("You have no active package !"))
@@ -108,7 +108,7 @@ class InstagramAppService(object):
         pattern = "^https:\/\/www\.instagram\.com\/([A-Za-z0-9-_\.]+)(?:\/)?(\?.*)?$"
         try:
             result = re.match(pattern, url)
-            page_id = result.groups()[1]
+            page_id = result.groups()[0]
             return page_id
         except Exception as e:
             logger.error(f"extract shortcode for url got exception: {url} error: {e}")
@@ -132,19 +132,31 @@ class InstagramAppService(object):
             return
 
     @staticmethod
-    def get_post_info(post_link):
+    def get_post_info(short_code):
         try:
-            response = requests.get(f"https://api.instagram.com/oembed/?callback=&url={post_link}")
+            response = requests.get(f"https://api.instagram.com/oembed/?callback=&url={short_code}")
             response.raise_for_status()
             response = response.json()
             media_id = response['media_id'].split('_')[0]
             return media_id
         except requests.HTTPError as e:
-            logger.error(f"error while getting post: {post_link} information HTTPError: {e}")
+            logger.error(f"error while getting post: {short_code} information HTTPError: {e}")
         except Exception as e:
-            logger.error(f"error while getting post: {post_link} information {e}")
+            logger.error(f"error while getting post: {short_code} information {e}")
 
         return False
+
+    @staticmethod
+    def get_post_media_url(short_code):
+        try:
+            response = requests.get(f"https://www.instagram.com/p/{short_code}/?__a=1")
+            response.raise_for_status()
+            response = response.json()
+            return response['graphql']['shortcode_media']['display_url']
+        except requests.HTTPError as e:
+            logger.error(f"error while getting post: {short_code} information HTTPError: {e}")
+        except Exception as e:
+            logger.error(f"error while getting post: {short_code} information {e}")
 
     @staticmethod
     def check_activity_from_db(post_link, username, check_type):

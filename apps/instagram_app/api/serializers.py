@@ -1,4 +1,3 @@
-from django.db.models import Sum
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
 from rest_framework import serializers
@@ -118,11 +117,8 @@ class UserInquirySerializer(serializers.ModelSerializer):
 
 
 class CoinTransactionSerializer(serializers.ModelSerializer):
-    user_balance = serializers.SerializerMethodField()
-
     class Meta:
         model = CoinTransaction
-        fields = ('id', 'user_balance', 'action')
+        fields = '__all__'
 
-    def get_user_balance(self, obj):
-        return obj.aggregate(Sum('amount'))
+

@@ -144,7 +144,7 @@ def collect_comment(order_id, order_link):
 
 # PERIODIC TASK
 @shared_task
-def collect_inventory_data():
+def collect_order_data():
     lock_key = 'collect-order-data'
     if cache.get(lock_key):
         logger.warning("collecting data for orders process still locked!!")
