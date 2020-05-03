@@ -80,9 +80,10 @@ class UserPackage(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     user = models.ForeignKey("accounts.User", on_delete=models.PROTECT, related_name='user_packages')
     package = models.ForeignKey(Package, on_delete=models.PROTECT)
-    remaining_follow = models.IntegerField(_("follow remaining"), null=True, blank=True)
-    remaining_comment = models.IntegerField(_("comment remaining"), null=True, blank=True)
-    remaining_like = models.IntegerField(_("like remaining"), null=True, blank=True)
+    is_consumed = models.BooleanField(_("totally consumed"), default=False)
+    # remaining_follow = models.IntegerField(_("follow remaining"), null=True, blank=True)
+    # remaining_comment = models.IntegerField(_("comment remaining"), null=True, blank=True)
+    # remaining_like = models.IntegerField(_("like remaining"), null=True, blank=True)
 
     class Meta:
         db_table = "insta_user_packages"
@@ -141,8 +142,10 @@ class UserInquiry(models.Model):
 class CoinTransaction(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     user = models.ForeignKey('accounts.User', related_name='coin_transactions', on_delete=models.CASCADE)
-    action = models.CharField(_("action"), max_length=120, blank=True)
     amount = models.IntegerField(_('coin amount'), null=False, blank=False, default=0)
+    description = models.TextField(_("action"), blank=True)
+    inquiry = models.ForeignKey(UserInquiry, null=True, blank=True, on_delete=models.PROTECT)
+    user_package = models.ForeignKey(UserPackage, null=True, blank=True, on_delete=models.PROTECT)
 
     class Meta:
         db_table = "insta_transactions"

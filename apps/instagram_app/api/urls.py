@@ -13,9 +13,10 @@ urlpatterns = [
 
 router = routers.DefaultRouter()
 router.register('pages', InstaPageViewSet)
-router.register('packages', PackageViewSet)
-router.register('orders', OrderViewSet)
 router.register('inquiries', UserInquiryViewSet)
+
+# router.register('packages', PackageViewSet)
+# router.register('orders', OrderViewSet)
 # router.register('user/packages', UserPackageViewSet)
 
 urlpatterns += router.urls
