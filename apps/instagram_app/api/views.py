@@ -14,6 +14,7 @@ from .serializers import (
     UserInquirySerializer,
     CoinTransactionSerializer
 )
+from ..pagination import CoinTransactionPagination
 from apps.instagram_app.models import (
     InstaPage, UserPage, Order,
     UserPackage, Package, UserInquiry,
@@ -153,6 +154,7 @@ class CoinTransactionAPIView(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = CoinTransaction.objects.all()
     serializer_class = CoinTransactionSerializer
+    pagination_class = CoinTransactionPagination
 
     def get_queryset(self):
         queryset = super().get_queryset()
