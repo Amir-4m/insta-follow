@@ -90,10 +90,20 @@ DATABASES = {
         'PASSWORD': config('DB_PASS'),
         'HOST': config('DB_HOST'),
         'PORT': config('DB_PORT'),
+    },
+    'mongo': {
+        'ENGINE': 'djongo',
+        'NAME': config('MONGO_DB_NAME'),
+        'CLIENT': {
+            'host': config('MONGO_DB_HOST'),
+            'username': config('MONGO_DB_USER'),
+            'password': config('MONGO_DB_PASS'),
+            'authSource': config('MONGO_DB_AS'),
+
+        }
     }
 }
-if DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':
-    DATABASES['default']['OPTIONS'] = {"charset": "utf8mb4"}
+DATABASE_ROUTERS = ['apps.instagram_app.dbrouters.MongoRouter', ]
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
