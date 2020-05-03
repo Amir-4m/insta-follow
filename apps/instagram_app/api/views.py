@@ -14,10 +14,10 @@ from .serializers import (
     UserInquirySerializer,
     CoinTransactionSerializer
 )
+from ..pagination import CoinTransactionPagination
 from apps.instagram_app.models import (
     InstaPage, UserPage, Order,
-    UserPackage, Package, UserInquiry,
-    Action, CoinTransaction
+    UserPackage, Package, UserInquiry, CoinTransaction
 )
 
 
@@ -130,15 +130,15 @@ class UserInquiryViewSet(viewsets.ViewSet):
 
     @action(methods=["get"], detail=False, url_path="like")
     def like(self, request, *args, **kwargs):
-        return self.get_inquiry(request, Action.LIKE)
+        return self.get_inquiry(request, 'L')
 
     @action(methods=['get'], detail=False, url_path="comment")
     def comment(self, request, *args, **kwargs):
-        return self.get_inquiry(request, Action.COMMENT)
+        return self.get_inquiry(request, 'C')
 
     @action(methods=['get'], detail=False, url_path="follow")
     def follow(self, request, *args, **kwargs):
-        return self.get_inquiry(request, Action.FOLLOW)
+        return self.get_inquiry(request, 'F')
 
     @action(methods=['post'], detail=False, url_path="done")
     def post(self, request, *args, **kwargs):
@@ -153,6 +153,7 @@ class CoinTransactionAPIView(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = CoinTransaction.objects.all()
     serializer_class = CoinTransactionSerializer
+    pagination_class = CoinTransactionPagination
 
     def get_queryset(self):
         queryset = super().get_queryset()

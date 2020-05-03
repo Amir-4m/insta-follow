@@ -12,7 +12,7 @@ from celery import shared_task
 
 from .endpoints import LIKES_BY_SHORTCODE, COMMENTS_BY_SHORTCODE
 from .services import InstagramAppService
-from .models import Order, Action, UserInquiry, UserPage, CoinTransaction, BaseInstaEntity
+from .models import Order, UserInquiry, UserPage, BaseInstaEntity
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def check_user_action(user_inquiry_ids, user_page_id):
 
 @shared_task
 def collect_like(order_id, order_link):
-    model = BaseInstaEntity.get_model(order_link)
+    model = BaseInstaEntity.get_model('L', order_link)
     if not model:
         logger.warning(f"can't get model for order: {order_id} to collect likes")
         return
@@ -65,16 +65,15 @@ def collect_like(order_id, order_link):
             for edge in edges:
                 node = edge['node']
                 io_likes.append(
-                    model(
+                    dict(
                         media_url=order_link,
                         media_id=media_id,
-                        action_type=Action.LIKE,
+                        action_type='L',
                         username=node['username'],
                         user_id=node['id']
-                    )
-                )
+                    ))
 
-            objs = model.objects.bulk_create(io_likes, ignore_conflicts=True)
+            objs = model.objects.mongo_insert_many(io_likes)
             if len(objs) != len(io_likes):
                 logger.warning(
                     f"bulk create like for order: {order_id}, io_count: {len(io_likes)}, created: {len(objs)}")
@@ -90,7 +89,7 @@ def collect_like(order_id, order_link):
 
 @shared_task
 def collect_comment(order_id, order_link):
-    model = BaseInstaEntity.get_model(order_link)
+    model = BaseInstaEntity.get_model('C', order_link)
     if not model:
         logger.warning(f"can't get model for order: {order_id} to collect likes")
         return
@@ -116,19 +115,18 @@ def collect_comment(order_id, order_link):
             for edge in edges:
                 node = edge['node']
                 io_comments.append(
-                    model(
-                        media_url=order_link,
-                        media_id=media_id,
-                        action_type=Action.COMMENT,
-                        username=node['owner']['username'],
-                        user_id=node['owner']['id'],
-                        comment=node['text'],
-                        comment_id=node['id'],
-                        comment_time=datetime.fromtimestamp(node['created_at'])
-                    )
+                    dict(media_url=order_link,
+                         media_id=media_id,
+                         action_type='C',
+                         username=node['owner']['username'],
+                         user_id=node['owner']['id'],
+                         comment=node['text'],
+                         comment_id=node['id'],
+                         comment_time=datetime.fromtimestamp(node['created_at']))
+
                 )
 
-            objs = model.objects.bulk_create(io_comments, ignore_conflicts=True)
+            objs = model.objects.mongo_insert_many(io_comments)
             if len(objs) != len(io_comments):
                 logger.warning(
                     f"bulk create comments for order: {order_id}, io_count: {len(io_comments)}, created: {len(objs)}")

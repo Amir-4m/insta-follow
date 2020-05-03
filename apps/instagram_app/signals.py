@@ -2,7 +2,7 @@ import requests
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from apps.accounts.models import User
-from .models import UserPackage, CoinTransaction, Order, Action
+from .models import UserPackage, CoinTransaction, Order
 from .services import InstagramAppService
 
 
@@ -34,17 +34,15 @@ def user_coin_transaction(sender, instance, **kwargs):
 @receiver(post_save, sender=Order)
 def order_media_url_setter(sender, instance, **kwargs):
     action = instance.action_type
-    if action == Action.LIKE or action == Action.COMMENT:
-        shortcode = InstagramAppService.get_shortcode(instance.link)
-        media_url = InstagramAppService.get_post_media_url(shortcode)
+    if not instance.media_url:
+        if action == 'L' or action == 'C':
+            shortcode = InstagramAppService.get_shortcode(instance.link)
+            media_url = InstagramAppService.get_post_media_url(shortcode)
 
-    elif action == Action.FOLLOW:
-        instagram_username = InstagramAppService.get_page_id(instance.link)
-        response = requests.get(f"https://www.instagram.com/{instagram_username}/?__a=1").json()
-        media_url = response['graphql']['user']['profile_pic_url_hd']
+        elif action == 'F':
+            instagram_username = InstagramAppService.get_page_id(instance.link)
+            response = requests.get(f"https://www.instagram.com/{instagram_username}/?__a=1").json()
+            media_url = response['graphql']['user']['profile_pic_url_hd']
 
-    Order.objects.filter(
-        id=instance.id).update(
-        media_url=media_url
-    )
-    instance.refresh_from_db()
+        if media_url:
+            Order.objects.filter(id=instance.id).update(media_url=media_url)

@@ -7,7 +7,7 @@ import requests
 from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
-from .models import Order, Action, BaseInstaEntity, InstaPage
+from .models import Order, BaseInstaEntity, InstaPage
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class InstagramAppService(object):
                 page_url = 'https://www.instagram.com/%s' % instagram_page.instagram_username
                 if user_package.remaining_follow >= follow:
                     follow_order = Order.objects.create(
-                        action_type=Action.FOLLOW,
+                        action_type='F',
                         link=page_url,
                         target_no=follow,
                         user_package=user_package,
@@ -59,7 +59,7 @@ class InstagramAppService(object):
                 if like:
                     if user_package.remaining_like >= like:
                         like_order = Order.objects.create(
-                            action_type=Action.LIKE,
+                            action_type='L',
                             link=link,
                             target_no=like,
                             user_package=user_package,
@@ -73,7 +73,7 @@ class InstagramAppService(object):
                 if comment:
                     if user_package.remaining_comment >= comment:
                         comment_order = Order.objects.create(
-                            action_type=Action.COMMENT,
+                            action_type='C',
                             link=link,
                             target_no=comment,
                             user_package=user_package,
@@ -160,16 +160,16 @@ class InstagramAppService(object):
 
     @staticmethod
     def check_activity_from_db(post_link, username, check_type):
-        model = BaseInstaEntity.get_model(post_link)
+        model = BaseInstaEntity.get_model(check_type, username)
         if not model:
             return False
 
-        if check_type == Action.LIKE:
-            like_query = model.objects.filter(username=username, action_type=Action.LIKE)
+        if check_type == 'L':
+            like_query = model.objects.filter(username=username, action_type='L', media_url=post_link)
             if like_query.exists():
                 return True
         else:
-            comment_query = model.objects.filter(username=username, action_type=Action.COMMENT)
+            comment_query = model.objects.filter(username=username, action_type='C', media_url=post_link)
             if comment_query.exists():
                 return True
         return False
