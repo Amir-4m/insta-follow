@@ -82,12 +82,13 @@ class OrderSerializer(serializers.Serializer):
 
 class UserInquirySerializer(serializers.ModelSerializer):
     link = serializers.ReadOnlyField(source="order.link")
+    media_url = serializers.ReadOnlyField(source="order.media_url")
     page_id = serializers.IntegerField(write_only=True)
     done_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True)
 
     class Meta:
         model = UserInquiry
-        fields = ('id', 'link', 'page_id', 'done_ids')
+        fields = ('id', 'link', 'media_url', 'page_id', 'done_ids')
 
     def validate(self, attrs):
         user = self.context['request'].user
@@ -119,6 +120,4 @@ class UserInquirySerializer(serializers.ModelSerializer):
 class CoinTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = CoinTransaction
-        fields = '__all__'
-
-
+        exclude = ('user', )
