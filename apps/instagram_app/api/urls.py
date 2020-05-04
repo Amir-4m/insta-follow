@@ -3,7 +3,7 @@ from rest_framework import routers
 
 from .views import (
     InstaPageViewSet, LikedPageAPIVIEW, UserInquiryViewSet,
-    UserPackageViewSet, PackageViewSet, OrderViewSet, CoinTransactionAPIView
+    OrderViewSet, CoinTransactionAPIView
 )
 
 urlpatterns = [

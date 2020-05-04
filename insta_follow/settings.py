@@ -96,14 +96,13 @@ DATABASES = {
         'NAME': config('MONGO_DB_NAME'),
         'CLIENT': {
             'host': config('MONGO_DB_HOST'),
-            'username': config('MONGO_DB_USER'),
-            'password': config('MONGO_DB_PASS'),
-            'authSource': config('MONGO_DB_AS'),
-
+            'username': config('MONGO_DB_USER', ''),
+            'password': config('MONGO_DB_PASS', ''),
+            'authSource': config('MONGO_DB_AS', ''),
         }
     }
 }
-DATABASE_ROUTERS = ['apps.instagram_app.dbrouters.MongoRouter', ]
+# DATABASE_ROUTERS = ['apps.instagram_app.dbrouters.MongoRouter', ]
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
