@@ -1,4 +1,3 @@
-from itertools import accumulate
 from rest_framework import status, mixins, viewsets, views, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
@@ -6,37 +5,37 @@ from rest_framework.decorators import action
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
 from .serializers import (
-    InstaPageSerializer,
-    LikedPageSerializer,
+    ProfileSerializer,
     OrderSerializer,
     UserInquirySerializer,
     CoinTransactionSerializer
 )
 from ..pagination import CoinTransactionPagination
+from apps.accounts.models import User
 from apps.instagram_app.models import (
-    InstaAction, InstaPage, UserPage, Order,
+    InstaAction, UserPage, Order,
     UserInquiry, CoinTransaction
 )
 
 
-class InstaPageViewSet(mixins.CreateModelMixin,
-                       mixins.RetrieveModelMixin,
-                       mixins.DestroyModelMixin,
-                       mixins.ListModelMixin,
-                       viewsets.GenericViewSet):
-    serializer_class = InstaPageSerializer
-    queryset = InstaPage.objects.all()
+class ProfileViewSet(mixins.CreateModelMixin,
+                     mixins.RetrieveModelMixin,
+                     mixins.DestroyModelMixin,
+                     mixins.ListModelMixin,
+                     viewsets.GenericViewSet):
+    serializer_class = ProfileSerializer
+    queryset = User.objects.all()
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
-        return queryset.filter(owner=user)
+        return queryset.filter(id=user.id)
 
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)
-        serializer = InstaPageSerializer(InstaPage.objects.filter(owner=self.request.user), many=True)
+        serializer = ProfileSerializer(self.queryset, many=True)
         response.data = serializer.data
         return response
 
@@ -45,17 +44,6 @@ class InstaPageViewSet(mixins.CreateModelMixin,
 
     def perform_destroy(self, instance):
         UserPage.objects.filter(page=instance, user=self.request.user).delete()
-
-
-class LikedPageAPIVIEW(views.APIView):
-    authentication_classes = (JWTAuthentication,)
-    permission_classes = (IsAuthenticated,)
-
-    def post(self, request, *args, **kwargs):
-        serializer = LikedPageSerializer(data=request.data)
-        if serializer.is_valid():
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # class PackageViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):

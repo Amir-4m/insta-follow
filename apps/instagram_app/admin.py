@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, InstaPage, UserPage, Order, UserInquiry, InstaAction
+from .models import Category, InstaPage, UserPage, Order, UserInquiry, InstaAction, CoinTransaction
 
 
 @admin.register(Category)
