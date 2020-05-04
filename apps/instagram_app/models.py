@@ -31,7 +31,7 @@ class InstaAction(models.Model):
         (ACTION_FOLLOW, _('Follow')),
         (ACTION_COMMENT, _('Comment')),
     ]
-    action_type = models.CharField(_('action type'), max_length=10, choices=ACTION_CHOICES, pk=True)
+    action_type = models.CharField(_('action type'), max_length=10, choices=ACTION_CHOICES, primary_key=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     sell_value = models.PositiveSmallIntegerField(_('selling value'))
     buy_value = models.PositiveSmallIntegerField(_('buying value'))
@@ -119,7 +119,7 @@ class Order(models.Model):
     achieved_no = models.IntegerField(_("achieved target"), default=0)
     link = models.URLField(_("link"))
     media_url = models.TextField(_("media url"), blank=True)
-    # user_package = models.ForeignKey(UserPackage, on_delete=models.CASCADE)
+    instagram_username = models.CharField(_("instagram username"), max_length=120, blank=True)
     description = models.TextField(_("description"), blank=True, default='')
     is_enable = models.BooleanField(_("is enable"), default=True)
 
@@ -200,7 +200,7 @@ class BaseInstaEntity(djongo_models.Model):
 
     class Meta:
         managed = False
-        unique_together = ('media_id', 'user_id', 'action_type')
+        unique_together = ('media_id', 'user_id', 'action')
 
     @classmethod
     def _get_table_model(cls, action, link, create=True):

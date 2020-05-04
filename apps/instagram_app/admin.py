@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, InstaPage, UserPage, Order, UserInquiry, BaseInstaEntity
+from .models import Category, InstaPage, UserPage, Order, UserInquiry, InstaAction
 
 
 @admin.register(Category)
@@ -44,9 +44,9 @@ class UserPageModelAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'action_type', 'link', 'is_enable', 'created_time')
-    list_filter = ('action_type',)
-    readonly_fields = ('media_url',)
+    list_display = ('id', 'action', 'link', 'instagram_username', 'is_enable', 'created_time')
+    list_filter = ('action',)
+    readonly_fields = ('media_url', 'instagram_username')
     sortable_by = ('-created_time',)
 
 
@@ -55,3 +55,8 @@ class UserAssignmentModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'order', 'user_page', 'last_check_time', 'updated_time', 'created_time')
     list_select_related = ['order', 'user_page']
     sortable_by = ('-created_time',)
+
+
+@admin.register(InstaAction)
+class InstaActionModelAdmin(admin.ModelAdmin):
+    list_display = ('action_type', 'sell_value', 'buy_value', 'updated_time')

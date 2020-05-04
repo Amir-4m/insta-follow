@@ -132,17 +132,19 @@ class InstagramAppService(object):
             return
 
     @staticmethod
-    def get_post_info(short_code):
+    def get_post_info(link):
         try:
-            response = requests.get(f"https://api.instagram.com/oembed/?callback=&url={short_code}")
+            response = requests.get(f"https://api.instagram.com/oembed/?callback=&url={link}")
             response.raise_for_status()
             response = response.json()
             media_id = response['media_id'].split('_')[0]
-            return media_id
+            author = '@' + response['author_name']
+            thumbnail_url = response['thumbnail_url']
+            return media_id, author, thumbnail_url
         except requests.HTTPError as e:
-            logger.error(f"error while getting post: {short_code} information HTTPError: {e}")
+            logger.error(f"error while getting post: {link} information HTTPError: {e}")
         except Exception as e:
-            logger.error(f"error while getting post: {short_code} information {e}")
+            logger.error(f"error while getting post: {link} information {e}")
 
         return False
 
