@@ -9,11 +9,17 @@ from djongo import models as djongo_models
 
 logger = logging.getLogger(__name__)
 
-ACTION_CHOICES = [
-    ('L', _('Like')),
-    ('F', _('Follow')),
-    ('C', _('Comment')),
-]
+
+class ActionChoice(object):
+    ACTION_LIKE = 'L'
+    ACTION_FOLLOW = 'F'
+    ACTION_COMMENT = 'C'
+
+    ACTION_CHOICES = [
+        (ACTION_LIKE, _('Like')),
+        (ACTION_FOLLOW, _('Follow')),
+        (ACTION_COMMENT, _('Comment')),
+    ]
 
 
 class Category(models.Model):
@@ -61,49 +67,49 @@ class UserPage(models.Model):
         return f"{self.user.username} with instagram page {self.page.instagram_username}"
 
 
-class Package(models.Model):
-    created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    slug = models.SlugField(_("slug"), unique=True)
-    name = models.CharField(_("package name"), max_length=100)
-    follow_target_no = models.IntegerField(_("follow target"))
-    like_target_no = models.IntegerField(_("like target"))
-    comment_target_no = models.IntegerField(_("comment target"))
-    coins = models.PositiveIntegerField(_('coins'))
-    is_enable = models.BooleanField(_('is enable'), default=True)
-
-    class Meta:
-        db_table = "insta_packages"
-
-    def __str__(self):
-        return f"{self.slug} {self.name}"
-
-
-class UserPackage(models.Model):
-    created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    user = models.ForeignKey("accounts.User", on_delete=models.PROTECT, related_name='user_packages')
-    package = models.ForeignKey(Package, on_delete=models.PROTECT)
-    is_consumed = models.BooleanField(_("totally consumed"), default=False)
-
-    remaining_follow = models.IntegerField(_("follow remaining"), null=True, blank=True)
-    remaining_comment = models.IntegerField(_("comment remaining"), null=True, blank=True)
-    remaining_like = models.IntegerField(_("like remaining"), null=True, blank=True)
-
-    class Meta:
-        db_table = "insta_user_packages"
-
-    def __str__(self):
-        return f"{self.user_id} - {self.package.name}"
+# class Package(models.Model):
+#     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
+#     slug = models.SlugField(_("slug"), unique=True)
+#     name = models.CharField(_("package name"), max_length=100)
+#     follow_target_no = models.IntegerField(_("follow target"))
+#     like_target_no = models.IntegerField(_("like target"))
+#     comment_target_no = models.IntegerField(_("comment target"))
+#     coins = models.PositiveIntegerField(_('coins'))
+#     is_enable = models.BooleanField(_('is enable'), default=True)
+#
+#     class Meta:
+#         db_table = "insta_packages"
+#
+#     def __str__(self):
+#         return f"{self.slug} {self.name}"
+#
+#
+# class UserPackage(models.Model):
+#     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
+#     user = models.ForeignKey("accounts.User", on_delete=models.PROTECT, related_name='user_packages')
+#     package = models.ForeignKey(Package, on_delete=models.PROTECT)
+#     is_consumed = models.BooleanField(_("totally consumed"), default=False)
+#
+#     remaining_follow = models.IntegerField(_("follow remaining"), null=True, blank=True)
+#     remaining_comment = models.IntegerField(_("comment remaining"), null=True, blank=True)
+#     remaining_like = models.IntegerField(_("like remaining"), null=True, blank=True)
+#
+#     class Meta:
+#         db_table = "insta_user_packages"
+#
+#     def __str__(self):
+#         return f"{self.user_id} - {self.package.name}"
 
 
 # Inventory
 class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    action_type = models.CharField(_('action type'), max_length=10, choices=ACTION_CHOICES)
+    action_type = models.CharField(_('action type'), max_length=10, choices=ActionChoice.ACTION_CHOICES)
+    target_no = models.IntegerField(_("target number"))
+    achieved_no = models.IntegerField(_("achieved target"), default=0)
     link = models.URLField(_("link"))
     media_url = models.TextField(_("media url"), blank=True)
-    user_package = models.ForeignKey(UserPackage, on_delete=models.CASCADE)
-    target_no = models.IntegerField(_("target like, comment or follower"), blank=True)
-    achieved_no = models.IntegerField(_("achieved like, comment or follower"), default=0)
+    # user_package = models.ForeignKey(UserPackage, on_delete=models.CASCADE)
     description = models.TextField(_("description"), blank=True, default='')
     is_enable = models.BooleanField(_("is enable"), default=True)
 
@@ -111,22 +117,22 @@ class Order(models.Model):
         db_table = "insta_user_orders"
 
     def __str__(self):
-        return f"{self.id} - {self.action_type} for {self.user_package_id}"
+        return f"{self.id} - {self.action_type}"
 
-    def clean(self):
-        if self.target_no and self.target_no > self.package_target:
-            raise ValidationError(_("order target number should not be higher than your package target number !"))
-        elif self.target_no is None:
-            self.target_no = self.package_target
+    # def clean(self):
+    #     if self.target_no and self.target_no > self.package_target:
+    #         raise ValidationError(_("order target number should not be higher than your package target number !"))
+    #     elif self.target_no is None:
+    #         self.target_no = self.package_target
 
-    @property
-    def package_target(self):
-        if self.action_type == 'F':
-            return self.user_package.package.follow_target_no
-        elif self.action_type == 'C':
-            return self.user_package.package.comment_target_no
-        elif self.action_type == 'L':
-            return self.user_package.package.like_target_no
+    # @property
+    # def package_target(self):
+    #     if self.action_type == 'F':
+    #         return self.user_package.package.follow_target_no
+    #     elif self.action_type == 'C':
+    #         return self.user_package.package.comment_target_no
+    #     elif self.action_type == 'L':
+    #         return self.user_package.package.like_target_no
 
 
 class UserInquiry(models.Model):
@@ -139,6 +145,7 @@ class UserInquiry(models.Model):
 
     class Meta:
         db_table = "insta_inquiries"
+        verbose_name_plural = _('user inquiries')
         unique_together = ('order', 'user_page')
 
 
@@ -148,7 +155,7 @@ class CoinTransaction(models.Model):
     amount = models.IntegerField(_('coin amount'), null=False, blank=False, default=0)
     description = models.TextField(_("action"), blank=True)
     inquiry = models.ForeignKey(UserInquiry, null=True, blank=True, on_delete=models.PROTECT)
-    user_package = models.ForeignKey(UserPackage, null=True, blank=True, on_delete=models.PROTECT)
+    order = models.ForeignKey(Order, null=True, blank=True, on_delete=models.PROTECT)
 
     class Meta:
         db_table = "insta_transactions"
@@ -161,11 +168,17 @@ class CoinTransaction(models.Model):
         return self.user.coin_transactions.all().aggregate(Sum('amount'))
 
 
+class RoutedDjongoManager(djongo_models.DjongoManager):
+    def __init__(self):
+        super().__init__()
+        self._db = 'mongo'
+
+
 class BaseInstaEntity(djongo_models.Model):
     created_time = djongo_models.DateTimeField(auto_now_add=True)
     media_url = djongo_models.CharField(max_length=150)
     media_id = djongo_models.BigIntegerField()
-    action_type = djongo_models.CharField(max_length=10, choices=ACTION_CHOICES)
+    action_type = djongo_models.CharField(max_length=10, choices=ActionChoice.ACTION_CHOICES)
     username = djongo_models.CharField(max_length=100)
     user_id = djongo_models.BigIntegerField()
     comment = djongo_models.TextField(null=True)
@@ -173,7 +186,7 @@ class BaseInstaEntity(djongo_models.Model):
     comment_time = djongo_models.DateTimeField(null=True)
     follow_time = djongo_models.DateTimeField(null=True)
 
-    objects = djongo_models.DjongoManager()
+    objects = RoutedDjongoManager()
 
     class Meta:
         managed = False

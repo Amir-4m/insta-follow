@@ -8,8 +8,6 @@ from rest_framework.response import Response
 from .serializers import (
     InstaPageSerializer,
     LikedPageSerializer,
-    UserPackageSerializer,
-    PackageSerializer,
     OrderSerializer,
     UserInquirySerializer,
     CoinTransactionSerializer
@@ -17,7 +15,8 @@ from .serializers import (
 from ..pagination import CoinTransactionPagination
 from apps.instagram_app.models import (
     InstaPage, UserPage, Order,
-    UserPackage, Package, UserInquiry, CoinTransaction
+    UserInquiry, CoinTransaction,
+    ActionChoice
 )
 
 
@@ -60,28 +59,28 @@ class LikedPageAPIVIEW(views.APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class PackageViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
-    authentication_classes = (JWTAuthentication,)
-    permission_classes = (IsAuthenticated,)
-    serializer_class = PackageSerializer
-    queryset = Package.objects.all()
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        return queryset.filter(is_enable=True)
-
-
-class UserPackageViewSet(mixins.CreateModelMixin,
-                         mixins.RetrieveModelMixin,
-                         mixins.ListModelMixin,
-                         viewsets.GenericViewSet):
-    authentication_classes = (JWTAuthentication,)
-    permission_classes = (IsAuthenticated,)
-    serializer_class = UserPackageSerializer
-    queryset = UserPackage.objects.all()
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+# class PackageViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+#     authentication_classes = (JWTAuthentication,)
+#     permission_classes = (IsAuthenticated,)
+#     serializer_class = PackageSerializer
+#     queryset = Package.objects.all()
+#
+#     def get_queryset(self):
+#         queryset = super().get_queryset()
+#         return queryset.filter(is_enable=True)
+#
+#
+# class UserPackageViewSet(mixins.CreateModelMixin,
+#                          mixins.RetrieveModelMixin,
+#                          mixins.ListModelMixin,
+#                          viewsets.GenericViewSet):
+#     authentication_classes = (JWTAuthentication,)
+#     permission_classes = (IsAuthenticated,)
+#     serializer_class = UserPackageSerializer
+#     queryset = UserPackage.objects.all()
+#
+#     def perform_create(self, serializer):
+#         serializer.save(user=self.request.user)
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -130,15 +129,15 @@ class UserInquiryViewSet(viewsets.ViewSet):
 
     @action(methods=["get"], detail=False, url_path="like")
     def like(self, request, *args, **kwargs):
-        return self.get_inquiry(request, 'L')
+        return self.get_inquiry(request, ActionChoice.ACTION_LIKE)
 
     @action(methods=['get'], detail=False, url_path="comment")
     def comment(self, request, *args, **kwargs):
-        return self.get_inquiry(request, 'C')
+        return self.get_inquiry(request, ActionChoice.ACTION_COMMENT)
 
     @action(methods=['get'], detail=False, url_path="follow")
     def follow(self, request, *args, **kwargs):
-        return self.get_inquiry(request, 'F')
+        return self.get_inquiry(request, ActionChoice.ACTION_FOLLOW)
 
     @action(methods=['post'], detail=False, url_path="done")
     def post(self, request, *args, **kwargs):

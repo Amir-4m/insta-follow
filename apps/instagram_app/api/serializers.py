@@ -2,7 +2,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from apps.instagram_app.models import InstaPage, UserPage, UserPackage, Package, UserInquiry, CoinTransaction
+from apps.instagram_app.models import InstaPage, UserPage, UserInquiry, CoinTransaction
 from apps.instagram_app.tasks import check_user_action
 from apps.instagram_app.services import InstagramAppService
 
@@ -39,22 +39,22 @@ class LikedPageSerializer(serializers.Serializer):
     )
 
 
-class PackageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Package
-        fields = '__all__'
-
-
-class UserPackageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserPackage
-        fields = ('id', 'package')
-        read_only_fields = ('id',)
-
-    def create(self, validated_data):
-        package_id = validated_data.get('package')
-        user = validated_data.get('user')
-        return UserPackage.objects.create(user=user, package=package_id)
+# class PackageSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Package
+#         fields = '__all__'
+#
+#
+# class UserPackageSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = UserPackage
+#         fields = ('id', 'package')
+#         read_only_fields = ('id',)
+#
+#     def create(self, validated_data):
+#         package_id = validated_data.get('package')
+#         user = validated_data.get('user')
+#         return UserPackage.objects.create(user=user, package=package_id)
 
 
 class OrderSerializer(serializers.Serializer):

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, InstaPage, UserPage, Package, UserPackage, Order, UserInquiry, BaseInstaEntity
+from .models import Category, InstaPage, UserPage, Order, UserInquiry, BaseInstaEntity
 
 
 @admin.register(Category)
@@ -25,26 +25,26 @@ class UserPageModelAdmin(admin.ModelAdmin):
     sortable_by = ('-created_time',)
 
 
-@admin.register(Package)
-class PackageModelAdmin(admin.ModelAdmin):
-    list_display = (
-        'id', 'name', 'follow_target_no', 'like_target_no',
-        'comment_target_no', 'coins', 'is_enable'
-    )
-    search_fields = ('name',)
-    sortable_by = ('-created_time',)
-
-
-@admin.register(UserPackage)
-class UserPackageModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'package', 'created_time')
-    list_select_related = ['user']
-    sortable_by = ('-created_time',)
+# @admin.register(Package)
+# class PackageModelAdmin(admin.ModelAdmin):
+#     list_display = (
+#         'id', 'name', 'follow_target_no', 'like_target_no',
+#         'comment_target_no', 'coins', 'is_enable'
+#     )
+#     search_fields = ('name',)
+#     sortable_by = ('-created_time',)
+#
+#
+# @admin.register(UserPackage)
+# class UserPackageModelAdmin(admin.ModelAdmin):
+#     list_display = ('id', 'user', 'package', 'created_time')
+#     list_select_related = ['user']
+#     sortable_by = ('-created_time',)
 
 
 @admin.register(Order)
 class OrderModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user_package', 'action_type', 'link', 'is_enable', 'created_time')
+    list_display = ('id', 'action_type', 'link', 'is_enable', 'created_time')
     list_filter = ('action_type',)
     list_select_related = ['user_package']
     readonly_fields = ('media_url',)
