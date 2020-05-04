@@ -14,9 +14,8 @@ from .serializers import (
 )
 from ..pagination import CoinTransactionPagination
 from apps.instagram_app.models import (
-    InstaPage, UserPage, Order,
-    UserInquiry, CoinTransaction,
-    ActionChoice
+    InstaAction, InstaPage, UserPage, Order,
+    UserInquiry, CoinTransaction
 )
 
 
@@ -113,7 +112,7 @@ class UserInquiryViewSet(viewsets.ViewSet):
             user_page = UserPage.objects.get(page_id=page_id, user=self.request.user)
         except UserPage.DoesNotExist:
             raise ValidationError({'Error': 'user and page does not match!'})
-        valid_orders = Order.objects.filter(is_enable=True, action_type=action_type).order_by('-id')
+        valid_orders = Order.objects.filter(is_enable=True, action=action_type).order_by('-id')
 
         valid_inquiries = []
         for order in valid_orders:
@@ -129,15 +128,15 @@ class UserInquiryViewSet(viewsets.ViewSet):
 
     @action(methods=["get"], detail=False, url_path="like")
     def like(self, request, *args, **kwargs):
-        return self.get_inquiry(request, ActionChoice.ACTION_LIKE)
+        return self.get_inquiry(request, InstaAction.ACTION_LIKE)
 
     @action(methods=['get'], detail=False, url_path="comment")
     def comment(self, request, *args, **kwargs):
-        return self.get_inquiry(request, ActionChoice.ACTION_COMMENT)
+        return self.get_inquiry(request, InstaAction.ACTION_COMMENT)
 
     @action(methods=['get'], detail=False, url_path="follow")
     def follow(self, request, *args, **kwargs):
-        return self.get_inquiry(request, ActionChoice.ACTION_FOLLOW)
+        return self.get_inquiry(request, InstaAction.ACTION_FOLLOW)
 
     @action(methods=['post'], detail=False, url_path="done")
     def post(self, request, *args, **kwargs):

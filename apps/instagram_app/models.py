@@ -10,18 +10,6 @@ from djongo import models as djongo_models
 logger = logging.getLogger(__name__)
 
 
-class ActionChoice(object):
-    ACTION_LIKE = 'L'
-    ACTION_FOLLOW = 'F'
-    ACTION_COMMENT = 'C'
-
-    ACTION_CHOICES = [
-        (ACTION_LIKE, _('Like')),
-        (ACTION_FOLLOW, _('Follow')),
-        (ACTION_COMMENT, _('Comment')),
-    ]
-
-
 class Category(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     name = models.CharField(_("category name"), max_length=100, unique=True)
@@ -31,6 +19,28 @@ class Category(models.Model):
 
     def __str__(self):
         return f"{self.name}"
+
+
+class InstaAction(models.Model):
+    ACTION_LIKE = 'L'
+    ACTION_FOLLOW = 'F'
+    ACTION_COMMENT = 'C'
+
+    ACTION_CHOICES = [
+        (ACTION_LIKE, _('Like')),
+        (ACTION_FOLLOW, _('Follow')),
+        (ACTION_COMMENT, _('Comment')),
+    ]
+    action_type = models.CharField(_('action type'), max_length=10, choices=ACTION_CHOICES, pk=True)
+    updated_time = models.DateTimeField(_("updated time"), auto_now=True)
+    sell_value = models.PositiveSmallIntegerField(_('selling value'))
+    buy_value = models.PositiveSmallIntegerField(_('buying value'))
+
+    class Meta:
+        db_table = "insta_actions"
+
+    def __str__(self):
+        return self.action_type
 
 
 class InstaPage(models.Model):
@@ -104,7 +114,7 @@ class UserPage(models.Model):
 # Inventory
 class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    action_type = models.CharField(_('action type'), max_length=10, choices=ActionChoice.ACTION_CHOICES)
+    action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
     target_no = models.IntegerField(_("target number"))
     achieved_no = models.IntegerField(_("achieved target"), default=0)
     link = models.URLField(_("link"))
@@ -117,7 +127,7 @@ class Order(models.Model):
         db_table = "insta_user_orders"
 
     def __str__(self):
-        return f"{self.id} - {self.action_type}"
+        return f"{self.id} - {self.action}"
 
     # def clean(self):
     #     if self.target_no and self.target_no > self.package_target:
@@ -154,8 +164,8 @@ class CoinTransaction(models.Model):
     user = models.ForeignKey('accounts.User', related_name='coin_transactions', on_delete=models.CASCADE)
     amount = models.IntegerField(_('coin amount'), null=False, blank=False, default=0)
     description = models.TextField(_("action"), blank=True)
-    inquiry = models.ForeignKey(UserInquiry, null=True, blank=True, on_delete=models.PROTECT)
-    order = models.ForeignKey(Order, null=True, blank=True, on_delete=models.PROTECT)
+    inquiry = models.ForeignKey(UserInquiry, on_delete=models.PROTECT, null=True, blank=True)
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, null=True, blank=True)
 
     class Meta:
         db_table = "insta_transactions"
@@ -178,7 +188,7 @@ class BaseInstaEntity(djongo_models.Model):
     created_time = djongo_models.DateTimeField(auto_now_add=True)
     media_url = djongo_models.CharField(max_length=150)
     media_id = djongo_models.BigIntegerField()
-    action_type = djongo_models.CharField(max_length=10, choices=ActionChoice.ACTION_CHOICES)
+    action = djongo_models.CharField(max_length=10, choices=InstaAction.ACTION_CHOICES)
     username = djongo_models.CharField(max_length=100)
     user_id = djongo_models.BigIntegerField()
     comment = djongo_models.TextField(null=True)
