@@ -174,10 +174,6 @@ class CoinTransaction(models.Model):
     def __str__(self):
         return f"{self.user} - {self.amount}"
 
-    @property
-    def user_balance(self):
-        return self.user.coin_transactions.all().aggregate(Sum('amount'))
-
 
 class RoutedDjongoManager(djongo_models.DjongoManager):
     def __init__(self):

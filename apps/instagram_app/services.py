@@ -3,11 +3,12 @@ import logging
 import re
 import time
 import requests
+from django.db.models import Sum
 
 from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
-from .models import Order, BaseInstaEntity, InstaPage
+from .models import Order, BaseInstaEntity, InstaPage, InstaAction, CoinTransaction
 
 logger = logging.getLogger(__name__)
 
@@ -29,68 +30,54 @@ class InstagramAppService(object):
             logger.error('instagram account response can not be json decoded')
 
     @staticmethod
-    def check_user_package_expired(user_package):
-        if user_package:
-            if (user_package.remaining_follow and user_package.remaining_comment and user_package.remaining_like) == 0:
-                user_package.delete()
-
-    @staticmethod
     def create_order(user, follow=None, like=None, comment=None, link=None, page_id=None):
-        user_package = user.user_packages.all().last()
         instagram_page = InstaPage.objects.get(id=page_id)
-        if user_package and instagram_page:
-            order_create_list = []
+        created_orders = []
+        if instagram_page:
             if follow:
                 page_url = 'https://www.instagram.com/%s' % instagram_page.instagram_username
-                if user_package.remaining_follow >= follow:
+                action_value = InstaAction.objects.get(action_type=InstaAction.ACTION_FOLLOW).buy_value
+                if user.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet') >= action_value:
                     follow_order = Order.objects.create(
-                        action_type='F',
+                        action=InstaAction.ACTION_FOLLOW,
                         link=page_url,
                         target_no=follow,
-                        user_package=user_package,
                     )
-                    follow_order.user_package.remaining_follow -= follow
-                    follow_order.user_package.save()
-                    order_create_list.append(follow_order)
+                    CoinTransaction.objects.create(user=user, amount=-action_value, order=follow_order)
+                    created_orders.append(follow_order)
                 else:
-                    raise ValidationError(_("Your follow target number should not be more than your package's"))
+                    raise ValidationError(_("You do not have enough coin to create follow order"))
 
-            if link:
-                if like:
-                    if user_package.remaining_like >= like:
-                        like_order = Order.objects.create(
-                            action_type='L',
-                            link=link,
-                            target_no=like,
-                            user_package=user_package,
-                        )
-                        like_order.user_package.remaining_like -= like
-                        like_order.user_package.save()
-                        order_create_list.append(like_order)
-                    else:
-                        raise ValidationError(_("Your like target number should not be more than your package's"))
+        if link:
+            if like:
+                action_value = InstaAction.objects.get(action_type=InstaAction.ACTION_LIKE).buy_value
+                if user.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet') >= action_value:
+                    like_order = Order.objects.create(
+                        action=InstaAction.ACTION_LIKE,
+                        link=link,
+                        target_no=like,
+                    )
+                    CoinTransaction.objects.create(user=user, amount=-action_value, order=like_order)
+                    created_orders.append(like_order)
+                else:
+                    raise ValidationError(_("You do not have enough coin to create like order"))
 
-                if comment:
-                    if user_package.remaining_comment >= comment:
-                        comment_order = Order.objects.create(
-                            action_type='C',
-                            link=link,
-                            target_no=comment,
-                            user_package=user_package,
-                        )
-                        comment_order.user_package.remaining_comment -= comment
-                        comment_order.user_package.save()
-                        order_create_list.append(comment_order)
-                    else:
-                        raise ValidationError(_("Your comment target number should not be more than your package's"))
+            if comment:
+                action_value = InstaAction.objects.get(action_type=InstaAction.ACTION_COMMENT).buy_value
+                if user.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet') >= action_value:
+                    comment_order = Order.objects.create(
+                        action=InstaAction.ACTION_COMMENT,
+                        link=link,
+                        target_no=comment,
+                    )
+                    CoinTransaction.objects.create(user=user, amount=-action_value, order=comment_order)
+                    created_orders.append(comment_order)
+                else:
+                    raise ValidationError(_("You do not have enough coin to create comment order"))
 
-            else:
-                raise ValidationError(_("No link were entered for the post !"))
-            InstagramAppService.check_user_package_expired(user_package)
-            return order_create_list
         else:
-            # TODO: change validation errors to non field error
-            raise ValidationError(_("You have no active package !"))
+            raise ValidationError(_("No link were entered for the post !"))
+        return created_orders
 
     @staticmethod
     def get_shortcode(url):
@@ -166,12 +153,14 @@ class InstagramAppService(object):
         if not model:
             return False
 
-        if check_type == 'L':
-            like_query = model.objects.filter(username=username, action_type='L', media_url=post_link)
+        if check_type == InstaAction.ACTION_LIKE:
+            like_query = model.objects.filter(username=username, action=InstaAction.ACTION_LIKE,
+                                              media_url=post_link)
             if like_query.exists():
                 return True
         else:
-            comment_query = model.objects.filter(username=username, action_type='C', media_url=post_link)
+            comment_query = model.objects.filter(username=username, action=InstaAction.ACTION_COMMENT,
+                                                 media_url=post_link)
             if comment_query.exists():
                 return True
         return False

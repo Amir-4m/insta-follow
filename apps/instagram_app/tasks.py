@@ -29,7 +29,7 @@ def check_user_action(user_inquiry_ids, user_page_id):
             if InstagramAppService.check_activity_from_db(
                     user_inquiry.order.link,
                     user_page.user.username,
-                    user_inquiry.order.action_type):
+                    user_inquiry.order.action):
                 user_inquiry.validated_time = timezone.now()
                 Order.objects.select_for_update().filter(
                     id=user_inquiry.order.id,
@@ -69,7 +69,7 @@ def collect_like(order_id, order_link):
                     dict(
                         media_url=order_link,
                         media_id=media_id,
-                        action_type='L',
+                        action=InstaAction.ACTION_LIKE,
                         username=node['username'],
                         user_id=node['id']
                     ))
@@ -118,7 +118,7 @@ def collect_comment(order_id, order_link):
                 io_comments.append(
                     dict(media_url=order_link,
                          media_id=media_id,
-                         action_type='C',
+                         action=InstaAction.ACTION_COMMENT,
                          username=node['owner']['username'],
                          user_id=node['owner']['id'],
                          comment=node['text'],
