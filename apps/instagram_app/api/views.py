@@ -35,7 +35,7 @@ class ProfileViewSet(mixins.CreateModelMixin,
 
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)
-        serializer = ProfileSerializer(self.queryset, many=True)
+        serializer = ProfileSerializer(self.get_queryset(), many=True)
         response.data = serializer.data
         return response
 
