@@ -11,40 +11,29 @@ from .serializers import (
     CoinTransactionSerializer
 )
 from ..pagination import CoinTransactionPagination
-from apps.accounts.models import User
 from apps.instagram_app.models import (
     InstaAction, UserPage, Order,
     UserInquiry, CoinTransaction
 )
 
 
-class ProfileViewSet(mixins.CreateModelMixin,
-                     mixins.RetrieveModelMixin,
-                     mixins.DestroyModelMixin,
-                     mixins.ListModelMixin,
-                     viewsets.GenericViewSet):
+class ProfileViewSet(viewsets.ViewSet):
     serializer_class = ProfileSerializer
-    queryset = User.objects.all()
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        user = self.request.user
-        return queryset.filter(id=user.id)
-
     def create(self, request, *args, **kwargs):
-        response = super().create(request, *args, **kwargs)
-        serializer = ProfileSerializer(self.get_queryset(), many=True)
-        response.data = serializer.data
-        return response
+        serializer = ProfileSerializer(data=self.request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+    def list(self, request):
+        serializer = self.serializer_class(self.request.user)
+        return Response(serializer.data)
 
-    def destroy(self, request, *args, **kwargs):
-        page_id = kwargs.get('pk')
-        UserPage.objects.filter(page=page_id, user=self.request.user).delete()
+    def destroy(self, request, pk=None):
+        UserPage.objects.filter(page=pk, user=self.request.user).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

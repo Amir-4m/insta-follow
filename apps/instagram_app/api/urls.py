@@ -11,7 +11,7 @@ urlpatterns = [
 ]
 
 router = routers.DefaultRouter()
-router.register('profile', ProfileViewSet)
+router.register('profile', ProfileViewSet, basename='profile')
 router.register('inquiries', UserInquiryViewSet)
 
 # router.register('packages', PackageViewSet)

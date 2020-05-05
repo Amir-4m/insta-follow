@@ -1,14 +1,12 @@
 import json
 import logging
 import urllib.parse
-from datetime import datetime
-
 import requests
-from django.db import transaction
-from django.db.models import F
+
+from datetime import datetime, timedelta
 from django.utils import timezone
 from django.core.cache import cache
-
+from django.db.models import F
 from celery import shared_task
 
 from .endpoints import LIKES_BY_SHORTCODE, COMMENTS_BY_SHORTCODE
@@ -16,26 +14,6 @@ from .services import InstagramAppService
 from .models import Order, UserInquiry, UserPage, BaseInstaEntity, InstaAction
 
 logger = logging.getLogger(__name__)
-
-
-@shared_task
-def check_user_action(user_inquiry_ids, user_page_id):
-    user_page = UserPage.objects.get(id=user_page_id)
-    with transaction.atomic():
-        for user_inquiry in UserInquiry.objects.select_for_update().filter(id__in=user_inquiry_ids):
-            user_inquiry.last_check_time = timezone.now()
-            if user_inquiry.validated_time is not None:
-                continue
-            if InstagramAppService.check_activity_from_db(
-                    user_inquiry.order.link,
-                    user_page.user.username,
-                    user_inquiry.order.action):
-                user_inquiry.validated_time = timezone.now()
-                Order.objects.select_for_update().filter(
-                    id=user_inquiry.order.id,
-                ).update(
-                    achieved_no=F('achieved_no') + 1)
-            user_inquiry.save()
 
 
 @shared_task
@@ -141,6 +119,23 @@ def collect_comment(order_id, order_link, order_page_id):
             break
 
 
+@shared_task
+def collect_post_info(order_id, action, link, media_url, author):
+    if action in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
+        media_id, author, media_url = InstagramAppService.get_post_info(link)
+
+    elif action == InstaAction.ACTION_FOLLOW:
+        instagram_username = InstagramAppService.get_page_id(link)
+        try:
+            response = requests.get(f"https://www.instagram.com/{instagram_username}/?__a=1").json()
+            media_url = response['graphql']['user']['profile_pic_url_hd']
+            author = '@' + instagram_username
+        except Exception as e:
+            logger.error(f"extract account json got exception error: {e}")
+    if media_url and author:
+        Order.objects.filter(id=order_id).update(media_url=media_url, instagram_username=author)
+
+
 # PERIODIC TASK
 @shared_task
 def collect_order_data():
@@ -164,18 +159,12 @@ def collect_order_data():
     cache.delete(lock_key)
 
 
+# PERIODIC TASK
 @shared_task
-def collect_post_info(order_id, action, link, media_url, author):
-    if action in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
-        media_id, author, media_url = InstagramAppService.get_post_info(link)
+def validate_user_inquiries():
+    qs = UserInquiry.objects.filter(done_time__isnull=False, validated_time__isnull=True)
+    inquiries = [(obj.id, obj.user_page) for obj in qs]
+    for inquiry in inquiries:
+        InstagramAppService.check_user_action([inquiry[0]], inquiry[1])
 
-    elif action == InstaAction.ACTION_FOLLOW:
-        instagram_username = InstagramAppService.get_page_id(link)
-        try:
-            response = requests.get(f"https://www.instagram.com/{instagram_username}/?__a=1").json()
-            media_url = response['graphql']['user']['profile_pic_url_hd']
-            author = '@' + instagram_username
-        except Exception as e:
-            logger.error(f"extract account json got exception error: {e}")
-    if media_url and author:
-        Order.objects.filter(id=order_id).update(media_url=media_url, instagram_username=author)
+
