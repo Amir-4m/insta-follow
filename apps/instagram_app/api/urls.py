@@ -2,17 +2,16 @@ from django.urls import path
 from rest_framework import routers
 
 from .views import (
-    InstaPageViewSet, LikedPageAPIVIEW, UserInquiryViewSet,
+    ProfileViewSet, UserInquiryViewSet,
     OrderViewSet, CoinTransactionAPIView
 )
 
 urlpatterns = [
-    # path('user/liked/', LikedPageAPIVIEW.as_view(), name="liked"),
     path('coin-transaction/', CoinTransactionAPIView.as_view(), name='coin-transaction')
 ]
 
 router = routers.DefaultRouter()
-router.register('pages', InstaPageViewSet)
+router.register('profile', ProfileViewSet)
 router.register('inquiries', UserInquiryViewSet)
 
 # router.register('packages', PackageViewSet)

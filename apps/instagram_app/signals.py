@@ -1,9 +1,11 @@
-import requests
+import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from apps.accounts.models import User
-from .models import CoinTransaction, Order, ActionChoice
-from .services import InstagramAppService
+from .models import CoinTransaction, Order
+from .tasks import collect_post_info
+
+logger = logging.getLogger(__name__)
 
 
 # @receiver(post_save, sender=UserPackage)
@@ -32,19 +34,15 @@ def user_coin_transaction(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=Order)
-def order_media_url_setter(sender, instance, **kwargs):
-    if not instance.media_url:
-        # TODO: call celery task to avoid delay in save
-        action = instance.action_type
-        media_url = ''
-        if action in [ActionChoice.ACTION_LIKE, ActionChoice.ACTION_COMMENT]:
-            shortcode = InstagramAppService.get_shortcode(instance.link)
-            media_url = InstagramAppService.get_post_media_url(shortcode)
-
-        elif action == ActionChoice.ACTION_FOLLOW:
-            instagram_username = InstagramAppService.get_page_id(instance.link)
-            response = requests.get(f"https://www.instagram.com/{instagram_username}/?__a=1").json()
-            media_url = response['graphql']['user']['profile_pic_url_hd']
-
-        if media_url:
-            Order.objects.filter(id=instance.id).update(media_url=media_url)
+def order_receiver(sender, instance, **kwargs):
+    if not instance.media_url or not instance.instagram_username:
+        action = instance.action.action_type
+        media_url = instance.media_url or ''
+        author = instance.instagram_username or ''
+        collect_post_info.delay(
+            order_id=instance.id,
+            action=action,
+            link=instance.link,
+            media_url=media_url,
+            author=author
+        )

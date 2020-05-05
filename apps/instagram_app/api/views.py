@@ -1,4 +1,3 @@
-from itertools import accumulate
 from rest_framework import status, mixins, viewsets, views, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
@@ -6,57 +5,47 @@ from rest_framework.decorators import action
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
 from .serializers import (
-    InstaPageSerializer,
-    LikedPageSerializer,
+    ProfileSerializer,
     OrderSerializer,
     UserInquirySerializer,
     CoinTransactionSerializer
 )
 from ..pagination import CoinTransactionPagination
+from apps.accounts.models import User
 from apps.instagram_app.models import (
-    InstaPage, UserPage, Order,
-    UserInquiry, CoinTransaction,
-    ActionChoice
+    InstaAction, UserPage, Order,
+    UserInquiry, CoinTransaction
 )
 
 
-class InstaPageViewSet(mixins.CreateModelMixin,
-                       mixins.RetrieveModelMixin,
-                       mixins.DestroyModelMixin,
-                       mixins.ListModelMixin,
-                       viewsets.GenericViewSet):
-    serializer_class = InstaPageSerializer
-    queryset = InstaPage.objects.all()
+class ProfileViewSet(mixins.CreateModelMixin,
+                     mixins.RetrieveModelMixin,
+                     mixins.DestroyModelMixin,
+                     mixins.ListModelMixin,
+                     viewsets.GenericViewSet):
+    serializer_class = ProfileSerializer
+    queryset = User.objects.all()
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
-        return queryset.filter(owner=user)
+        return queryset.filter(id=user.id)
 
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)
-        serializer = InstaPageSerializer(InstaPage.objects.filter(owner=self.request.user), many=True)
+        serializer = ProfileSerializer(self.queryset, many=True)
         response.data = serializer.data
         return response
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-    def perform_destroy(self, instance):
-        UserPage.objects.filter(page=instance, user=self.request.user).delete()
-
-
-class LikedPageAPIVIEW(views.APIView):
-    authentication_classes = (JWTAuthentication,)
-    permission_classes = (IsAuthenticated,)
-
-    def post(self, request, *args, **kwargs):
-        serializer = LikedPageSerializer(data=request.data)
-        if serializer.is_valid():
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def destroy(self, request, *args, **kwargs):
+        page_id = kwargs.get('pk')
+        UserPage.objects.filter(page=page_id, user=self.request.user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # class PackageViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
@@ -113,7 +102,7 @@ class UserInquiryViewSet(viewsets.ViewSet):
             user_page = UserPage.objects.get(page_id=page_id, user=self.request.user)
         except UserPage.DoesNotExist:
             raise ValidationError({'Error': 'user and page does not match!'})
-        valid_orders = Order.objects.filter(is_enable=True, action_type=action_type).order_by('-id')
+        valid_orders = Order.objects.filter(is_enable=True, action=action_type).order_by('-id')
 
         valid_inquiries = []
         for order in valid_orders:
@@ -129,15 +118,15 @@ class UserInquiryViewSet(viewsets.ViewSet):
 
     @action(methods=["get"], detail=False, url_path="like")
     def like(self, request, *args, **kwargs):
-        return self.get_inquiry(request, ActionChoice.ACTION_LIKE)
+        return self.get_inquiry(request, InstaAction.ACTION_LIKE)
 
     @action(methods=['get'], detail=False, url_path="comment")
     def comment(self, request, *args, **kwargs):
-        return self.get_inquiry(request, ActionChoice.ACTION_COMMENT)
+        return self.get_inquiry(request, InstaAction.ACTION_COMMENT)
 
     @action(methods=['get'], detail=False, url_path="follow")
     def follow(self, request, *args, **kwargs):
-        return self.get_inquiry(request, ActionChoice.ACTION_FOLLOW)
+        return self.get_inquiry(request, InstaAction.ACTION_FOLLOW)
 
     @action(methods=['post'], detail=False, url_path="done")
     def post(self, request, *args, **kwargs):

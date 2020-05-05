@@ -10,18 +10,6 @@ from djongo import models as djongo_models
 logger = logging.getLogger(__name__)
 
 
-class ActionChoice(object):
-    ACTION_LIKE = 'L'
-    ACTION_FOLLOW = 'F'
-    ACTION_COMMENT = 'C'
-
-    ACTION_CHOICES = [
-        (ACTION_LIKE, _('Like')),
-        (ACTION_FOLLOW, _('Follow')),
-        (ACTION_COMMENT, _('Comment')),
-    ]
-
-
 class Category(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     name = models.CharField(_("category name"), max_length=100, unique=True)
@@ -31,6 +19,28 @@ class Category(models.Model):
 
     def __str__(self):
         return f"{self.name}"
+
+
+class InstaAction(models.Model):
+    ACTION_LIKE = 'L'
+    ACTION_FOLLOW = 'F'
+    ACTION_COMMENT = 'C'
+
+    ACTION_CHOICES = [
+        (ACTION_LIKE, _('Like')),
+        (ACTION_FOLLOW, _('Follow')),
+        (ACTION_COMMENT, _('Comment')),
+    ]
+    action_type = models.CharField(_('action type'), max_length=10, choices=ACTION_CHOICES, primary_key=True)
+    updated_time = models.DateTimeField(_("updated time"), auto_now=True)
+    sell_value = models.PositiveSmallIntegerField(_('selling value'))
+    buy_value = models.PositiveSmallIntegerField(_('buying value'))
+
+    class Meta:
+        db_table = "insta_actions"
+
+    def __str__(self):
+        return self.action_type
 
 
 class InstaPage(models.Model):
@@ -58,6 +68,7 @@ class UserPage(models.Model):
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     user = models.ForeignKey("accounts.User", related_name='user_pages', on_delete=models.CASCADE)
     page = models.ForeignKey(InstaPage, related_name='user_pages', on_delete=models.PROTECT)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         db_table = "insta_user_pages"
@@ -104,12 +115,12 @@ class UserPage(models.Model):
 # Inventory
 class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    action_type = models.CharField(_('action type'), max_length=10, choices=ActionChoice.ACTION_CHOICES)
+    action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
     target_no = models.IntegerField(_("target number"))
     achieved_no = models.IntegerField(_("achieved target"), default=0)
     link = models.URLField(_("link"))
     media_url = models.TextField(_("media url"), blank=True)
-    # user_package = models.ForeignKey(UserPackage, on_delete=models.CASCADE)
+    instagram_username = models.CharField(_("instagram username"), max_length=120, blank=True)
     description = models.TextField(_("description"), blank=True, default='')
     is_enable = models.BooleanField(_("is enable"), default=True)
 
@@ -117,7 +128,7 @@ class Order(models.Model):
         db_table = "insta_user_orders"
 
     def __str__(self):
-        return f"{self.id} - {self.action_type}"
+        return f"{self.id} - {self.action}"
 
     # def clean(self):
     #     if self.target_no and self.target_no > self.package_target:
@@ -154,18 +165,14 @@ class CoinTransaction(models.Model):
     user = models.ForeignKey('accounts.User', related_name='coin_transactions', on_delete=models.CASCADE)
     amount = models.IntegerField(_('coin amount'), null=False, blank=False, default=0)
     description = models.TextField(_("action"), blank=True)
-    inquiry = models.ForeignKey(UserInquiry, null=True, blank=True, on_delete=models.PROTECT)
-    order = models.ForeignKey(Order, null=True, blank=True, on_delete=models.PROTECT)
+    inquiry = models.ForeignKey(UserInquiry, on_delete=models.PROTECT, null=True, blank=True)
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, null=True, blank=True)
 
     class Meta:
         db_table = "insta_transactions"
 
     def __str__(self):
         return f"{self.user} - {self.amount}"
-
-    @property
-    def user_balance(self):
-        return self.user.coin_transactions.all().aggregate(Sum('amount'))
 
 
 class RoutedDjongoManager(djongo_models.DjongoManager):
@@ -178,7 +185,7 @@ class BaseInstaEntity(djongo_models.Model):
     created_time = djongo_models.DateTimeField(auto_now_add=True)
     media_url = djongo_models.CharField(max_length=150)
     media_id = djongo_models.BigIntegerField()
-    action_type = djongo_models.CharField(max_length=10, choices=ActionChoice.ACTION_CHOICES)
+    action = djongo_models.CharField(max_length=10, choices=InstaAction.ACTION_CHOICES)
     username = djongo_models.CharField(max_length=100)
     user_id = djongo_models.BigIntegerField()
     comment = djongo_models.TextField(null=True)
@@ -190,17 +197,16 @@ class BaseInstaEntity(djongo_models.Model):
 
     class Meta:
         managed = False
-        unique_together = ('media_id', 'user_id', 'action_type')
+        unique_together = ('media_id', 'user_id', 'action')
 
     @classmethod
-    def _get_table_model(cls, action, link, create=True):
-        link_hash = md5(link.encode('utf-8')).hexdigest()
-        if action == 'L' or action == 'C':
-            table_name = f"post_{link_hash}"
-            model_name = f"Post{link_hash}"
-        elif action == 'F':
-            table_name = f"page_{link_hash}"
-            model_name = f"Page{link_hash}"
+    def _get_table_model(cls, action, page_id, create=True):
+        if action == InstaAction.ACTION_LIKE or action == InstaAction.ACTION_COMMENT:
+            table_name = f"post_{page_id}"
+            model_name = f"Post{page_id}"
+        elif action == InstaAction.ACTION_FOLLOW:
+            table_name = f"page_{page_id}"
+            model_name = f"Page{page_id}"
         app_models = cls._meta.apps.all_models[cls._meta.app_label]
         if model_name not in app_models:
             model = type(model_name, (cls,), {'__module__': cls.__module__})
@@ -219,9 +225,9 @@ class BaseInstaEntity(djongo_models.Model):
         return model
 
     @classmethod
-    def get_model(cls, action, link):
+    def get_model(cls, action, page_id):
         try:
-            model = cls._get_table_model(action, link)
+            model = cls._get_table_model(action, page_id)
         except Exception as e:
             logger.error(f"hash table got exception: {e}")
             return None

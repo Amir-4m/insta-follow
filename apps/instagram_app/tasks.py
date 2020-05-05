@@ -3,6 +3,7 @@ import logging
 import urllib.parse
 from datetime import datetime
 
+import requests
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
@@ -12,7 +13,7 @@ from celery import shared_task
 
 from .endpoints import LIKES_BY_SHORTCODE, COMMENTS_BY_SHORTCODE
 from .services import InstagramAppService
-from .models import Order, UserInquiry, UserPage, BaseInstaEntity
+from .models import Order, UserInquiry, UserPage, BaseInstaEntity, InstaAction
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ def check_user_action(user_inquiry_ids, user_page_id):
             if InstagramAppService.check_activity_from_db(
                     user_inquiry.order.link,
                     user_page.user.username,
-                    user_inquiry.order.action_type):
+                    user_inquiry.order.action):
                 user_inquiry.validated_time = timezone.now()
                 Order.objects.select_for_update().filter(
                     id=user_inquiry.order.id,
@@ -38,8 +39,8 @@ def check_user_action(user_inquiry_ids, user_page_id):
 
 
 @shared_task
-def collect_like(order_id, order_link):
-    model = BaseInstaEntity.get_model('L', order_link)
+def collect_like(order_id, order_link, order_page_id):
+    model = BaseInstaEntity.get_model(InstaAction.ACTION_LIKE, order_page_id)
     if not model:
         logger.warning(f"can't get model for order: {order_id} to collect likes")
         return
@@ -68,7 +69,7 @@ def collect_like(order_id, order_link):
                     dict(
                         media_url=order_link,
                         media_id=media_id,
-                        action_type='L',
+                        action=InstaAction.ACTION_LIKE,
                         username=node['username'],
                         user_id=node['id']
                     ))
@@ -88,8 +89,8 @@ def collect_like(order_id, order_link):
 
 
 @shared_task
-def collect_comment(order_id, order_link):
-    model = BaseInstaEntity.get_model('C', order_link)
+def collect_comment(order_id, order_link, order_page_id):
+    model = BaseInstaEntity.get_model(InstaAction.ACTION_COMMENT, order_page_id)
     if not model:
         logger.warning(f"can't get model for order: {order_id} to collect likes")
         return
@@ -117,7 +118,7 @@ def collect_comment(order_id, order_link):
                 io_comments.append(
                     dict(media_url=order_link,
                          media_id=media_id,
-                         action_type='C',
+                         action=InstaAction.ACTION_COMMENT,
                          username=node['owner']['username'],
                          user_id=node['owner']['id'],
                          comment=node['text'],
@@ -154,10 +155,27 @@ def collect_order_data():
     for order in orders:
         logger.info(f"collecting data for order: {order.link}")
         try:
-            collect_like.delay(order.id, order.link)
-            collect_comment.delay(order.id, order.link)
+            collect_like.delay(order.id, order.link, order.instagram_username)
+            collect_comment.delay(order.id, order.link, order.instagram_username)
         except Exception as e:
             logger.error(
                 f"collecting data for order: {order.link} error: {e}")
 
     cache.delete(lock_key)
+
+
+@shared_task
+def collect_post_info(order_id, action, link, media_url, author):
+    if action in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
+        media_id, author, media_url = InstagramAppService.get_post_info(link)
+
+    elif action == InstaAction.ACTION_FOLLOW:
+        instagram_username = InstagramAppService.get_page_id(link)
+        try:
+            response = requests.get(f"https://www.instagram.com/{instagram_username}/?__a=1").json()
+            media_url = response['graphql']['user']['profile_pic_url_hd']
+            author = '@' + instagram_username
+        except Exception as e:
+            logger.error(f"extract account json got exception error: {e}")
+    if media_url and author:
+        Order.objects.filter(id=order_id).update(media_url=media_url, instagram_username=author)

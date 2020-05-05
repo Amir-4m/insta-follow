@@ -1,3 +1,5 @@
+from abc import ABC
+from django.db.models import Sum, F
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
 from rest_framework import serializers
@@ -5,13 +7,31 @@ from rest_framework.exceptions import ValidationError
 from apps.instagram_app.models import InstaPage, UserPage, UserInquiry, CoinTransaction
 from apps.instagram_app.tasks import check_user_action
 from apps.instagram_app.services import InstagramAppService
+from apps.accounts.models import User
 
 
-class InstaPageSerializer(serializers.ModelSerializer):
+class InstaPagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = InstaPage
         fields = ('id', 'instagram_username')
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    insta_pages = serializers.SerializerMethodField(read_only=True)
+    wallet = serializers.SerializerMethodField(read_only=True)
+    instagram_username = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ('id', 'insta_pages', 'wallet', 'instagram_username')
         read_only_fields = ('id',)
+
+    def get_wallet(self, obj):
+        return obj.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet')
+
+    def get_insta_pages(self, obj):
+        qs = obj.insta_pages.filter(user_pages__is_active=True)
+        return InstaPagesSerializer(qs, many=True).data
 
     def create(self, validated_data):
         page_id = validated_data.get('instagram_username')
@@ -28,15 +48,9 @@ class InstaPageSerializer(serializers.ModelSerializer):
                 }
             )
             UserPage.objects.get_or_create(user=user, page=page)
-            return page
+            return user
         except Exception:
             raise ValidationError(_("the page you entered does not exists !"))
-
-
-class LikedPageSerializer(serializers.Serializer):
-    page_id = serializers.ListField(
-        child=serializers.IntegerField()
-    )
 
 
 # class PackageSerializer(serializers.ModelSerializer):
@@ -85,10 +99,11 @@ class UserInquirySerializer(serializers.ModelSerializer):
     media_url = serializers.ReadOnlyField(source="order.media_url")
     page_id = serializers.IntegerField(write_only=True)
     done_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True)
+    instagram_username = serializers.ReadOnlyField(source='order.instagram_username')
 
     class Meta:
         model = UserInquiry
-        fields = ('id', 'link', 'media_url', 'page_id', 'done_ids')
+        fields = ('id', 'link', 'instagram_username', 'media_url', 'page_id', 'done_ids')
 
     def validate(self, attrs):
         user = self.context['request'].user
@@ -120,4 +135,4 @@ class UserInquirySerializer(serializers.ModelSerializer):
 class CoinTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = CoinTransaction
-        exclude = ('user', )
+        exclude = ('user',)
