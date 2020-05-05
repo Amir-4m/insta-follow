@@ -114,15 +114,6 @@ class UserPage(models.Model):
 
 # Inventory
 class Order(models.Model):
-    STATUS_OPEN = 'open'
-    STATUS_VALIDATED = 'validated'
-    STATUS_EXPIRED = 'expired'
-
-    STATUS_CHOICES = [
-        (STATUS_OPEN, _('Open')),
-        (STATUS_VALIDATED, _('Validated')),
-        (STATUS_EXPIRED, _('Expired')),
-    ]
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
     target_no = models.IntegerField(_("target number"))
@@ -133,7 +124,6 @@ class Order(models.Model):
     instagram_username = models.CharField(_("instagram username"), max_length=120, blank=True)
     description = models.TextField(_("description"), blank=True, default='')
     is_enable = models.BooleanField(_("is enable"), default=True)
-    status = models.CharField(_('status'), max_length=12, choices=STATUS_CHOICES, default=STATUS_OPEN)
 
     class Meta:
         db_table = "insta_user_orders"
@@ -158,6 +148,15 @@ class Order(models.Model):
 
 
 class UserInquiry(models.Model):
+    STATUS_OPEN = 'open'
+    STATUS_VALIDATED = 'validated'
+    STATUS_EXPIRED = 'expired'
+
+    STATUS_CHOICES = [
+        (STATUS_OPEN, _('Open')),
+        (STATUS_VALIDATED, _('Validated')),
+        (STATUS_EXPIRED, _('Expired')),
+    ]
     created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
@@ -165,6 +164,8 @@ class UserInquiry(models.Model):
     validated_time = models.DateTimeField(_("validated time"), null=True, blank=True)
     done_time = models.DateTimeField(_('done time'), null=True, blank=True)
     last_check_time = models.DateTimeField(_("last check time"), null=True, blank=True)
+    status = models.CharField(_('status'), max_length=12, choices=STATUS_CHOICES, default=STATUS_OPEN)
+
 
     class Meta:
         db_table = "insta_inquiries"
