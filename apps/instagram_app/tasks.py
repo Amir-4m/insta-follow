@@ -39,8 +39,8 @@ def check_user_action(user_inquiry_ids, user_page_id):
 
 
 @shared_task
-def collect_like(order_id, order_link):
-    model = BaseInstaEntity.get_model('L', order_link)
+def collect_like(order_id, order_link, order_page_id):
+    model = BaseInstaEntity.get_model(InstaAction.ACTION_LIKE, order_page_id)
     if not model:
         logger.warning(f"can't get model for order: {order_id} to collect likes")
         return
@@ -89,8 +89,8 @@ def collect_like(order_id, order_link):
 
 
 @shared_task
-def collect_comment(order_id, order_link):
-    model = BaseInstaEntity.get_model('C', order_link)
+def collect_comment(order_id, order_link, order_page_id):
+    model = BaseInstaEntity.get_model(InstaAction.ACTION_COMMENT, order_page_id)
     if not model:
         logger.warning(f"can't get model for order: {order_id} to collect likes")
         return
@@ -155,8 +155,8 @@ def collect_order_data():
     for order in orders:
         logger.info(f"collecting data for order: {order.link}")
         try:
-            collect_like.delay(order.id, order.link)
-            collect_comment.delay(order.id, order.link)
+            collect_like.delay(order.id, order.link, order.instagram_username)
+            collect_comment.delay(order.id, order.link, order.instagram_username)
         except Exception as e:
             logger.error(
                 f"collecting data for order: {order.link} error: {e}")

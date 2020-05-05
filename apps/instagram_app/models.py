@@ -200,14 +200,13 @@ class BaseInstaEntity(djongo_models.Model):
         unique_together = ('media_id', 'user_id', 'action')
 
     @classmethod
-    def _get_table_model(cls, action, link, create=True):
-        link_hash = md5(link.encode('utf-8')).hexdigest()
-        if action == 'L' or action == 'C':
-            table_name = f"post_{link_hash}"
-            model_name = f"Post{link_hash}"
-        elif action == 'F':
-            table_name = f"page_{link_hash}"
-            model_name = f"Page{link_hash}"
+    def _get_table_model(cls, action, page_id, create=True):
+        if action == InstaAction.ACTION_LIKE or action == InstaAction.ACTION_COMMENT:
+            table_name = f"post_{page_id}"
+            model_name = f"Post{page_id}"
+        elif action == InstaAction.ACTION_FOLLOW:
+            table_name = f"page_{page_id}"
+            model_name = f"Page{page_id}"
         app_models = cls._meta.apps.all_models[cls._meta.app_label]
         if model_name not in app_models:
             model = type(model_name, (cls,), {'__module__': cls.__module__})
@@ -226,9 +225,9 @@ class BaseInstaEntity(djongo_models.Model):
         return model
 
     @classmethod
-    def get_model(cls, action, link):
+    def get_model(cls, action, page_id):
         try:
-            model = cls._get_table_model(action, link)
+            model = cls._get_table_model(action, page_id)
         except Exception as e:
             logger.error(f"hash table got exception: {e}")
             return None
