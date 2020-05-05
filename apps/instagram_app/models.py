@@ -33,7 +33,7 @@ class InstaAction(models.Model):
     ]
     action_type = models.CharField(_('action type'), max_length=10, choices=ACTION_CHOICES, primary_key=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
-    sell_value = models.PositiveSmallIntegerField(_('selling value'))
+    action_value = models.PositiveSmallIntegerField(_('selling value'))
     buy_value = models.PositiveSmallIntegerField(_('buying value'))
 
     class Meta:
@@ -48,9 +48,9 @@ class InstaPage(models.Model):
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     instagram_username = models.CharField(_("instagram username"), max_length=50)
     instagram_user_id = models.BigIntegerField(_("instagram id"), unique=True)
-    followers = models.IntegerField(_("page followers"))
-    following = models.IntegerField(_("page following"))
-    post_no = models.IntegerField(_("posts number"))
+    followers = models.IntegerField(_("page followers"), null=True)
+    following = models.IntegerField(_("page following"), null=True)
+    post_no = models.IntegerField(_("posts number"), null=True)
     is_banned = models.BooleanField(_("is banned"), default=False)
 
     category = models.ManyToManyField(Category)
@@ -117,7 +117,8 @@ class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
     target_no = models.IntegerField(_("target number"))
-    achieved_no = models.IntegerField(_("achieved target"), default=0)
+    approved_achieved_no = models.IntegerField(_("approved achieved target"), default=0)
+    unapproved_achieved_no = models.IntegerField(_("unapproved achieved target"), default=0)
     link = models.URLField(_("link"))
     media_url = models.TextField(_("media url"), blank=True)
     instagram_username = models.CharField(_("instagram username"), max_length=120, blank=True)
@@ -147,12 +148,24 @@ class Order(models.Model):
 
 
 class UserInquiry(models.Model):
-    created_time = models.DateTimeField(_("created time"), auto_now_add=True)
+    STATUS_OPEN = 'open'
+    STATUS_VALIDATED = 'validated'
+    STATUS_EXPIRED = 'expired'
+
+    STATUS_CHOICES = [
+        (STATUS_OPEN, _('Open')),
+        (STATUS_VALIDATED, _('Validated')),
+        (STATUS_EXPIRED, _('Expired')),
+    ]
+    created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     user_page = models.ForeignKey(UserPage, on_delete=models.CASCADE)
     validated_time = models.DateTimeField(_("validated time"), null=True, blank=True)
+    done_time = models.DateTimeField(_('done time'), null=True, blank=True)
     last_check_time = models.DateTimeField(_("last check time"), null=True, blank=True)
+    status = models.CharField(_('status'), max_length=12, choices=STATUS_CHOICES, default=STATUS_OPEN)
+
 
     class Meta:
         db_table = "insta_inquiries"
@@ -163,7 +176,8 @@ class UserInquiry(models.Model):
 class CoinTransaction(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     user = models.ForeignKey('accounts.User', related_name='coin_transactions', on_delete=models.CASCADE)
-    amount = models.IntegerField(_('coin amount'), null=False, blank=False, default=0)
+    approved_amount = models.IntegerField(_('approved coin amount'), null=False, blank=False, default=0)
+    unapproved_amount = models.IntegerField(_('unapproved amount'), null=False, blank=False, default=0)
     description = models.TextField(_("action"), blank=True)
     inquiry = models.ForeignKey(UserInquiry, on_delete=models.PROTECT, null=True, blank=True)
     order = models.ForeignKey(Order, on_delete=models.PROTECT, null=True, blank=True)
@@ -172,7 +186,7 @@ class CoinTransaction(models.Model):
         db_table = "insta_transactions"
 
     def __str__(self):
-        return f"{self.user} - {self.amount}"
+        return f"{self.user} - {self.approved_amount}"
 
 
 class RoutedDjongoManager(djongo_models.DjongoManager):
@@ -201,6 +215,8 @@ class BaseInstaEntity(djongo_models.Model):
 
     @classmethod
     def _get_table_model(cls, action, page_id, create=True):
+        table_name = ""
+        model_name = ""
         if action == InstaAction.ACTION_LIKE or action == InstaAction.ACTION_COMMENT:
             table_name = f"post_{page_id}"
             model_name = f"Post{page_id}"
@@ -235,9 +251,9 @@ class BaseInstaEntity(djongo_models.Model):
         return model
 
     @classmethod
-    def drop_model(cls, action, post_link):
+    def drop_model(cls, action, page_id):
         try:
-            model = cls._get_table_model(action, post_link, False)
+            model = cls._get_table_model(action, page_id, False)
             all_tables = connection.introspection.table_names()
         except Exception as e:
             logger.error(f"hash table got exception: {e}")

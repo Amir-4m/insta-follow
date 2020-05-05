@@ -59,4 +59,4 @@ class UserAssignmentModelAdmin(admin.ModelAdmin):
 
 @admin.register(InstaAction)
 class InstaActionModelAdmin(admin.ModelAdmin):
-    list_display = ('action_type', 'sell_value', 'buy_value', 'updated_time')
+    list_display = ('action_type', 'action_value', 'buy_value', 'updated_time')

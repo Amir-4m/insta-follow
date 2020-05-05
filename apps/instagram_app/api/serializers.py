@@ -5,7 +5,6 @@ from django.forms.models import model_to_dict
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from apps.instagram_app.models import InstaPage, UserPage, UserInquiry, CoinTransaction
-from apps.instagram_app.tasks import check_user_action
 from apps.instagram_app.services import InstagramAppService
 from apps.accounts.models import User
 
@@ -18,16 +17,21 @@ class InstaPagesSerializer(serializers.ModelSerializer):
 
 class ProfileSerializer(serializers.ModelSerializer):
     insta_pages = serializers.SerializerMethodField(read_only=True)
-    wallet = serializers.SerializerMethodField(read_only=True)
+    approved_wallet = serializers.SerializerMethodField(read_only=True)
+    unapproved_wallet = serializers.SerializerMethodField(read_only=True)
     instagram_username = serializers.CharField(write_only=True)
+    user_id = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
-        fields = ('id', 'insta_pages', 'wallet', 'instagram_username')
+        fields = ('id', 'insta_pages', 'approved_wallet', 'unapproved_wallet', 'instagram_username', 'user_id')
         read_only_fields = ('id',)
 
-    def get_wallet(self, obj):
-        return obj.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet')
+    def get_approved_wallet(self, obj):
+        return obj.coin_transactions.all().aggregate(wallet=Sum('approved_amount')).get('wallet')
+
+    def get_unapproved_wallet(self, obj):
+        return obj.coin_transactions.all().aggregate(wallet=Sum('unapproved_amount')).get('wallet')
 
     def get_insta_pages(self, obj):
         qs = obj.insta_pages.filter(user_pages__is_active=True)
@@ -35,22 +39,14 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         page_id = validated_data.get('instagram_username')
-        user = validated_data.get('user')
-        try:
-            user_id, name, followers, following, posts_count = InstagramAppService.get_page_info(page_id)
-            page, created = InstaPage.objects.update_or_create(
-                instagram_user_id=user_id,
-                defaults={
-                    "instagram_username": page_id,
-                    "followers": followers,
-                    "following": following,
-                    "post_no": posts_count
-                }
-            )
-            UserPage.objects.get_or_create(user=user, page=page)
-            return user
-        except Exception:
-            raise ValidationError(_("the page you entered does not exists !"))
+        user_id = validated_data.get('user_id')
+        user = self.context['request'].user
+        page, created = InstaPage.objects.get_or_create(
+            instagram_user_id=user_id,
+            instagram_username=page_id,
+        )
+        UserPage.objects.get_or_create(user=user, page=page)
+        return user
 
 
 # class PackageSerializer(serializers.ModelSerializer):
@@ -128,7 +124,7 @@ class UserInquirySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user_page = validated_data.get('user_page')
         user_inquiry_ids = validated_data.get('user_inquiry_ids')
-        check_user_action.delay(user_inquiry_ids, user_page.id)
+        InstagramAppService.check_user_action(user_inquiry_ids, user_page.id)
         return True
 
 

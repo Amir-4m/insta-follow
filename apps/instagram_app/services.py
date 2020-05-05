@@ -4,11 +4,13 @@ import re
 import time
 import requests
 from django.db.models import Sum
-
+from django.db import transaction
+from django.db.models import F
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
-from .models import Order, BaseInstaEntity, InstaPage, InstaAction, CoinTransaction
+from .models import Order, BaseInstaEntity, InstaPage, InstaAction, CoinTransaction, UserPage, UserInquiry
 
 logger = logging.getLogger(__name__)
 
@@ -164,3 +166,29 @@ class InstagramAppService(object):
             if comment_query.exists():
                 return True
         return False
+
+    @staticmethod
+    def check_user_action(user_inquiry_ids, user_page_id):
+        user_page = UserPage.objects.get(id=user_page_id)
+        with transaction.atomic():
+            for user_inquiry in UserInquiry.objects.select_for_update().filter(id__in=user_inquiry_ids):
+                user_inquiry.last_check_time = timezone.now()
+                if user_inquiry.done_time is None:
+                    user_inquiry.done_time = timezone.now()
+                if user_inquiry.validated_time is not None:
+                    continue
+                if InstagramAppService.check_activity_from_db(
+                        user_inquiry.order.link,
+                        user_page.user.username,
+                        user_inquiry.order.action):
+                    user_inquiry.validated_time = timezone.now()
+                    order = Order.objects.select_for_update().filter(
+                        id=user_inquiry.order.id,
+                    ).update(
+                        achieved_no=F('unapproved_achieved_no') + 1)
+                    CoinTransaction.objects.create(
+                        user=user_page.user,
+                        order=order,
+                        unapproved_amount=F('unapproved_amount') + order.action.action_value
+                    )
+                user_inquiry.save()
