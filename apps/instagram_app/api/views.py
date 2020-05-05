@@ -42,8 +42,10 @@ class ProfileViewSet(mixins.CreateModelMixin,
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-    def perform_destroy(self, instance):
-        UserPage.objects.filter(page=instance, user=self.request.user).delete()
+    def destroy(self, request, *args, **kwargs):
+        page_id = kwargs.get('pk')
+        UserPage.objects.filter(page=page_id, user=self.request.user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # class PackageViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):

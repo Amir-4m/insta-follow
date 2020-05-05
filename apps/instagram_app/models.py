@@ -68,6 +68,7 @@ class UserPage(models.Model):
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     user = models.ForeignKey("accounts.User", related_name='user_pages', on_delete=models.CASCADE)
     page = models.ForeignKey(InstaPage, related_name='user_pages', on_delete=models.PROTECT)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         db_table = "insta_user_pages"

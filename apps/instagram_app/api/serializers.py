@@ -10,22 +10,14 @@ from apps.instagram_app.services import InstagramAppService
 from apps.accounts.models import User
 
 
-class InstaPagesObjectRelatedField(serializers.RelatedField, ABC):
-    """
-        A custom field to use for the `insta_page_object` generic relationship.
-        """
-
-    def to_representation(self, value):
-        """
-        Serialize insta page objects to a simple textual representation.
-        """
-        if isinstance(value, InstaPage):
-            return {'id': value.id, 'instagram_username': value.instagram_username}
-        raise Exception('Unexpected type of insta page object')
+class InstaPagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InstaPage
+        fields = ('id', 'instagram_username')
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    insta_pages = InstaPagesObjectRelatedField(read_only=True, many=True)
+    insta_pages = serializers.SerializerMethodField(read_only=True)
     wallet = serializers.SerializerMethodField(read_only=True)
     instagram_username = serializers.CharField(write_only=True)
 
@@ -36,6 +28,10 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_wallet(self, obj):
         return obj.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet')
+
+    def get_insta_pages(self, obj):
+        qs = obj.insta_pages.filter(user_pages__is_active=True)
+        return InstaPagesSerializer(qs, many=True).data
 
     def create(self, validated_data):
         page_id = validated_data.get('instagram_username')
