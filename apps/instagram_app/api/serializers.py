@@ -28,10 +28,16 @@ class ProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ('id',)
 
     def get_approved_wallet(self, obj):
-        return obj.coin_transactions.all().aggregate(wallet=Sum('approved_amount')).get('wallet')
+        # TODO: arash fix
+        return obj.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet') or 0
 
     def get_unapproved_wallet(self, obj):
-        return obj.coin_transactions.all().aggregate(wallet=Sum('unapproved_amount')).get('wallet')
+        # TODO: arash fix
+        return UserInquiry.objects.filter(
+            user_page__user=obj,
+            status=UserInquiry.STATUS_DONE,
+            done_time__isnull=False
+        ).aggregate(coins=Sum('order__action__action_value')).get('coins') or 0
 
     def get_insta_pages(self, obj):
         qs = obj.insta_pages.filter(user_pages__is_active=True)

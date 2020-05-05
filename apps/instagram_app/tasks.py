@@ -11,7 +11,7 @@ from celery import shared_task
 
 from .endpoints import LIKES_BY_SHORTCODE, COMMENTS_BY_SHORTCODE
 from .services import InstagramAppService
-from .models import Order, UserInquiry, UserPage, BaseInstaEntity, InstaAction
+from .models import Order, UserInquiry, BaseInstaEntity, InstaAction, CoinTransaction
 
 logger = logging.getLogger(__name__)
 
@@ -168,3 +168,37 @@ def validate_user_inquiries():
         InstagramAppService.check_user_action([inquiry[0]], inquiry[1])
 
 
+# PERIODIC TASK
+@shared_task
+def final_validate_user_inquiries():
+    for inquiry in UserInquiry.objects.select_for_update().filter(
+            validated_time__isnull=False,
+            validated_time__gte=timezone.now() - timedelta(days=1),
+            done_time__isnull=False
+    ):
+        inquiry.last_check_time = timezone.now()
+        order = Order.objects.select_for_update().filter(
+            id=inquiry.order.id)
+        if InstagramAppService.check_activity_from_db(
+                inquiry.order.link,
+                inquiry.user.username,
+                inquiry.order.action):
+            inquiry.status = UserInquiry.STATUS_VALIDATED
+            CoinTransaction.objects.create(
+                user=inquiry.user_page.user,
+                inquiry=inquiry,
+                amount=order.action.action_value
+            )
+            if order.achieved_number_approved() == order.target_no:
+                order.is_enable = False
+                order.save()
+        else:
+            inquiry.status = UserInquiry.STATUS_REJECTED
+            CoinTransaction.objects.create(
+                user=inquiry.user_page.user,
+                inquiry=inquiry,
+                order=order,
+                unapproved_amount=-order.action.action_value,
+            )
+
+        inquiry.save()
