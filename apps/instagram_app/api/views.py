@@ -1,9 +1,12 @@
+from django.utils.decorators import method_decorator
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets, generics, mixins
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
+from ..swagger_schemas import ORDER_POST_DOCS, INQUIRY_POST_DOC, PROFILE_POST_DOC
 from .serializers import (
     ProfileSerializer,
     OrderSerializer,
@@ -18,6 +21,14 @@ from apps.instagram_app.models import (
 )
 
 
+@method_decorator(name='list', decorator=swagger_auto_schema(
+    operation_description="Get a list of user instagram pages and his/her coin balance",
+    responses={"200": 'Successful'}
+))
+@method_decorator(name='create', decorator=swagger_auto_schema(
+    request_body=PROFILE_POST_DOC
+
+))
 class ProfileViewSet(viewsets.ViewSet):
     serializer_class = ProfileSerializer
     authentication_classes = (JWTAuthentication,)
@@ -38,6 +49,14 @@ class ProfileViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@method_decorator(name='list', decorator=swagger_auto_schema(
+    operation_description="Get a list of user submitted orders",
+    responses={"200": 'Successful'}
+))
+@method_decorator(name='create', decorator=swagger_auto_schema(
+    operation_description="Create an order with a chosen action for the post or profile that user requested",
+    request_body=ORDER_POST_DOCS
+))
 class OrderViewSet(viewsets.GenericViewSet,
                    mixins.CreateModelMixin,
                    mixins.ListModelMixin):
@@ -89,16 +108,25 @@ class UserInquiryViewSet(viewsets.ViewSet):
 
     @action(methods=["get"], detail=False, url_path="like")
     def like(self, request, *args, **kwargs):
+        """Get a list of like orders that user must like them"""
         return self.get_inquiry(request, InstaAction.ACTION_LIKE)
 
     @action(methods=['get'], detail=False, url_path="comment")
     def comment(self, request, *args, **kwargs):
+        """Get a list of comment orders that user must comment for them"""
         return self.get_inquiry(request, InstaAction.ACTION_COMMENT)
 
     @action(methods=['get'], detail=False, url_path="follow")
     def follow(self, request, *args, **kwargs):
+        """Get a list of follow orders that user must follow"""
         return self.get_inquiry(request, InstaAction.ACTION_FOLLOW)
 
+    @swagger_auto_schema(
+        operation_description='Check whether or not the user did the action properly for the order such as (like, comment or follow).',
+        method='post',
+        request_body=INQUIRY_POST_DOC
+
+    )
     @action(methods=['post'], detail=False, url_path="done")
     def post(self, request, *args, **kwargs):
         serializer = UserInquirySerializer(data=request.data, context={'request': request})
@@ -108,6 +136,7 @@ class UserInquiryViewSet(viewsets.ViewSet):
 
 
 class CoinTransactionAPIView(generics.ListAPIView):
+    """Shows a list of user transactions"""
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
     queryset = CoinTransaction.objects.all()
@@ -120,5 +149,6 @@ class CoinTransactionAPIView(generics.ListAPIView):
 
 
 class InstaActionAPIView(generics.ListAPIView):
+    """Get a list of action types and their values"""
     queryset = InstaAction.objects.all()
     serializer_class = InstaActionSerializer
