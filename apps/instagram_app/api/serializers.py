@@ -1,8 +1,11 @@
 from django.db import transaction
 from django.db.models import Sum, F
+from django.db.models.functions import Coalesce
 from django.utils.translation import ugettext_lazy as _
+
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+
 from apps.instagram_app.models import InstaPage, UserPage, UserInquiry, CoinTransaction, Order, InstaAction
 from apps.instagram_app.services import InstagramAppService
 from apps.accounts.models import User
@@ -55,9 +58,14 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    # action = serializers.CharField(write_only=True)
+
     class Meta:
         model = Order
         fields = ('id', 'action', 'target_no', 'link', 'instagram_username', 'is_enable')
+        extra_kwargs = {
+            'link': {'required': False}
+        }
 
     def __init__(self, *args, **kwargs):
         super(OrderSerializer, self).__init__(*args, **kwargs)
@@ -67,29 +75,39 @@ class OrderSerializer(serializers.ModelSerializer):
             instagram_username = data.get('instagram_username')
             data.update({'link': f"https://www.instagram.com/{instagram_username}/"})
 
+    # def validate_action(self, value):
+    #     # TODO: check
+    #     action_value = InstaAction.objects.get(pk=value)
+    #
+    #     return action_value
+
+    # def validate(self, attrs):
+    #     if attrs.
+
+
     def create(self, validated_data):
         user = validated_data.get('user')
-        order_action = validated_data.get('action')
+        action_value = validated_data.get('action')
         target_no = validated_data.get('target_no')
         link = validated_data.get('link')
-        if order_action == InstaAction.ACTION_FOLLOW:
+        if action_value.pk == InstaAction.ACTION_FOLLOW:
             instagram_username = validated_data.get('instagram_username')
             link = f"https://www.instagram.com/{instagram_username}/"
-        action_value = InstaAction.objects.get(action_type=order_action).buy_value
         with transaction.atomic():
-            locked_user = User.objects.select_for_update().get(id=user.id)
-            if locked_user.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet') >= action_value:
-                ct = CoinTransaction.objects.create(user=locked_user, amount=-action_value)
-                order = Order.objects.create(
-                    action=order_action,
-                    link=link,
-                    target_no=target_no,
-                    owner=locked_user,
-                )
-                ct.order = order
-                ct.save()
-            else:
+            user = User.objects.select_for_update().get(id=user.id)
+            if user.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0)) < action_value.buy_value:
                 raise ValidationError(_("You do not have enough coin to create order"))
+
+            ct = CoinTransaction.objects.create(user=user, amount=-action_value)
+            order = Order.objects.create(
+                action=action_value,
+                link=link,
+                target_no=target_no,
+                owner=user,
+            )
+            ct.order = order
+            ct.save()
+
             return order
 
 
