@@ -6,7 +6,6 @@ import requests
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.core.cache import cache
-from django.db.models import F
 from celery import shared_task
 
 from .endpoints import LIKES_BY_SHORTCODE, COMMENTS_BY_SHORTCODE
@@ -162,7 +161,7 @@ def collect_order_data():
 # PERIODIC TASK
 @shared_task
 def validate_user_inquiries():
-    qs = UserInquiry.objects.filter(done_time__isnull=False, validated_time__isnull=True)
+    qs = UserInquiry.objects.filter(done_time__isnull=False, validated_time__isnull=True, status=UserInquiry.STATUS_DONE)
     inquiries = [(obj.id, obj.user_page) for obj in qs]
     for inquiry in inquiries:
         InstagramAppService.check_user_action([inquiry[0]], inquiry[1])
@@ -174,15 +173,12 @@ def final_validate_user_inquiries():
     for inquiry in UserInquiry.objects.select_for_update().filter(
             validated_time__isnull=False,
             validated_time__gte=timezone.now() - timedelta(days=1),
-            done_time__isnull=False
+            done_time__isnull=False,
+            status=UserInquiry.STATUS_DONE
     ):
         inquiry.last_check_time = timezone.now()
-        order = Order.objects.select_for_update().filter(
-            id=inquiry.order.id)
-        if InstagramAppService.check_activity_from_db(
-                inquiry.order.link,
-                inquiry.user.username,
-                inquiry.order.action):
+        order = Order.objects.select_for_update().filter(id=inquiry.order.id)
+        if InstagramAppService.check_activity_from_db(inquiry.order.link, inquiry.user.username, inquiry.order.action):
             inquiry.status = UserInquiry.STATUS_VALIDATED
             CoinTransaction.objects.create(
                 user=inquiry.user_page.user,
@@ -194,11 +190,4 @@ def final_validate_user_inquiries():
                 order.save()
         else:
             inquiry.status = UserInquiry.STATUS_REJECTED
-            CoinTransaction.objects.create(
-                user=inquiry.user_page.user,
-                inquiry=inquiry,
-                order=order,
-                unapproved_amount=-order.action.action_value,
-            )
-
         inquiry.save()

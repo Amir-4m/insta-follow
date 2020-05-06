@@ -37,30 +37,6 @@ class ProfileViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# class PackageViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
-#     authentication_classes = (JWTAuthentication,)
-#     permission_classes = (IsAuthenticated,)
-#     serializer_class = PackageSerializer
-#     queryset = Package.objects.all()
-#
-#     def get_queryset(self):
-#         queryset = super().get_queryset()
-#         return queryset.filter(is_enable=True)
-#
-#
-# class UserPackageViewSet(mixins.CreateModelMixin,
-#                          mixins.RetrieveModelMixin,
-#                          mixins.ListModelMixin,
-#                          viewsets.GenericViewSet):
-#     authentication_classes = (JWTAuthentication,)
-#     permission_classes = (IsAuthenticated,)
-#     serializer_class = UserPackageSerializer
-#     queryset = UserPackage.objects.all()
-#
-#     def perform_create(self, serializer):
-#         serializer.save(user=self.request.user)
-
-
 class OrderViewSet(viewsets.ModelViewSet):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
@@ -96,7 +72,6 @@ class UserInquiryViewSet(viewsets.ViewSet):
         valid_inquiries = []
         for order in valid_orders:
             user_inquiry, _c = UserInquiry.objects.get_or_create(order=order, defaults=dict(user_page=user_page))
-            # if _c or user_inquiry.validated_time is None:
             if _c:
                 valid_inquiries.append(user_inquiry)
             if len(valid_inquiries) == limit:
