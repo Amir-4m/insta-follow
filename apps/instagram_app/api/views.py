@@ -1,4 +1,4 @@
-from rest_framework import status, mixins, viewsets, views, generics
+from rest_framework import status, viewsets, generics, mixins
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
@@ -13,7 +13,7 @@ from .serializers import (
 from ..pagination import CoinTransactionPagination
 from apps.instagram_app.models import (
     InstaAction, UserPage, Order,
-    UserInquiry, CoinTransaction
+    UserInquiry, CoinTransaction,
 )
 
 
@@ -37,11 +37,20 @@ class ProfileViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class OrderViewSet(viewsets.GenericViewSet):
+class OrderViewSet(viewsets.GenericViewSet,
+                   mixins.CreateModelMixin,
+                   mixins.ListModelMixin):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
+
+    def get_queryset(self):
+        qs = super(OrderViewSet, self).get_queryset()
+        return qs.filter(owner=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class UserInquiryViewSet(viewsets.ViewSet):

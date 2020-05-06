@@ -1,10 +1,9 @@
-from abc import ABC
+from django.db import transaction
 from django.db.models import Sum, F
 from django.utils.translation import ugettext_lazy as _
-from django.forms.models import model_to_dict
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from apps.instagram_app.models import InstaPage, UserPage, UserInquiry, CoinTransaction
+from apps.instagram_app.models import InstaPage, UserPage, UserInquiry, CoinTransaction, Order, InstaAction
 from apps.instagram_app.services import InstagramAppService
 from apps.accounts.models import User
 
@@ -55,27 +54,32 @@ class ProfileSerializer(serializers.ModelSerializer):
         return user
 
 
-class OrderSerializer(serializers.Serializer):
-    follow = serializers.IntegerField(allow_null=True, required=False)
-    like = serializers.IntegerField(allow_null=True, required=False)
-    comment = serializers.IntegerField(allow_null=True, required=False)
-    link = serializers.URLField(allow_null=False, allow_blank=False)
-    page_id = serializers.CharField(max_length=100, allow_blank=False, allow_null=True)
-
-    def to_representation(self, data):
-        lst = []
-        if not isinstance(data, list):
-            return model_to_dict(data)
-        else:
-            for ins in data:
-                lst.append(model_to_dict(ins))
-            return {'created_orders': lst}
+class OrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ('id', 'action', 'target_no', 'link', 'instagram_username', 'is_enable')
 
     def create(self, validated_data):
-        return InstagramAppService.create_order(**validated_data)
-
-    def update(self, instance, validated_data):
-        raise NotImplementedError('`update()` must be implemented.')
+        user = validated_data.get('user')
+        order_action = validated_data.get('action')
+        target_no = validated_data.get('target_no')
+        link = validated_data.get('link')
+        action_value = InstaAction.objects.get(action_type=order_action).buy_value
+        with transaction.atomic():
+            locked_user = User.objects.select_for_update().get(id=user.id)
+            if locked_user.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet') >= action_value:
+                ct = CoinTransaction.objects.create(user=locked_user, amount=-action_value)
+                order = Order.objects.create(
+                    action=order_action,
+                    link=link,
+                    target_no=target_no,
+                    owner=locked_user
+                )
+                ct.order = order
+                ct.save()
+            else:
+                raise ValidationError(_("You do not have enough coin to create order"))
+            return order
 
 
 class UserInquirySerializer(serializers.ModelSerializer):
