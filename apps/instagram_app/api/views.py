@@ -37,14 +37,11 @@ class ProfileViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class OrderViewSet(viewsets.ModelViewSet):
+class OrderViewSet(viewsets.GenericViewSet):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
 
 
 class UserInquiryViewSet(viewsets.ViewSet):
