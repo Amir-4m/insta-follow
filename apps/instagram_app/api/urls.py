@@ -13,9 +13,6 @@ urlpatterns = [
 router = routers.DefaultRouter()
 router.register('profile', ProfileViewSet, basename='profile')
 router.register('inquiries', UserInquiryViewSet)
-
-# router.register('packages', PackageViewSet)
-# router.register('orders', OrderViewSet)
-# router.register('user/packages', UserPackageViewSet)
+router.register('orders', OrderViewSet)
 
 urlpatterns += router.urls

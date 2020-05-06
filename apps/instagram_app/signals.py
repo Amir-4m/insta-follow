@@ -8,29 +8,10 @@ from .tasks import collect_post_info
 logger = logging.getLogger(__name__)
 
 
-# @receiver(post_save, sender=UserPackage)
-# def save_remaining(sender, instance, **kwargs):
-#     follow = instance.remaining_follow
-#     like = instance.remaining_like
-#     comment = instance.remaining_comment
-#     if follow is None:
-#         follow = instance.package.follow_target_no
-#     if like is None:
-#         like = instance.package.like_target_no
-#     if comment is None:
-#         comment = instance.package.comment_target_no
-#     UserPackage.objects.filter(
-#         id=instance.id).update(
-#         remaining_follow=follow,
-#         remaining_comment=comment,
-#         remaining_like=like
-#     )
-
-
 @receiver(post_save, sender=User)
 def user_coin_transaction(sender, instance, **kwargs):
     if not instance.coin_transactions.exists():
-        CoinTransaction.objects.create(user=instance)
+        CoinTransaction.objects.create(user=instance, amount=0)
 
 
 @receiver(post_save, sender=Order)

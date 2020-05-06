@@ -173,22 +173,12 @@ class InstagramAppService(object):
         with transaction.atomic():
             for user_inquiry in UserInquiry.objects.select_for_update().filter(id__in=user_inquiry_ids):
                 user_inquiry.last_check_time = timezone.now()
-                if user_inquiry.done_time is None:
-                    user_inquiry.done_time = timezone.now()
-                if user_inquiry.validated_time is not None:
+                user_inquiry.status = UserInquiry.STATUS_DONE
+                if user_inquiry.validated_time is not None or user_inquiry.done_time is not None:
                     continue
                 if InstagramAppService.check_activity_from_db(
                         user_inquiry.order.link,
                         user_page.user.username,
                         user_inquiry.order.action):
-                    user_inquiry.validated_time = timezone.now()
-                    order = Order.objects.select_for_update().filter(
-                        id=user_inquiry.order.id,
-                    ).update(
-                        achieved_no=F('unapproved_achieved_no') + 1)
-                    CoinTransaction.objects.create(
-                        user=user_page.user,
-                        order=order,
-                        unapproved_amount=F('unapproved_amount') + order.action.action_value
-                    )
+                    user_inquiry.done_time = timezone.now()
                 user_inquiry.save()

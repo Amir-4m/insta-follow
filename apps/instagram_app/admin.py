@@ -25,23 +25,6 @@ class UserPageModelAdmin(admin.ModelAdmin):
     sortable_by = ('-created_time',)
 
 
-# @admin.register(Package)
-# class PackageModelAdmin(admin.ModelAdmin):
-#     list_display = (
-#         'id', 'name', 'follow_target_no', 'like_target_no',
-#         'comment_target_no', 'coins', 'is_enable'
-#     )
-#     search_fields = ('name',)
-#     sortable_by = ('-created_time',)
-#
-#
-# @admin.register(UserPackage)
-# class UserPackageModelAdmin(admin.ModelAdmin):
-#     list_display = ('id', 'user', 'package', 'created_time')
-#     list_select_related = ['user']
-#     sortable_by = ('-created_time',)
-
-
 @admin.register(Order)
 class OrderModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'action', 'link', 'instagram_username', 'is_enable', 'created_time')
@@ -60,3 +43,8 @@ class UserAssignmentModelAdmin(admin.ModelAdmin):
 @admin.register(InstaAction)
 class InstaActionModelAdmin(admin.ModelAdmin):
     list_display = ('action_type', 'action_value', 'buy_value', 'updated_time')
+
+
+@admin.register(CoinTransaction)
+class CoinTransactionModelAdmin(admin.ModelAdmin):
+    pass
