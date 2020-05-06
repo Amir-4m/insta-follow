@@ -59,11 +59,22 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ('id', 'action', 'target_no', 'link', 'instagram_username', 'is_enable')
 
+    def __init__(self, *args, **kwargs):
+        super(OrderSerializer, self).__init__(*args, **kwargs)
+        data = kwargs['data']
+        order_action = data.get('action')
+        if order_action == InstaAction.ACTION_FOLLOW:
+            instagram_username = data.get('instagram_username')
+            data.update({'link': f"https://www.instagram.com/{instagram_username}/"})
+
     def create(self, validated_data):
         user = validated_data.get('user')
         order_action = validated_data.get('action')
         target_no = validated_data.get('target_no')
         link = validated_data.get('link')
+        if order_action == InstaAction.ACTION_FOLLOW:
+            instagram_username = validated_data.get('instagram_username')
+            link = f"https://www.instagram.com/{instagram_username}/"
         action_value = InstaAction.objects.get(action_type=order_action).buy_value
         with transaction.atomic():
             locked_user = User.objects.select_for_update().get(id=user.id)
@@ -73,7 +84,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     action=order_action,
                     link=link,
                     target_no=target_no,
-                    owner=locked_user
+                    owner=locked_user,
                 )
                 ct.order = order
                 ct.save()
@@ -124,3 +135,9 @@ class CoinTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = CoinTransaction
         exclude = ('user',)
+
+
+class InstaActionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InstaAction
+        fields = ('action_type', 'action_value', 'buy_value')

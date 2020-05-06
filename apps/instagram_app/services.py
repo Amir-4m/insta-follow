@@ -3,14 +3,10 @@ import logging
 import re
 import time
 import requests
-from django.db.models import Sum
 from django.db import transaction
-from django.db.models import F
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy as _
-from rest_framework.exceptions import ValidationError
 
-from .models import Order, BaseInstaEntity, InstaPage, InstaAction, CoinTransaction, UserPage, UserInquiry
+from .models import BaseInstaEntity, InstaAction, UserPage, UserInquiry
 
 logger = logging.getLogger(__name__)
 
@@ -32,56 +28,6 @@ class InstagramAppService(object):
             logger.error('instagram account response can not be json decoded')
 
     @staticmethod
-    def create_order(user, follow=None, like=None, comment=None, link=None, page_id=None):
-        instagram_page = InstaPage.objects.get(id=page_id)
-        created_orders = []
-        if instagram_page:
-            if follow:
-                page_url = 'https://www.instagram.com/%s' % instagram_page.instagram_username
-                action_value = InstaAction.objects.get(action_type=InstaAction.ACTION_FOLLOW).buy_value
-                if user.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet') >= action_value:
-                    follow_order = Order.objects.create(
-                        action=InstaAction.ACTION_FOLLOW,
-                        link=page_url,
-                        target_no=follow,
-                    )
-                    CoinTransaction.objects.create(user=user, amount=-action_value, order=follow_order)
-                    created_orders.append(follow_order)
-                else:
-                    raise ValidationError(_("You do not have enough coin to create follow order"))
-
-        if link:
-            if like:
-                action_value = InstaAction.objects.get(action_type=InstaAction.ACTION_LIKE).buy_value
-                if user.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet') >= action_value:
-                    like_order = Order.objects.create(
-                        action=InstaAction.ACTION_LIKE,
-                        link=link,
-                        target_no=like,
-                    )
-                    CoinTransaction.objects.create(user=user, amount=-action_value, order=like_order)
-                    created_orders.append(like_order)
-                else:
-                    raise ValidationError(_("You do not have enough coin to create like order"))
-
-            if comment:
-                action_value = InstaAction.objects.get(action_type=InstaAction.ACTION_COMMENT).buy_value
-                if user.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet') >= action_value:
-                    comment_order = Order.objects.create(
-                        action=InstaAction.ACTION_COMMENT,
-                        link=link,
-                        target_no=comment,
-                    )
-                    CoinTransaction.objects.create(user=user, amount=-action_value, order=comment_order)
-                    created_orders.append(comment_order)
-                else:
-                    raise ValidationError(_("You do not have enough coin to create comment order"))
-
-        else:
-            raise ValidationError(_("No link were entered for the post !"))
-        return created_orders
-
-    @staticmethod
     def get_shortcode(url):
         pattern = "^https:\/\/www\.instagram\.com\/(p|tv)\/([\d\w\-_]+)(?:\/)?(\?.*)?$"
         try:
@@ -100,7 +46,7 @@ class InstagramAppService(object):
             page_id = result.groups()[0]
             return page_id
         except Exception as e:
-            logger.error(f"extract shortcode for url got exception: {url} error: {e}")
+            logger.error(f"extract page id for url got exception: {url} error: {e}")
             return
 
     @staticmethod
@@ -127,7 +73,7 @@ class InstagramAppService(object):
             response.raise_for_status()
             response = response.json()
             media_id = response['media_id'].split('_')[0]
-            author = '@' + response['author_name']
+            author = response['author_name']
             thumbnail_url = response['thumbnail_url']
             return media_id, author, thumbnail_url
         except requests.HTTPError as e:

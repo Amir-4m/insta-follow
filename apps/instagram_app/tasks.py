@@ -128,7 +128,7 @@ def collect_post_info(order_id, action, link, media_url, author):
         try:
             response = requests.get(f"https://www.instagram.com/{instagram_username}/?__a=1").json()
             media_url = response['graphql']['user']['profile_pic_url_hd']
-            author = '@' + instagram_username
+            author = instagram_username
         except Exception as e:
             logger.error(f"extract account json got exception error: {e}")
     if media_url and author:
@@ -161,7 +161,8 @@ def collect_order_data():
 # PERIODIC TASK
 @shared_task
 def validate_user_inquiries():
-    qs = UserInquiry.objects.filter(done_time__isnull=False, validated_time__isnull=True, status=UserInquiry.STATUS_DONE)
+    qs = UserInquiry.objects.filter(done_time__isnull=False, validated_time__isnull=True,
+                                    status=UserInquiry.STATUS_DONE)
     inquiries = [(obj.id, obj.user_page) for obj in qs]
     for inquiry in inquiries:
         InstagramAppService.check_user_action([inquiry[0]], inquiry[1])
