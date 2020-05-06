@@ -8,7 +8,8 @@ from .serializers import (
     ProfileSerializer,
     OrderSerializer,
     UserInquirySerializer,
-    CoinTransactionSerializer
+    CoinTransactionSerializer,
+    InstaActionSerializer
 )
 from ..pagination import CoinTransactionPagination
 from apps.instagram_app.models import (
@@ -116,3 +117,8 @@ class CoinTransactionAPIView(generics.ListAPIView):
     def get_queryset(self):
         queryset = super().get_queryset()
         return queryset.filter(user=self.request.user).order_by('-created_time')
+
+
+class InstaActionAPIView(generics.ListAPIView):
+    queryset = InstaAction.objects.all()
+    serializer_class = InstaActionSerializer
