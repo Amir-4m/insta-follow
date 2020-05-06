@@ -85,9 +85,10 @@ class Order(models.Model):
     instagram_username = models.CharField(_("instagram username"), max_length=120, blank=True)
     description = models.TextField(_("description"), blank=True, default='')
     is_enable = models.BooleanField(_("is enable"), default=True)
+    owner = models.ForeignKey('accounts.User', related_name='user_orders', on_delete=models.CASCADE)
 
     class Meta:
-        db_table = "insta_user_orders"
+        db_table = "insta_orders"
 
     def __str__(self):
         return f"{self.id} - {self.action}"

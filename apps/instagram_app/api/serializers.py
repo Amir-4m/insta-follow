@@ -12,7 +12,7 @@ from apps.accounts.models import User
 class InstaPagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = InstaPage
-        fields = ('id', 'instagram_username')
+        fields = ('id', 'instagram_username', 'instagram_user_id')
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -53,24 +53,6 @@ class ProfileSerializer(serializers.ModelSerializer):
         )
         UserPage.objects.get_or_create(user=user, page=page)
         return user
-
-
-# class PackageSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Package
-#         fields = '__all__'
-#
-#
-# class UserPackageSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = UserPackage
-#         fields = ('id', 'package')
-#         read_only_fields = ('id',)
-#
-#     def create(self, validated_data):
-#         package_id = validated_data.get('package')
-#         user = validated_data.get('user')
-#         return UserPackage.objects.create(user=user, package=package_id)
 
 
 class OrderSerializer(serializers.Serializer):
