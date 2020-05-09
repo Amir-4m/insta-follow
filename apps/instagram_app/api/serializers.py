@@ -58,8 +58,6 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    # action = serializers.CharField(write_only=True)
-
     class Meta:
         model = Order
         fields = ('id', 'action', 'target_no', 'link', 'instagram_username', 'is_enable')
@@ -67,47 +65,39 @@ class OrderSerializer(serializers.ModelSerializer):
             'link': {'required': False}
         }
 
-    def __init__(self, *args, **kwargs):
-        super(OrderSerializer, self).__init__(*args, **kwargs)
-        data = kwargs['data']
-        order_action = data.get('action')
-        if order_action == InstaAction.ACTION_FOLLOW:
-            instagram_username = data.get('instagram_username')
-            data.update({'link': f"https://www.instagram.com/{instagram_username}/"})
-
-    # def validate_action(self, value):
-    #     # TODO: check
-    #     action_value = InstaAction.objects.get(pk=value)
-    #
-    #     return action_value
-
-    # def validate(self, attrs):
-    #     if attrs.
-
+    def validate(self, attrs):
+        action_value = attrs.get('action')
+        link = attrs.get('link')
+        instagram_username = attrs.get('instagram_username')
+        if (action_value.pk == InstaAction.ACTION_LIKE or action_value.pk == InstaAction.ACTION_COMMENT) and not link:
+            raise ValidationError({'link': 'this field is required for like and comment !'})
+        elif action_value.pk == InstaAction.ACTION_FOLLOW and not instagram_username:
+            raise ValidationError({'instagram_username': 'this field is required for follow !'})
+        return attrs
 
     def create(self, validated_data):
         user = validated_data.get('user')
-        action_value = validated_data.get('action')
+        insta_action = validated_data.get('action')
         target_no = validated_data.get('target_no')
         link = validated_data.get('link')
-        if action_value.pk == InstaAction.ACTION_FOLLOW:
+        if insta_action.pk == InstaAction.ACTION_FOLLOW:
             instagram_username = validated_data.get('instagram_username')
             link = f"https://www.instagram.com/{instagram_username}/"
+
         with transaction.atomic():
             user = User.objects.select_for_update().get(id=user.id)
-            if user.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0)) < action_value.buy_value:
+            if user.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0)).get('wallet', 0) < insta_action.buy_value * target_no:
                 raise ValidationError(_("You do not have enough coin to create order"))
 
-            ct = CoinTransaction.objects.create(user=user, amount=-action_value)
+            ct = CoinTransaction.objects.create(user=user, amount=-(insta_action.buy_value * target_no))
             order = Order.objects.create(
-                action=action_value,
+                action=insta_action,
                 link=link,
                 target_no=target_no,
                 owner=user,
             )
             ct.order = order
             ct.save()
-
             return order
 
 
