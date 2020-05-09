@@ -46,7 +46,7 @@ class ProfileViewSet(viewsets.ViewSet):
         return Response(serializer.data)
 
     def destroy(self, request, pk=None):
-        UserPage.objects.filter(page=pk, user=self.request.user).delete()
+        UserPage.objects.filter(page=pk, user=self.request.user).update(is_active=False)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -83,11 +83,11 @@ class UserInquiryViewSet(viewsets.ViewSet):
     def get_inquiry(self, request, action_type):
         page_id = request.query_params.get('page_id')
         if not page_id:
-            return Response({'Error': 'page_id is required'})
+            return Response({'Error': 'page_id is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             limit = abs(min(int(request.query_params.get('limit', 0)), 100))
-        except TypeError:
+        except ValueError:
             raise ValidationError('make sure the limit value is a positive number!')
 
         try:
@@ -130,7 +130,7 @@ class UserInquiryViewSet(viewsets.ViewSet):
     )
     @action(methods=['post'], detail=False, url_path="done")
     def post(self, request, *args, **kwargs):
-        serializer = UserInquirySerializer(data=request.data, context={'request': request})
+        serializer = UserInquirySerializer(data=request.data, context={'user': request.user})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response()
