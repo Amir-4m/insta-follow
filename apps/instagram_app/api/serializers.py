@@ -86,7 +86,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             user = User.objects.select_for_update().get(id=user.id)
-            if user.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0)).get('wallet', 0) < insta_action.buy_value * target_no:
+            if user.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0)).get('wallet',
+                                                                                             0) < insta_action.buy_value * target_no:
                 raise ValidationError(_("You do not have enough coin to create order"))
 
             ct = CoinTransaction.objects.create(user=user, amount=-(insta_action.buy_value * target_no))

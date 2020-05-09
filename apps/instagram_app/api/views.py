@@ -1,3 +1,4 @@
+from django.db.models import Sum
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets, generics, mixins
@@ -135,7 +136,7 @@ class UserInquiryViewSet(viewsets.ViewSet):
         return Response()
 
 
-class CoinTransactionAPIView(generics.ListAPIView):
+class CoinTransactionAPIView(viewsets.GenericViewSet, mixins.ListModelMixin):
     """Shows a list of user transactions"""
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
@@ -146,6 +147,11 @@ class CoinTransactionAPIView(generics.ListAPIView):
     def get_queryset(self):
         queryset = super().get_queryset()
         return queryset.filter(user=self.request.user).order_by('-created_time')
+
+    @action(methods=['get'], detail=False, url_path='total')
+    def total(self, request, *args, **kwargs):
+        serializer = self.serializer_class(self.get_queryset().aggregate(amount=Sum('amount')))
+        return Response(serializer.data)
 
 
 class InstaActionAPIView(generics.ListAPIView):

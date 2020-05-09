@@ -1,5 +1,6 @@
 import logging
 
+from django.core.exceptions import ValidationError
 from django.db import models, connection
 from django.utils.translation import ugettext_lazy as _
 from djongo import models as djongo_models
@@ -38,6 +39,10 @@ class InstaAction(models.Model):
 
     def __str__(self):
         return self.action_type
+
+    def clean(self):
+        if self.action_value > self.buy_value:
+            raise ValidationError(_('action value must be lower than buy value'))
 
 
 class InstaPage(models.Model):
