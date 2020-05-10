@@ -67,12 +67,15 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         action_value = attrs.get('action')
+        target_no = attrs.get('target_no')
         link = attrs.get('link')
         instagram_username = attrs.get('instagram_username')
         if (action_value.pk == InstaAction.ACTION_LIKE or action_value.pk == InstaAction.ACTION_COMMENT) and not link:
             raise ValidationError({'link': 'this field is required for like and comment !'})
         elif action_value.pk == InstaAction.ACTION_FOLLOW and not instagram_username:
             raise ValidationError({'instagram_username': 'this field is required for follow !'})
+        if target_no <= 0:
+            raise ValidationError({'target_no': 'target number could not be 0 !'})
         return attrs
 
     def create(self, validated_data):
@@ -86,7 +89,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             user = User.objects.select_for_update().get(id=user.id)
-            if user.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0)).get('wallet', 0) < insta_action.buy_value * target_no:
+            if user.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0)).get('wallet',
+                                                                                             0) < insta_action.buy_value * target_no:
                 raise ValidationError(_("You do not have enough coin to create order"))
 
             ct = CoinTransaction.objects.create(user=user, amount=-(insta_action.buy_value * target_no))
@@ -113,7 +117,7 @@ class UserInquirySerializer(serializers.ModelSerializer):
         fields = ('id', 'link', 'instagram_username', 'media_url', 'page_id', 'done_ids')
 
     def validate(self, attrs):
-        user = self.context['request'].user
+        user = self.context['user']
         page_id = attrs.get('page_id')
         id_list = attrs.get('done_ids')
         try:

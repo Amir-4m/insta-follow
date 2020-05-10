@@ -4,6 +4,8 @@ import urllib.parse
 import requests
 
 from datetime import datetime, timedelta
+
+from django.db.models import F
 from django.utils import timezone
 from django.core.cache import cache
 from celery import shared_task
@@ -192,3 +194,15 @@ def final_validate_user_inquiries():
         else:
             inquiry.status = UserInquiry.STATUS_REJECTED
         inquiry.save()
+
+
+# PERIODIC TASK
+@shared_task
+def check_expired_inquiries():
+    qs = UserInquiry.objects.filter(
+        status=UserInquiry.STATUS_OPEN,
+        created_time__gte=F('created_time') + timedelta(hours=2)
+    )
+    for obj in qs:
+        obj.status = UserInquiry.STATUS_EXPIRED
+        obj.save()

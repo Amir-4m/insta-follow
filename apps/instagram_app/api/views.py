@@ -1,3 +1,4 @@
+from django.db.models import Sum
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets, generics, mixins
@@ -45,7 +46,7 @@ class ProfileViewSet(viewsets.ViewSet):
         return Response(serializer.data)
 
     def destroy(self, request, pk=None):
-        UserPage.objects.filter(page=pk, user=self.request.user).delete()
+        UserPage.objects.filter(page=pk, user=self.request.user).update(is_active=False)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -82,11 +83,11 @@ class UserInquiryViewSet(viewsets.ViewSet):
     def get_inquiry(self, request, action_type):
         page_id = request.query_params.get('page_id')
         if not page_id:
-            return Response({'Error': 'page_id is required'})
+            return Response({'Error': 'page_id is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             limit = abs(min(int(request.query_params.get('limit', 0)), 100))
-        except TypeError:
+        except ValueError:
             raise ValidationError('make sure the limit value is a positive number!')
 
         try:
@@ -129,13 +130,13 @@ class UserInquiryViewSet(viewsets.ViewSet):
     )
     @action(methods=['post'], detail=False, url_path="done")
     def post(self, request, *args, **kwargs):
-        serializer = UserInquirySerializer(data=request.data, context={'request': request})
+        serializer = UserInquirySerializer(data=request.data, context={'user': request.user})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response()
 
 
-class CoinTransactionAPIView(generics.ListAPIView):
+class CoinTransactionAPIView(viewsets.GenericViewSet, mixins.ListModelMixin):
     """Shows a list of user transactions"""
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
@@ -146,6 +147,11 @@ class CoinTransactionAPIView(generics.ListAPIView):
     def get_queryset(self):
         queryset = super().get_queryset()
         return queryset.filter(user=self.request.user).order_by('-created_time')
+
+    @action(methods=['get'], detail=False, url_path='total')
+    def total(self, request, *args, **kwargs):
+        serializer = self.serializer_class(self.get_queryset().aggregate(amount=Sum('amount')))
+        return Response(serializer.data)
 
 
 class InstaActionAPIView(generics.ListAPIView):

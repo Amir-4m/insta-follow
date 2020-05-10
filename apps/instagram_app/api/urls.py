@@ -8,7 +8,6 @@ from .views import (
 )
 
 urlpatterns = [
-    path('coin-transaction/', CoinTransactionAPIView.as_view(), name='coin-transaction'),
     path('insta-action/', InstaActionAPIView.as_view(), name='insta-action')
 
 ]
@@ -17,5 +16,6 @@ router = routers.DefaultRouter()
 router.register('profile', ProfileViewSet, basename='profile')
 router.register('inquiries', UserInquiryViewSet)
 router.register('orders', OrderViewSet)
+router.register('coin-transaction', CoinTransactionAPIView)
 
 urlpatterns += router.urls

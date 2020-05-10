@@ -7,6 +7,9 @@ django-celery-beat
 python-decouple
 python-telegram-bot>=12.6, <12.7
 drf-yasg==1.17.1
+coverage==5.1
+mock==4.0.2
+
 djongo
 
 PyJWT
