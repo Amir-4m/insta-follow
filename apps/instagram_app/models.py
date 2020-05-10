@@ -158,6 +158,10 @@ class CoinTransaction(models.Model):
     def __str__(self):
         return f"{self.user} - {self.amount}"
 
+    def clean(self):
+        if not self.inquiry and not self.order:
+            ValidationError(_("both inquiry and order can not be None."))
+
 
 class RoutedDjongoManager(djongo_models.DjongoManager):
     def __init__(self):
