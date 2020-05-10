@@ -10,6 +10,9 @@ omit =
     docs/*
     */apps.py
      */models.py
+     */services.py
+     */signals.py
+     */tasks.py
       run_tests.py
        manage.py
 
