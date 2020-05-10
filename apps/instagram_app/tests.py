@@ -163,7 +163,7 @@ class InstagramSerializerTestCase(APITestCase):
         self.assertFalse(serializer.is_valid())
         self.assertRaisesMessage(
             ValidationError,
-            'this field is required for like and comment !',
+            'link field is required for like and comment !',
             serializer.validate,
             data
         )
@@ -178,7 +178,7 @@ class InstagramSerializerTestCase(APITestCase):
         self.assertFalse(serializer.is_valid())
         self.assertRaisesMessage(
             ValidationError,
-            'this field is required for follow !',
+            'instagram_username field is required for follow !',
             serializer.validate,
             data
         )
