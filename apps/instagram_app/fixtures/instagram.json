@@ -76,6 +76,7 @@
     "model": "instagram_app.order",
     "pk": 1,
     "fields": {
+      "entity_id": 1,
       "created_time": "2020-05-06T11:37:15.704",
       "action": "L",
       "target_no": 20,
@@ -91,6 +92,7 @@
     "model": "instagram_app.order",
     "pk": 2,
     "fields": {
+      "entity_id": 2,
       "created_time": "2020-05-06T12:14:43.986",
       "action": "C",
       "target_no": 50,
@@ -106,6 +108,7 @@
     "model": "instagram_app.order",
     "pk": 3,
     "fields": {
+      "entity_id": 3,
       "created_time": "2020-05-06T12:15:04.271",
       "action": "F",
       "target_no": 50,

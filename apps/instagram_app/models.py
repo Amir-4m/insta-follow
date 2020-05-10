@@ -83,6 +83,7 @@ class UserPage(models.Model):
 # Inventory
 class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
+    entity_id = models.IntegerField(_('entity ID'), null=True, db_index=True)
     action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
     target_no = models.IntegerField(_("target number"))
     link = models.URLField(_("link"))
@@ -135,7 +136,7 @@ class UserInquiry(models.Model):
     done_time = models.DateTimeField(_('done time'), null=True, blank=True)
     validated_time = models.DateTimeField(_("validated time"), null=True, blank=True)
 
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='user_inquiries')
     user_page = models.ForeignKey(UserPage, on_delete=models.CASCADE)
 
     class Meta:
