@@ -94,15 +94,17 @@ class UserInquiryViewSet(viewsets.ViewSet):
             user_page = UserPage.objects.get(page_id=page_id, user=self.request.user)
         except UserPage.DoesNotExist:
             raise ValidationError(detail={'detail': 'user and page does not match!'})
-        valid_orders = Order.objects.filter(is_enable=True, action=action_type).exclude(
-            entity_id__in=UserInquiry.objects.filter(user_page=user_page).values_list('order__entity_id', flat=True)
-        )
+        valid_orders = Order.objects.filter(is_enable=True, action=action_type).order_by('-id')
 
         valid_inquiries = []
+        given_entities = []
         for order in valid_orders:
+            if order.entity_id in given_entities:
+                continue
             user_inquiry, _c = UserInquiry.objects.get_or_create(order=order, defaults=dict(user_page=user_page))
             if _c:
                 valid_inquiries.append(user_inquiry)
+                given_entities.append(order.entity_id)
             if len(valid_inquiries) == limit:
                 break
 
