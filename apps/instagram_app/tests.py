@@ -183,7 +183,7 @@ class InstagramSerializerTestCase(APITestCase):
         self.assertFalse(serializer.is_valid())
         self.assertRaisesMessage(
             ValidationError,
-            'instagram_username field is required for follow !',
+            'instagram_username field is required for follow!',
             serializer.validate,
             data
         )
@@ -199,7 +199,7 @@ class InstagramSerializerTestCase(APITestCase):
         self.assertFalse(serializer.is_valid())
         self.assertRaisesMessage(
             ValidationError,
-            'target number could not be 0 !',
+            'target number could not be 0!',
             serializer.validate,
             data
         )
@@ -208,6 +208,7 @@ class InstagramSerializerTestCase(APITestCase):
         data = {
             "action": InstaAction(pk=InstaAction.ACTION_FOLLOW),
             "target_no": 70,
+            "link": None,
             "instagram_username": "test"
         }
         serializer = OrderSerializer(data=data)
@@ -224,6 +225,7 @@ class InstagramSerializerTestCase(APITestCase):
         data = {
             "action": InstaAction(pk=InstaAction.ACTION_FOLLOW),
             "target_no": 1,
+            'link': None,
             "instagram_username": "test"
         }
         CoinTransaction.objects.create(user=self.user, amount=100)

@@ -171,6 +171,19 @@ class CoinTransaction(models.Model):
         return f"{self.user} - {self.amount}"
 
 
+class CoinPackage(models.Model):
+    created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
+    updated_time = models.DateTimeField(_("updated time"), auto_now=True)
+    amount = models.IntegerField(_('amount'))
+    price = models.PositiveIntegerField(_('price'))
+
+    class Meta:
+        db_table = "insta_coin_packages"
+
+    def __str__(self):
+        return f"{self.amount} - {self.price}"
+
+
 class RoutedDjongoManager(djongo_models.DjongoManager):
     def __init__(self):
         super().__init__()
