@@ -8,6 +8,17 @@ from djongo import models as djongo_models
 logger = logging.getLogger(__name__)
 
 
+class Device(models.Model):
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE, related_name='devices')
+    device_id = models.CharField(_('device id'), max_length=40, db_index=True)
+
+    class Meta:
+        db_table = "insta_devices"
+
+    def __str__(self):
+        return f"{self.user} - {self.device_id}"
+
+
 class Category(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     name = models.CharField(_("category name"), max_length=100, unique=True)
@@ -90,6 +101,7 @@ class Order(models.Model):
     media_url = models.TextField(_("media url"), blank=True)
     instagram_username = models.CharField(_("instagram username"), max_length=120, blank=True)
     description = models.TextField(_("description"), blank=True, default='')
+    is_private = models.BooleanField(_("is private"), default=False)
     is_enable = models.BooleanField(_("is enable"), default=True)
     owner = models.ForeignKey('accounts.User', related_name='user_orders', on_delete=models.CASCADE)
 

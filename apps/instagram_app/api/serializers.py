@@ -58,7 +58,8 @@ class ProfileSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
-        fields = ('id', 'action', 'target_no', 'link', 'instagram_username', 'is_enable')
+        fields = ('id', 'entity_id', 'action', 'target_no', 'link', 'instagram_username', 'is_enable', 'is_private')
+        read_only_fields = ('entity_id', 'is_private')
         extra_kwargs = {
             'link': {'required': False, 'allow_null': True}
         }
@@ -99,6 +100,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 owner=user,
             )
             ct.order = order
+            ct.description = f"create order {order.id}"
             ct.save()
             return order
 
