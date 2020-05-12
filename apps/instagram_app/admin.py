@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, InstaPage, UserPage, Order, UserInquiry, InstaAction, CoinTransaction
+from .models import Category, InstaPage, UserPage, Order, UserInquiry, InstaAction, CoinTransaction, CoinPackage
 
 
 @admin.register(Category)
@@ -43,3 +43,9 @@ class UserAssignmentModelAdmin(admin.ModelAdmin):
 @admin.register(InstaAction)
 class InstaActionModelAdmin(admin.ModelAdmin):
     list_display = ('action_type', 'action_value', 'buy_value', 'updated_time')
+
+
+@admin.register(CoinPackage)
+class CoinPackageModelAdmin(admin.ModelAdmin):
+    list_display = ('id', 'amount', 'price', 'updated_time', 'created_time')
+    sortable_by = ('-created_time', 'price')

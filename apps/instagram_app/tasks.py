@@ -1,13 +1,14 @@
 import json
 import logging
 import urllib.parse
-import requests
 
 from datetime import datetime, timedelta
 
+from django.utils.translation import ugettext_lazy as _
 from django.db.models import F
 from django.utils import timezone
 from django.core.cache import cache
+
 from celery import shared_task
 
 from .endpoints import LIKES_BY_SHORTCODE, COMMENTS_BY_SHORTCODE
@@ -71,7 +72,7 @@ def collect_like(order_id, order_link, order_page_id):
 def collect_comment(order_id, order_link, order_page_id):
     model = BaseInstaEntity.get_model(InstaAction.ACTION_COMMENT, order_page_id)
     if not model:
-        logger.warning(f"can't get model for order: {order_id} to collect likes")
+        logger.warning(f"can't get model for order: {order_id} to collect comments")
         return
 
     shortcode = InstagramAppService.get_shortcode(order_link)
@@ -79,7 +80,7 @@ def collect_comment(order_id, order_link, order_page_id):
         "shortcode": shortcode,
         "first": 50,
     }
-    media_id = InstagramAppService.get_post_info(order_link)
+    media_id = InstagramAppService.get_post_info(order_link)[0]
     has_next_page = True
 
     while has_next_page:
@@ -121,36 +122,29 @@ def collect_comment(order_id, order_link, order_page_id):
 
 
 @shared_task
-def collect_post_info(order_id, action, link, media_url, author):
-    entity_id = 0
-    if action in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
-        try:
-            entity_id, author, media_url = InstagramAppService.get_post_info(link)
-        except Exception as e:
-            Order.objects.filter(id=order_id).update(
-                description=e,
-                is_private=True
-            )
-            logger.error(f"extract post json got exception error: {e}")
+def collect_order_link_info(order_id, action, link, media_url):
+    if action == InstaAction.ACTION_FOLLOW:
+        author = InstagramAppService.get_page_id(link)
+        entity_id, media_url, is_private = InstagramAppService.get_page_info(author)
 
-    elif action == InstaAction.ACTION_FOLLOW:
-        instagram_username = InstagramAppService.get_page_id(link)
-        try:
-            response = requests.get(f"https://www.instagram.com/{instagram_username}/?__a=1").json()
-            response = response['graphql']['user']
-            media_url = response['profile_pic_url_hd']
-            entity_id = response['id']
-            is_private = response['is_private']
-            if is_private:
-                return Order.objects.filter(id=order_id).update(is_private=True)
+    else:
+        entity_id, author, media_url, is_private = InstagramAppService.get_post_info(link)
 
-            author = instagram_username
-        except Exception as e:
-            Order.objects.filter(id=order_id).update(is_private=True, description=e)
-            logger.error(f"extract account json got exception error: {e}")
+    if is_private:
+        # TODO: send fcm notif
+        Order.objects.filter(id=order_id).update(
+            is_enable=False,
+            description=_("account is private")
+        )
 
-    if media_url and author and entity_id:
-        Order.objects.filter(id=order_id).update(media_url=media_url, instagram_username=author, entity_id=entity_id)
+    elif media_url and author and entity_id:
+        Order.objects.filter(id=order_id).update(
+            entity_id=entity_id,
+            media_url=media_url,
+            instagram_username=author,
+            is_enable=True,
+            description=_("order enabled properly")
+        )
 
 
 # PERIODIC TASK
@@ -179,8 +173,11 @@ def collect_order_data():
 # PERIODIC TASK
 @shared_task
 def validate_user_inquiries():
-    qs = UserInquiry.objects.filter(done_time__isnull=False, validated_time__isnull=True,
-                                    status=UserInquiry.STATUS_DONE)
+    qs = UserInquiry.objects.filter(
+        done_time__isnull=False,
+        validated_time__isnull=True,
+        status=UserInquiry.STATUS_DONE
+    )
     inquiries = [(obj.id, obj.user_page) for obj in qs]
     for inquiry in inquiries:
         InstagramAppService.check_user_action([inquiry[0]], inquiry[1])
@@ -207,6 +204,7 @@ def final_validate_user_inquiries():
             )
             if order.achieved_number_approved() == order.target_no:
                 order.is_enable = False
+                order.description = _("order completed")
                 order.save()
         else:
             inquiry.status = UserInquiry.STATUS_REJECTED

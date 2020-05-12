@@ -94,14 +94,13 @@ class UserPage(models.Model):
 # Inventory
 class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    entity_id = models.IntegerField(_('entity ID'), null=True, db_index=True)
     action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
     target_no = models.IntegerField(_("target number"))
     link = models.URLField(_("link"))
+    entity_id = models.IntegerField(_('entity ID'), null=True, db_index=True)
     media_url = models.TextField(_("media url"), blank=True)
     instagram_username = models.CharField(_("instagram username"), max_length=120, blank=True)
     description = models.TextField(_("description"), blank=True, default='')
-    is_private = models.BooleanField(_("is private"), default=False)
     is_enable = models.BooleanField(_("is enable"), default=True)
     owner = models.ForeignKey('accounts.User', related_name='user_orders', on_delete=models.CASCADE)
 
@@ -170,6 +169,19 @@ class CoinTransaction(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.amount}"
+
+
+class CoinPackage(models.Model):
+    created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
+    updated_time = models.DateTimeField(_("updated time"), auto_now=True)
+    amount = models.IntegerField(_('amount'))
+    price = models.PositiveIntegerField(_('price'))
+
+    class Meta:
+        db_table = "insta_coin_packages"
+
+    def __str__(self):
+        return f"{self.amount} - {self.price}"
 
 
 class RoutedDjongoManager(djongo_models.DjongoManager):
