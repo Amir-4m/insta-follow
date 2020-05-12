@@ -61,7 +61,7 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = ('id', 'entity_id', 'action', 'target_no', 'link', 'instagram_username', 'is_enable', 'is_private')
         read_only_fields = ('entity_id', 'is_private')
         extra_kwargs = {
-            'link': {'required': False, 'allow_null': True}
+            'link': {'allow_null': True}
         }
 
     def validate(self, attrs):
@@ -71,7 +71,7 @@ class OrderSerializer(serializers.ModelSerializer):
         instagram_username = attrs.get('instagram_username')
         if (action_value.pk == InstaAction.ACTION_LIKE or action_value.pk == InstaAction.ACTION_COMMENT) and not link:
             raise ValidationError(detail={'detail': 'link field is required for like and comment !', 'code': 400})
-        elif action_value.pk == InstaAction.ACTION_FOLLOW and not instagram_username:
+        if action_value.pk == InstaAction.ACTION_FOLLOW and not instagram_username:
             raise ValidationError(detail={'detail': 'instagram_username field is required for follow !', 'code': 400})
         if target_no <= 0:
             raise ValidationError(detail={'detail': 'target number could not be 0 !', 'code': 400})
@@ -88,8 +88,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             user = User.objects.select_for_update().get(id=user.id)
-            if user.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0)).get('wallet',
-                                                                                             0) < insta_action.buy_value * target_no:
+            if user.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet'] < insta_action.buy_value * target_no:
                 raise ValidationError(detail={'detail': _("You do not have enough coin to create order"), 'code': 400})
 
             ct = CoinTransaction.objects.create(user=user, amount=-(insta_action.buy_value * target_no))

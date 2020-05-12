@@ -13,19 +13,35 @@ logger = logging.getLogger(__name__)
 
 class InstagramAppService(object):
     @staticmethod
-    def get_page_info(instagram_id):
+    def get_page_info(instagram_id, full_info=False):
+        user_id = None
+        name = ''
+        media_url = ''
+        is_private = False
+        followers, following, posts_count = 0, 0, 0
+
         try:
-            response = requests.get(f"https://www.instagram.com/{instagram_id}/?__a=1").json()
-            temp = response['graphql']['user']
+            r = requests.get(f"https://www.instagram.com/{instagram_id}/?__a=1")
+            r.raise_for_status()
+            r_json = r.json()
+
+            temp = r_json['graphql']['user']
             user_id = temp['id']
             name = temp['full_name']
             followers = temp['edge_followed_by']['count']
             following = temp['edge_follow']['count']
             posts_count = temp['edge_owner_to_timeline_media']['count']
-            return user_id, name, followers, following, posts_count
+            media_url = r_json['profile_pic_url_hd']
+            is_private = r_json['is_private']
+        except Exception as e:
+            logger.error(f"error while getting page: {instagram_id} information {e}")
 
-        except json.JSONDecodeError:
-            logger.error('instagram account response can not be json decoded')
+        if full_info:
+            v = user_id, name, followers, following, posts_count, media_url, is_private
+        else:
+            v = user_id, media_url, is_private
+
+        return v
 
     @staticmethod
     def get_shortcode(url):
@@ -68,20 +84,26 @@ class InstagramAppService(object):
 
     @staticmethod
     def get_post_info(link):
+        media_id = None
+        author = ''
+        thumbnail_url = ''
+        is_private = False
+
         try:
-            response = requests.get(f"https://api.instagram.com/oembed/?callback=&url={link}")
-            response.raise_for_status()
-            response = response.json()
-            media_id = response['media_id'].split('_')[0]
-            author = response['author_name']
-            thumbnail_url = response['thumbnail_url']
-            return media_id, author, thumbnail_url
+            r = requests.get(f"https://api.instagram.com/oembed/?callback=&url={link}")
+            r.raise_for_status()
+            r = r.json()
+            media_id = r['media_id'].split('_')[0]
+            author = r['author_name']
+            thumbnail_url = r['thumbnail_url']
         except requests.HTTPError as e:
             logger.error(f"error while getting post: {link} information HTTPError: {e}")
+            if r.status_code == 404:
+                is_private = True
         except Exception as e:
             logger.error(f"error while getting post: {link} information {e}")
 
-        return False
+        return media_id, author, thumbnail_url, is_private
 
     @staticmethod
     def get_post_media_url(short_code):

@@ -73,6 +73,8 @@ class OrderViewSet(viewsets.GenericViewSet,
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+    #TODO: add method to make order not private
+
 
 class UserInquiryViewSet(viewsets.ViewSet):
     authentication_classes = (JWTAuthentication,)

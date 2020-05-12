@@ -79,6 +79,8 @@ def collect_comment(order_id, order_link, order_page_id):
         "shortcode": shortcode,
         "first": 50,
     }
+    return
+    # FIXME: returns tuple
     media_id = InstagramAppService.get_post_info(order_link)
     has_next_page = True
 
@@ -121,35 +123,20 @@ def collect_comment(order_id, order_link, order_page_id):
 
 
 @shared_task
-def collect_post_info(order_id, action, link, media_url, author):
-    entity_id = 0
-    if action in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
-        try:
-            entity_id, author, media_url = InstagramAppService.get_post_info(link)
-        except Exception as e:
-            Order.objects.filter(id=order_id).update(
-                description=e,
-                is_private=True
-            )
-            logger.error(f"extract post json got exception error: {e}")
+def collect_post_info(order_id, action, link, media_url):
 
-    elif action == InstaAction.ACTION_FOLLOW:
-        instagram_username = InstagramAppService.get_page_id(link)
-        try:
-            response = requests.get(f"https://www.instagram.com/{instagram_username}/?__a=1").json()
-            response = response['graphql']['user']
-            media_url = response['profile_pic_url_hd']
-            entity_id = response['id']
-            is_private = response['is_private']
-            if is_private:
-                return Order.objects.filter(id=order_id).update(is_private=True)
+    if action == InstaAction.ACTION_FOLLOW:
+        author = InstagramAppService.get_page_id(link)
+        entity_id, thumbnail_url, is_private = InstagramAppService.get_page_info(author)
 
-            author = instagram_username
-        except Exception as e:
-            Order.objects.filter(id=order_id).update(is_private=True, description=e)
-            logger.error(f"extract account json got exception error: {e}")
+    else:
+        entity_id, author, thumbnail_url, is_private = InstagramAppService.get_post_info(link)
 
-    if media_url and author and entity_id:
+    if is_private:
+        # TODO: send fcm notif
+        Order.objects.filter(id=order_id).update(is_private=is_private)
+
+    elif media_url and author and entity_id:
         Order.objects.filter(id=order_id).update(media_url=media_url, instagram_username=author, entity_id=entity_id)
 
 
