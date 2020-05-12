@@ -1,4 +1,3 @@
-import json
 import logging
 import re
 import time
@@ -31,8 +30,8 @@ class InstagramAppService(object):
             followers = temp['edge_followed_by']['count']
             following = temp['edge_follow']['count']
             posts_count = temp['edge_owner_to_timeline_media']['count']
-            media_url = r_json['profile_pic_url_hd']
-            is_private = r_json['is_private']
+            media_url = temp['profile_pic_url_hd']
+            is_private = temp['is_private']
         except Exception as e:
             logger.error(f"error while getting page: {instagram_id} information {e}")
 
@@ -75,11 +74,11 @@ class InstagramAppService(object):
             return response.json()
 
         except requests.HTTPError as e:
-            logger.error(f"sending request to instagram got HTTPError: {e}")
+            logger.error(f"sending request to instagram for url: {url} got HTTPError: {e}")
             return
 
         except Exception as e:
-            logger.error(f"sending request to instagram got error: {e}")
+            logger.error(f"sending request to instagram for url: {url} got error: {e}")
             return
 
     @staticmethod

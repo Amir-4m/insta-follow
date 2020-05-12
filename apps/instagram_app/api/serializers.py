@@ -6,9 +6,20 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from apps.instagram_app.models import InstaPage, UserPage, UserInquiry, CoinTransaction, Order, InstaAction
+from apps.instagram_app.models import InstaPage, UserPage, UserInquiry, CoinTransaction, Order, InstaAction, Device
 from apps.instagram_app.services import InstagramAppService
 from apps.accounts.models import User
+
+
+class DeviceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Device
+        fields = ('device_id',)
+
+    def create(self, validated_data):
+        user = validated_data.get('user')
+        device_id = validated_data.get('device_id')
+        return Device.objects.create(user=user, device_id=device_id)
 
 
 class InstaPagesSerializer(serializers.ModelSerializer):
@@ -58,8 +69,9 @@ class ProfileSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
-        fields = ('id', 'entity_id', 'action', 'target_no', 'link', 'instagram_username', 'is_enable', 'is_private')
-        read_only_fields = ('entity_id', 'is_private')
+        fields = ('id', 'entity_id', 'action', 'target_no', 'achieved_number_approved', 'link', 'instagram_username',
+                  'is_enable')
+        read_only_fields = ('entity_id', 'is_enable', 'achieved_number_approved')
         extra_kwargs = {
             'link': {'allow_null': True}
         }
@@ -70,11 +82,12 @@ class OrderSerializer(serializers.ModelSerializer):
         link = attrs.get('link')
         instagram_username = attrs.get('instagram_username')
         if (action_value.pk == InstaAction.ACTION_LIKE or action_value.pk == InstaAction.ACTION_COMMENT) and not link:
-            raise ValidationError(detail={'detail': 'link field is required for like and comment !', 'code': 400})
+            raise ValidationError(detail={'detail': _('link field is required for like and comment !')})
         if action_value.pk == InstaAction.ACTION_FOLLOW and not instagram_username:
-            raise ValidationError(detail={'detail': 'instagram_username field is required for follow !', 'code': 400})
+            raise ValidationError(
+                detail={'detail': _('instagram_username field is required for follow!')})
         if target_no <= 0:
-            raise ValidationError(detail={'detail': 'target number could not be 0 !', 'code': 400})
+            raise ValidationError(detail={'detail': _('target number could not be 0!')})
         return attrs
 
     def create(self, validated_data):
@@ -88,8 +101,11 @@ class OrderSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             user = User.objects.select_for_update().get(id=user.id)
-            if user.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet'] < insta_action.buy_value * target_no:
-                raise ValidationError(detail={'detail': _("You do not have enough coin to create order"), 'code': 400})
+            if user.coin_transactions.all().aggregate(
+                    wallet=Coalesce(Sum('amount'), 0)
+            )['wallet'] < insta_action.buy_value * target_no:
+
+                raise ValidationError(detail={'detail': _("You do not have enough coin to create order")})
 
             ct = CoinTransaction.objects.create(user=user, amount=-(insta_action.buy_value * target_no))
             order = Order.objects.create(
@@ -123,11 +139,11 @@ class UserInquirySerializer(serializers.ModelSerializer):
             user_page = UserPage.objects.get(page=page_id, user=user)
             user_inquiry_ids = [obj.id for obj in UserInquiry.objects.filter(id__in=id_list, user_page=user_page)]
         except UserPage.DoesNotExist:
-            raise ValidationError(detail={'detail': 'user and page does not match together !', 'code': 400})
+            raise ValidationError(detail={'detail': _('user and page does not match together !')})
         except Exception as e:
-            raise ValidationError(detail={'detail': f"{e}", 'code': 400})
+            raise ValidationError(detail={'detail': f"{e}"})
         if len(user_inquiry_ids) != len(id_list):
-            raise ValidationError(detail={'detail': 'invalid id for user inquiries', 'code': 400})
+            raise ValidationError(detail={'detail': _('invalid id for user inquiries')})
 
         v_data = {
             'user_page': user_page,

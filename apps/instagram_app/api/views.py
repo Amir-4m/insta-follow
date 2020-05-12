@@ -1,3 +1,4 @@
+from django.utils.translation import ugettext_lazy as _
 from django.db.models import Sum
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
@@ -13,13 +14,24 @@ from .serializers import (
     OrderSerializer,
     UserInquirySerializer,
     CoinTransactionSerializer,
-    InstaActionSerializer
+    InstaActionSerializer,
+    DeviceSerializer
 )
 from ..pagination import CoinTransactionPagination
 from apps.instagram_app.models import (
     InstaAction, UserPage, Order,
-    UserInquiry, CoinTransaction,
+    UserInquiry, CoinTransaction, Device
 )
+
+
+class DeviceViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
+    serializer_class = DeviceSerializer
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = Device.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 @method_decorator(name='list', decorator=swagger_auto_schema(
@@ -73,7 +85,17 @@ class OrderViewSet(viewsets.GenericViewSet,
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-    #TODO: add method to make order not private
+    @action(methods=["get"], detail=True)
+    def recheck(self, request, pk=None, *args, **kwargs):
+        """
+        Check whether or not the account is private or not
+        """
+        instance = self.get_object()
+        if instance.is_enable is False:
+            instance.is_enable = True
+            instance.save()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
 
 class UserInquiryViewSet(viewsets.ViewSet):
@@ -85,17 +107,17 @@ class UserInquiryViewSet(viewsets.ViewSet):
     def get_inquiry(self, request, action_type):
         page_id = request.query_params.get('page_id')
         if not page_id:
-            return Response({'Error': 'page_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'Error': _('page_id is required')}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             limit = abs(min(int(request.query_params.get('limit', 0)), 100))
         except ValueError:
-            raise ValidationError(detail={'detail': 'make sure the limit value is a positive number!', 'code': 400})
+            raise ValidationError(detail={'detail': _('make sure the limit value is a positive number!')})
 
         try:
             user_page = UserPage.objects.get(page_id=page_id, user=self.request.user)
         except UserPage.DoesNotExist:
-            raise ValidationError(detail={'detail': 'user and page does not match!', 'code': 400})
+            raise ValidationError(detail={'detail': _('user and page does not match!')})
         valid_orders = Order.objects.filter(is_enable=True, action=action_type).order_by('-id')
 
         valid_inquiries = []
