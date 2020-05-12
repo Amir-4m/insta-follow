@@ -8,6 +8,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
+
 from ..swagger_schemas import ORDER_POST_DOCS, INQUIRY_POST_DOC, PROFILE_POST_DOC
 from .serializers import (
     ProfileSerializer,
@@ -18,6 +19,7 @@ from .serializers import (
     DeviceSerializer
 )
 from ..pagination import CoinTransactionPagination
+from ..tasks import collect_order_link_info
 from apps.instagram_app.models import (
     InstaAction, UserPage, Order,
     UserInquiry, CoinTransaction, Device
@@ -92,8 +94,12 @@ class OrderViewSet(viewsets.GenericViewSet,
         """
         instance = self.get_object()
         if instance.is_enable is False:
-            instance.is_enable = True
-            instance.save()
+            collect_order_link_info.delay(
+                order_id=instance.id,
+                action=instance.action.action_type,
+                link=instance.link,
+                media_url=instance.media_url,
+            )
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 

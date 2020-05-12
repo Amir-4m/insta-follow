@@ -15,8 +15,8 @@ def user_coin_transaction(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=Order)
-def order_receiver(sender, instance, **kwargs):
-    if instance.is_enable is False or instance.entity_id is None:
+def order_receiver(sender, instance, created, **kwargs):
+    if created:
         action = instance.action.action_type
         media_url = instance.media_url or ''
         collect_order_link_info.delay(
