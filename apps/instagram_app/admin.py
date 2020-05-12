@@ -29,7 +29,7 @@ class UserPageModelAdmin(admin.ModelAdmin):
 class OrderModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'action', 'link', 'instagram_username', 'is_enable', 'created_time')
     list_filter = ('action',)
-    readonly_fields = ('media_url', 'instagram_username')
+    readonly_fields = ('media_url', 'instagram_username', 'entity_id')
     sortable_by = ('-created_time',)
 
 

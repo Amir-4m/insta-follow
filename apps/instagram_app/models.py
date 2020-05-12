@@ -8,6 +8,17 @@ from djongo import models as djongo_models
 logger = logging.getLogger(__name__)
 
 
+class Device(models.Model):
+    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE, related_name='devices')
+    device_id = models.CharField(_('device id'), max_length=40, db_index=True)
+
+    class Meta:
+        db_table = "insta_devices"
+
+    def __str__(self):
+        return f"{self.user} - {self.device_id}"
+
+
 class Category(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     name = models.CharField(_("category name"), max_length=100, unique=True)
@@ -83,12 +94,14 @@ class UserPage(models.Model):
 # Inventory
 class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
+    entity_id = models.IntegerField(_('entity ID'), null=True, db_index=True)
     action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
     target_no = models.IntegerField(_("target number"))
     link = models.URLField(_("link"))
     media_url = models.TextField(_("media url"), blank=True)
     instagram_username = models.CharField(_("instagram username"), max_length=120, blank=True)
     description = models.TextField(_("description"), blank=True, default='')
+    is_private = models.BooleanField(_("is private"), default=False)
     is_enable = models.BooleanField(_("is enable"), default=True)
     owner = models.ForeignKey('accounts.User', related_name='user_orders', on_delete=models.CASCADE)
 
@@ -135,7 +148,7 @@ class UserInquiry(models.Model):
     done_time = models.DateTimeField(_('done time'), null=True, blank=True)
     validated_time = models.DateTimeField(_("validated time"), null=True, blank=True)
 
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='user_inquiries')
     user_page = models.ForeignKey(UserPage, on_delete=models.CASCADE)
 
     class Meta:
@@ -157,10 +170,6 @@ class CoinTransaction(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.amount}"
-
-    def clean(self):
-        if not self.inquiry and not self.order:
-            ValidationError(_("both inquiry and order can not be None."))
 
 
 class RoutedDjongoManager(djongo_models.DjongoManager):

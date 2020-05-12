@@ -71,6 +71,11 @@ class InstagramAPITestCase(APITestCase):
         response = self.client.get(url, {'page_id': 1}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_get_user_inquiry_comment_duplicate_order(self):
+        url = reverse('userinquiry-comment')
+        response = self.client.get(url, {'page_id': 2}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     def test_get_user_inquiry_like(self):
         url = reverse('userinquiry-like')
         response = self.client.get(url, {'page_id': 1}, format='json')
@@ -163,7 +168,7 @@ class InstagramSerializerTestCase(APITestCase):
         self.assertFalse(serializer.is_valid())
         self.assertRaisesMessage(
             ValidationError,
-            'this field is required for like and comment !',
+            'link field is required for like and comment !',
             serializer.validate,
             data
         )
@@ -178,7 +183,7 @@ class InstagramSerializerTestCase(APITestCase):
         self.assertFalse(serializer.is_valid())
         self.assertRaisesMessage(
             ValidationError,
-            'this field is required for follow !',
+            'instagram_username field is required for follow !',
             serializer.validate,
             data
         )

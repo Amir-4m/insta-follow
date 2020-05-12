@@ -88,19 +88,23 @@ class UserInquiryViewSet(viewsets.ViewSet):
         try:
             limit = abs(min(int(request.query_params.get('limit', 0)), 100))
         except ValueError:
-            raise ValidationError('make sure the limit value is a positive number!')
+            raise ValidationError(detail={'detail': 'make sure the limit value is a positive number!', 'code': 400})
 
         try:
             user_page = UserPage.objects.get(page_id=page_id, user=self.request.user)
         except UserPage.DoesNotExist:
-            raise ValidationError({'Error': 'user and page does not match!'})
+            raise ValidationError(detail={'detail': 'user and page does not match!', 'code': 400})
         valid_orders = Order.objects.filter(is_enable=True, action=action_type).order_by('-id')
 
         valid_inquiries = []
+        given_entities = []
         for order in valid_orders:
+            if order.entity_id in given_entities:
+                continue
             user_inquiry, _c = UserInquiry.objects.get_or_create(order=order, defaults=dict(user_page=user_page))
             if _c:
                 valid_inquiries.append(user_inquiry)
+                given_entities.append(order.entity_id)
             if len(valid_inquiries) == limit:
                 break
 
