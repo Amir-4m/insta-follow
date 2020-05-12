@@ -60,7 +60,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ('id', 'action', 'target_no', 'link', 'instagram_username', 'is_enable')
         extra_kwargs = {
-            'link': {'required': False}
+            'link': {'required': False, 'allow_null': True}
         }
 
     def validate(self, attrs):
