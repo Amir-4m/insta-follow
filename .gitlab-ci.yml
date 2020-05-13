@@ -19,12 +19,12 @@ test:
   before_script:
     - virtualenv $CI_PROJECT_DIR/venv 
   script:
-      # - cd $CI_PROJECT_DIR 
-      # - source $CI_PROJECT_DIR/venv/bin/activate
-      # - pip install -r requirements.txt
+    # - cd $CI_PROJECT_DIR 
+    - source $CI_PROJECT_DIR/venv/bin/activate
+    - pip install -r requirements.txt
     - cat requirements.txt
-      # - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
-      # - python manage.py check
+    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
+    - python manage.py check
   only:
     - develop
 
@@ -43,4 +43,5 @@ production:
   script:
     - echo $PROJECT_DIR
   only:
+    - master
     - tags
