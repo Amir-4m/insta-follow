@@ -11,6 +11,8 @@ test1:
   script:
     - echo $CI_COMMIT_REF_NAME          
       #- export
+  only:
+    - test
 
 test:
   stage: test
