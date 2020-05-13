@@ -1,0 +1,40 @@
+stages:
+  - test
+  - deploy
+
+variables:
+  PROJECT_DIR: "insta_follow"
+  PROJECT_ABR: "instaflw"
+
+test1:
+  stage: test1
+  script:
+    - echo $CI_COMMIT_REF_NAME          
+      #- export
+
+test:
+  stage: test
+  before_script:
+    - virtualenv $CI_PROJECT_DIR/venv 
+  script:
+    - cd $CI_PROJECT_DIR 
+    - source $CI_PROJECT_DIR/venv/bin/activate
+    - pip install -r requirements.txt
+    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
+    - python manage.py check
+
+staging:
+  stage: deploy
+  script:
+    - git pull origin develop
+    - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
+    - supervisorctl restart $PROJECT_ABR:*
+  only:
+    - develop
+
+production:
+  stage: deploy
+  script:
+    - echo $PROJECT_DIR
+  only:
+    - tags
