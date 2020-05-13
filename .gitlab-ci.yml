@@ -23,6 +23,8 @@ test:
     - cat requirements.txt
       # - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
       # - python manage.py check
+  only:
+    - develop
 
 staging:
   stage: deploy
