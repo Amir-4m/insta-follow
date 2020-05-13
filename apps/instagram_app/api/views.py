@@ -18,7 +18,7 @@ from .serializers import (
     InstaActionSerializer,
     DeviceSerializer
 )
-from ..pagination import CoinTransactionPagination
+from ..pagination import CoinTransactionPagination, OrderPagination
 from ..tasks import collect_order_link_info
 from apps.instagram_app.models import (
     InstaAction, UserPage, Order,
@@ -79,10 +79,11 @@ class OrderViewSet(viewsets.GenericViewSet,
     permission_classes = (IsAuthenticated,)
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
+    pagination_class = OrderPagination
 
     def get_queryset(self):
         qs = super(OrderViewSet, self).get_queryset()
-        return qs.filter(owner=self.request.user)
+        return qs.filter(owner=self.request.user).order_by('-created_time')
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -132,7 +133,7 @@ class UserInquiryViewSet(viewsets.ViewSet):
             if order.entity_id in given_entities:
                 continue
             user_inquiry, _c = UserInquiry.objects.get_or_create(order=order, defaults=dict(user_page=user_page))
-            if _c:
+            if user_inquiry:
                 valid_inquiries.append(user_inquiry)
                 given_entities.append(order.entity_id)
             if len(valid_inquiries) == limit:

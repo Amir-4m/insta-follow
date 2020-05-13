@@ -7,7 +7,7 @@ from apps.telegram_app.models import TelegramUser
 logger = logging.getLogger(__name__)
 
 
-class SupportBotService(object):
+class InstaBotService(object):
 
     @staticmethod
     def refresh_session(bot, update, session=None, clear=False):

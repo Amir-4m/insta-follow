@@ -68,9 +68,12 @@ class ProfileSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
-        fields = ('id', 'entity_id', 'action', 'target_no', 'achieved_number_approved', 'link', 'instagram_username',
-                  'is_enable')
-        read_only_fields = ('entity_id', 'is_enable', 'achieved_number_approved')
+        fields = (
+            'id', 'entity_id', 'action',
+            'target_no', 'achieved_number_approved', 'link',
+            'instagram_username', 'is_enable', 'description'
+        )
+        read_only_fields = ('entity_id', 'is_enable', 'achieved_number_approved', 'description')
         extra_kwargs = {
             'link': {'allow_null': True, 'required': False, 'allow_blank': True}
         }
@@ -127,7 +130,7 @@ class UserInquirySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserInquiry
-        fields = ('id', 'link', 'instagram_username', 'media_url', 'page_id', 'done_ids')
+        fields = ('id', 'link', 'instagram_username', 'media_url', 'page_id', 'done_ids', 'status')
 
     def validate(self, attrs):
         user = self.context['user']
