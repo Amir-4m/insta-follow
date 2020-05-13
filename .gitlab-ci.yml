@@ -6,12 +6,6 @@ variables:
   PROJECT_DIR: "insta_follow"
   PROJECT_ABR: "instaflw"
 
-workflow:
-  rules:
-    - if: $CI_COMMIT_REF_NAME == $MONBRANCH
-      when: always
-    - when: never
-
 test:
   stage: test
   before_script:
@@ -27,6 +21,9 @@ test:
     - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $MONBRANCH
+      when: always
 
 staging:
   stage: deploy
