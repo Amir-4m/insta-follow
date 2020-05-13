@@ -23,9 +23,11 @@ test:
     - export
     - source $CI_PROJECT_DIR/venv/bin/activate
     - pip install -r requirements.txt
-    - cat requirements.txt
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
+    - ll ../
     - python manage.py check
+  after_script:
+    - rm $CI_PROJECT_DIR/.env
   only:
     - develop
 
