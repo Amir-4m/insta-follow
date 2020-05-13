@@ -17,18 +17,20 @@ test:
   before_script:
     - virtualenv $CI_PROJECT_DIR/venv 
   script:
-    - cd $CI_PROJECT_DIR 
-    - source $CI_PROJECT_DIR/venv/bin/activate
-    - pip install -r requirements.txt
-    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
-    - python manage.py check
+      # - cd $CI_PROJECT_DIR 
+      # - source $CI_PROJECT_DIR/venv/bin/activate
+      # - pip install -r requirements.txt
+    - cat requirements.txt
+      # - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
+      # - python manage.py check
 
 staging:
   stage: deploy
   script:
-    - git pull origin develop
-    - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
-    - supervisorctl restart $PROJECT_ABR:*
+    - echo $PROJECT_DIR
+    # - git pull origin develop
+    # - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
+    # - supervisorctl restart $PROJECT_ABR:*
   only:
     - develop
 
