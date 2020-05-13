@@ -2,7 +2,6 @@ from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils.translation import ugettext_lazy as _
-
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -73,7 +72,7 @@ class OrderSerializer(serializers.ModelSerializer):
                   'is_enable')
         read_only_fields = ('entity_id', 'is_enable', 'achieved_number_approved')
         extra_kwargs = {
-            'link': {'allow_null': True}
+            'link': {'allow_null': True, 'required': False, 'allow_blank': True}
         }
 
     def validate(self, attrs):
@@ -104,7 +103,6 @@ class OrderSerializer(serializers.ModelSerializer):
             if user.coin_transactions.all().aggregate(
                     wallet=Coalesce(Sum('amount'), 0)
             )['wallet'] < insta_action.buy_value * target_no:
-
                 raise ValidationError(detail={'detail': _("You do not have enough coin to create order")})
 
             ct = CoinTransaction.objects.create(user=user, amount=-(insta_action.buy_value * target_no))

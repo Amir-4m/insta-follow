@@ -172,9 +172,12 @@ STATIC_URL = '/static/'
 
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
-FOLLOW_COIN = 15
-LIKE_COIN = 5
-COMMENT_COIN = 10
+INSTAGRAM_CREDENTIALS = {
+    'USERNAME': config('INSTAGRAM_USERNAME', default=''),
+    'PASSWORD': config('INSTAGRAM_PASSWORD', default=''),
+}
+
+FCM_TOKEN = config('FCM_TOKEN', default=''),
 
 # FIXTURE_DIRS = [
 #     BASE_DIR / 'fixtures',
