@@ -6,30 +6,27 @@ variables:
   PROJECT_DIR: "insta_follow"
   PROJECT_ABR: "instaflw"
 
-test1:
-  stage: test
-  script:
-    - echo $CI_COMMIT_REF_NAME          
-      #- export
-  only:
-    - test
+workflow:
+  rules:
+    - if: $CI_COMMIT_REF_NAME = $MONBRANCH
+      when: always
+    - when: never
 
 test:
   stage: test
   before_script:
+    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
     - virtualenv $CI_PROJECT_DIR/venv 
+    - source $CI_PROJECT_DIR/venv/bin/activate
+    - pip install -r /var/www/$PROJECT_DIR/project/requirements.txt
   script:
     # - cd $CI_PROJECT_DIR 
-    - export
-    - source $CI_PROJECT_DIR/venv/bin/activate
+    # - pwd
+    # - export
     - pip install -r requirements.txt
-    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
-    - pwd
     - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
-  only:
-    - develop
 
 staging:
   stage: deploy
