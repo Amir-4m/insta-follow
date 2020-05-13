@@ -52,7 +52,7 @@ class InstaAction(models.Model):
         return self.action_type
 
     def clean(self):
-        if self.action_value > self.buy_value:
+        if self.action_value >= self.buy_value:
             raise ValidationError(_('action value must be lower than buy value'))
 
 
