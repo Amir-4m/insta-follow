@@ -4,6 +4,8 @@ import time
 import requests
 from django.db import transaction
 from django.utils import timezone
+from django.conf import settings
+from igramscraper.instagram import Instagram
 
 from .models import BaseInstaEntity, InstaAction, UserPage, UserInquiry
 
@@ -118,21 +120,29 @@ class InstagramAppService(object):
 
     @staticmethod
     def check_activity_from_db(post_link, username, check_type):
-        model = BaseInstaEntity.get_model(check_type, username)
-        if not model:
-            return False
+        try:
+            model = BaseInstaEntity.get_model(check_type, username)
+        except Exception as e:
+            logger.warning(f"can't get model for username: {username} to check activity : {e}")
+            return
 
         if check_type == InstaAction.ACTION_LIKE:
-            like_query = model.objects.filter(username=username, action=InstaAction.ACTION_LIKE,
-                                              media_url=post_link)
-            if like_query.exists():
-                return True
+            q = model.objects.filter(
+                username=username,
+                action=InstaAction.ACTION_LIKE,
+                media_url=post_link)
+        elif check_type == InstaAction.ACTION_COMMENT:
+            q = model.objects.filter(
+                username=username,
+                action=InstaAction.ACTION_COMMENT,
+                media_url=post_link)
         else:
-            comment_query = model.objects.filter(username=username, action=InstaAction.ACTION_COMMENT,
-                                                 media_url=post_link)
-            if comment_query.exists():
-                return True
-        return False
+            q = model.objects.filter(
+                username=username,
+                action=InstaAction.ACTION_FOLLOW,
+                media_url=post_link)
+
+        return q.exists()
 
     @staticmethod
     def check_user_action(user_inquiry_ids, user_page_id):
@@ -149,3 +159,16 @@ class InstagramAppService(object):
                         user_inquiry.order.action):
                     user_inquiry.done_time = timezone.now()
                 user_inquiry.save()
+
+    @staticmethod
+    def get_user_followers(instagram_username):
+        instagram = Instagram()
+        instagram.with_credentials(
+            settings.INSTAGRAM_CREDENTIALS['USERNAME'],
+            settings.INSTAGRAM_CREDENTIALS['PASSWORD']
+        )
+        instagram.login(force=False, two_step_verificator=True)
+        username = instagram_username
+        account = instagram.get_account(username)
+        followers = instagram.get_followers(account.identifier, 150, 100, delayed=True)
+        return followers

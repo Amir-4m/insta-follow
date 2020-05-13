@@ -230,20 +230,14 @@ class BaseInstaEntity(djongo_models.Model):
                             schema.create_model(model)
                     except Exception as e:
                         logger.error(f"create table got exception: {e}")
-                        return None
+                        raise
         else:
             model = app_models[model_name]
         return model
 
     @classmethod
     def get_model(cls, action, page_id):
-        try:
-            model = cls._get_table_model(action, page_id)
-        except Exception as e:
-            logger.error(f"hash table got exception: {e}")
-            return None
-
-        return model
+        return cls._get_table_model(action, page_id)
 
     @classmethod
     def drop_model(cls, action, page_id):

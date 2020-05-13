@@ -1,13 +1,16 @@
 import json
 import logging
 import urllib.parse
+import requests
 
 from datetime import datetime, timedelta
 
+from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import F
 from django.utils import timezone
 from django.core.cache import cache
+from django.conf import settings
 
 from celery import shared_task
 
@@ -20,9 +23,10 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def collect_like(order_id, order_link, order_page_id):
-    model = BaseInstaEntity.get_model(InstaAction.ACTION_LIKE, order_page_id)
-    if not model:
-        logger.warning(f"can't get model for order: {order_id} to collect likes")
+    try:
+        model = BaseInstaEntity.get_model(InstaAction.ACTION_LIKE, order_page_id)
+    except Exception as e:
+        logger.warning(f"can't get model for order: {order_id} to collect likes : {e}")
         return
 
     shortcode = InstagramAppService.get_shortcode(order_link)
@@ -70,9 +74,10 @@ def collect_like(order_id, order_link, order_page_id):
 
 @shared_task
 def collect_comment(order_id, order_link, order_page_id):
-    model = BaseInstaEntity.get_model(InstaAction.ACTION_COMMENT, order_page_id)
-    if not model:
-        logger.warning(f"can't get model for order: {order_id} to collect comments")
+    try:
+        model = BaseInstaEntity.get_model(InstaAction.ACTION_COMMENT, order_page_id)
+    except Exception as e:
+        logger.warning(f"can't get model for order: {order_id} to collect comments: {e}")
         return
 
     shortcode = InstagramAppService.get_shortcode(order_link)
@@ -122,6 +127,30 @@ def collect_comment(order_id, order_link, order_page_id):
 
 
 @shared_task
+def collect_follower(order_id, order_entity_id, order_link, order_page_id):
+    try:
+        model = BaseInstaEntity.get_model(InstaAction.ACTION_FOLLOW, order_page_id)
+    except Exception as e:
+        logger.warning(f"can't get model for order: {order_id} to collect followers: {e}")
+        return
+    try:
+        followers = InstagramAppService.get_user_followers(order_page_id)
+        io_followers = []
+        for follower in followers['accounts']:
+            io_followers.append(
+                dict(
+                    media_url=order_link,
+                    media_id=order_entity_id,
+                    action=InstaAction.ACTION_FOLLOW,
+                    username=follower.username,
+                    user_id=follower.identifier
+                ))
+        model.objects.mongo_insert_many(io_followers)
+    except Exception as e:
+        logger.error(f"error occurred for getting followers for order {order_id} and username {order_page_id}: {e}")
+
+
+@shared_task
 def collect_order_link_info(order_id, action, link, media_url):
     if action == InstaAction.ACTION_FOLLOW:
         author = InstagramAppService.get_page_id(link)
@@ -131,11 +160,7 @@ def collect_order_link_info(order_id, action, link, media_url):
         entity_id, author, media_url, is_private = InstagramAppService.get_post_info(link)
 
     if is_private:
-        # TODO: send fcm notif
-        Order.objects.filter(id=order_id).update(
-            is_enable=False,
-            description=_("account is private")
-        )
+        incomplete_order_notifier.delay(order_id)
 
     elif media_url and author and entity_id:
         Order.objects.filter(id=order_id).update(
@@ -145,6 +170,28 @@ def collect_order_link_info(order_id, action, link, media_url):
             is_enable=True,
             description=_("order enabled properly")
         )
+
+
+@shared_task
+def incomplete_order_notifier(order_id):
+    order = Order.objects.get(id=order_id)
+    order.is_enable = False
+    order.description = "problem in getting information"
+    order.save()
+    devices = [device.device_id for device in order.owner.devices.all()]
+    if len(devices) >= 1:
+        data = {
+            "devices": [devices],
+            "data": {
+                "title": _("Error in submitting order"),
+                "alert": _("Please make assurance that your instagram page has not any problem) !")
+            }
+        }
+        header = {'Authorization': settings.FCM_TOKEN}
+        try:
+            requests.post('https://devlytic.myblueapi.com:8443/api/push/devices/', data, headers=header)
+        except Exception as e:
+            logger.error(f"push message for private account failed due : {e}")
 
 
 # PERIODIC TASK
@@ -161,8 +208,12 @@ def collect_order_data():
     for order in orders:
         logger.info(f"collecting data for order: {order.link}")
         try:
-            collect_like.delay(order.id, order.link, order.instagram_username)
-            collect_comment.delay(order.id, order.link, order.instagram_username)
+            if order.action.action_type == InstaAction.ACTION_LIKE:
+                collect_like.delay(order.id, order.link, order.instagram_username)
+            if order.action.action_type == InstaAction.ACTION_COMMENT:
+                collect_comment.delay(order.id, order.link, order.instagram_username)
+            if order.action.action_type == InstaAction.ACTION_FOLLOW:
+                collect_follower.delay(order.id, order.entity_id, order.link, order.instagram_username)
         except Exception as e:
             logger.error(
                 f"collecting data for order: {order.link} error: {e}")
@@ -173,14 +224,23 @@ def collect_order_data():
 # PERIODIC TASK
 @shared_task
 def validate_user_inquiries():
-    qs = UserInquiry.objects.filter(
-        done_time__isnull=False,
-        validated_time__isnull=True,
-        status=UserInquiry.STATUS_DONE
-    )
-    inquiries = [(obj.id, obj.user_page) for obj in qs]
-    for inquiry in inquiries:
-        InstagramAppService.check_user_action([inquiry[0]], inquiry[1])
+    with transaction.atomic():
+        qs = UserInquiry.objects.select_for_update(of=('self',)).select_related('user_page').filter(
+            done_time__isnull=False,
+            validated_time__isnull=True,
+            status=UserInquiry.STATUS_DONE
+        )
+        for user_inquiry in qs:
+            user_inquiry.last_check_time = timezone.now()
+            user_inquiry.status = UserInquiry.STATUS_DONE
+            if user_inquiry.validated_time is not None or user_inquiry.done_time is not None:
+                continue
+            if InstagramAppService.check_activity_from_db(
+                    user_inquiry.order.link,
+                    user_inquiry.user_page.user.username,
+                    user_inquiry.order.action):
+                user_inquiry.done_time = timezone.now()
+            user_inquiry.save()
 
 
 # PERIODIC TASK
