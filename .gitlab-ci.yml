@@ -19,7 +19,7 @@ test:
     # - cd $CI_PROJECT_DIR 
     # - pwd
     - export
-    - pip install -r requirements.txt
+    - pip install -r --no-cache-dir requirements.txt
     - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
