@@ -9,8 +9,6 @@ variables:
 
 test:
   stage: test
-  variables:
-    BRANCH: $CI_COMMIT_REF_NAME
   before_script:
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
     - virtualenv $CI_PROJECT_DIR/venv 
@@ -23,9 +21,11 @@ test:
     - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
-      #only:
-      #variables:
-      #- $CI_COMMIT_REF_NAME == $RELEASE
+  only:
+    variables:
+      - $CI_COMMIT_REF_NAME == $RELEASE
+  variables:
+    BRANCH: $CI_COMMIT_REF_NAME
 
 migrate:
   stage: migrate
@@ -37,13 +37,6 @@ migrate:
     - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
-  only:
-    refs:
-      - develop
-    changes:
-      - apps/*/models.py 
-    variables:
-      - $RELEASE == $BRANCH
 
 staging:
   stage: deploy
@@ -57,9 +50,6 @@ staging:
     # - python manage.py migrate
     # - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     # - supervisorctl restart $PROJECT_ABR:*
-  only:
-    variables:
-      - $BRANCH == "develop"
 
 production:
   stage: deploy
