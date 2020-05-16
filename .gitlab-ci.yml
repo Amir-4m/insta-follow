@@ -1,5 +1,6 @@
 stages:
   - test
+  - migrate
   - deploy
 
 variables:
@@ -16,29 +17,51 @@ test:
   script:
     # - cd $CI_PROJECT_DIR 
     # - pwd
-    # - export
+    - export
     - pip install -r requirements.txt
-    - python manage.py check
+    - python manage.py check --deploy
   after_script:
     - rm $CI_PROJECT_DIR/.env
   only:
     variables:
       - $CI_COMMIT_REF_NAME == $MONBRANCH
 
+migrate:
+  stage: migrate
+  before_script:
+    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
+    - source $CI_PROJECT_DIR/venv/bin/activate
+  script:
+    - python manage.py makemigrations
+  after_script:
+    - rm $CI_PROJECT_DIR/.env
+  only:
+    - develop
+    - $STAGING
+    change:
+      - apps/*/models.py 
+    variables:
+      - $CI_COMMIT_REF_NAME == $MONBRANCH
+
 staging:
   stage: deploy
+  before_script:
+    - source /var/www/$PROJECT_DIR/venv/bin/activate
   script:
-    - echo $PROJECT_DIR
+    - export
     # - git pull origin develop
+    # - python manage.py makemigrations
+    # - python manage.py migrate
     # - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     # - supervisorctl restart $PROJECT_ABR:*
   only:
     - develop
+    - $STAGING
 
 production:
   stage: deploy
   script:
-    - echo $PROJECT_DIR
+    - export
   only:
     - master
     # - tags

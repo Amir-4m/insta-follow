@@ -18,6 +18,6 @@ djongo
 PyJWT
 psycopg2-binary
 python-memcached
-requests
+requests==2.21.0
 Pillow
 
