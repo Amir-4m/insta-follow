@@ -38,6 +38,9 @@ migrate:
 #    - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
+  only:
+    variables:
+      - $BRANCH == "develop"
 
 staging:
   stage: deploy
@@ -51,6 +54,8 @@ staging:
     # - python manage.py migrate
     # - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     # - supervisorctl restart $PROJECT_ABR:*
+  only:
+    - develop
 
 production:
   stage: deploy
