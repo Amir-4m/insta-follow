@@ -1,6 +1,6 @@
 stages:
   - test
-  - migrate
+#  - migrate
   - deploy
 
 variables:
@@ -13,29 +13,31 @@ test:
     - virtualenv $CI_PROJECT_DIR/venv
     - source $CI_PROJECT_DIR/venv/bin/activate
   script:
-    - pip install --no-cache-dir -r requirements.txt
+#    - pip install --no-cache-dir -r requirements.txt
+    - pip install -r requirements.txt
+    - python manage.py makemigrations
     - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
   tags:
     - django
 
-migrate:
-  stage: migrate
-  before_script:
-    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
-    - virtualenv $CI_PROJECT_DIR/venv
-    - source $CI_PROJECT_DIR/venv/bin/activate
-  script:
-    - python manage.py makemigrations
-  after_script:
-    - rm $CI_PROJECT_DIR/.env
-  tags:
-    - django
-    - staging
-  only:
-    changes:
-      - apps/*/models.py
+#migrate:
+#  stage: migrate
+#  before_script:
+#    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
+#    - virtualenv $CI_PROJECT_DIR/venv
+#    - source $CI_PROJECT_DIR/venv/bin/activate
+#  script:
+#    - python manage.py makemigrations
+#  after_script:
+#    - rm $CI_PROJECT_DIR/.env
+#  only:
+#    changes:
+#      - apps/*/models.py
+#  tags:
+#    - django
+#    - staging
 
 staging:
   stage: deploy
@@ -51,11 +53,11 @@ staging:
     - python manage.py migrate
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_ABR:*
+  only:
+    - develop
   tags:
     - django
     - staging
-#  only:
-#    - develop
 
 production:
   stage: deploy
@@ -67,9 +69,9 @@ production:
     - python manage.py migrate
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_ABR:*
-  tags:
-    - django
-    - release
   only:
     - master
     - tags
+  tags:
+    - django
+    - release
