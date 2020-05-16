@@ -23,9 +23,6 @@ test:
     - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
-  only:
-    variables:
-      - $CI_COMMIT_REF_NAME == $RELEASE
 
 migrate:
   stage: migrate
