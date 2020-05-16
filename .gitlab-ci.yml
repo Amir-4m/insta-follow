@@ -5,60 +5,72 @@ stages:
 
 variables:
   PROJECT_DIR: "insta_follow"
-  PROJECT_ABR: "instaflw"
-  BRANCH: ""
 
 test:
   stage: test
-  variables:
-    BRANCH: $CI_COMMIT_REF_NAME
   before_script:
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
-#    - virtualenv $CI_PROJECT_DIR/venv
-#    - source $CI_PROJECT_DIR/venv/bin/activate
+    - virtualenv $CI_PROJECT_DIR/venv
+    - source $CI_PROJECT_DIR/venv/bin/activate
   script:
-#    - cd $CI_PROJECT_DIR
-    - export
-#    - pip install --no-cache-dir -r requirements.txt
-#    - python manage.py check
+    - pip install --no-cache-dir -r requirements.txt
+    - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
+  tags:
+    - django
 
 migrate:
   stage: migrate
   before_script:
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
-#    - source $CI_PROJECT_DIR/venv/bin/activate
+    - virtualenv $CI_PROJECT_DIR/venv
+    - source $CI_PROJECT_DIR/venv/bin/activate
   script:
-    - pwd
-    - export
-#    - python manage.py makemigrations
-#    - python manage.py check
+    - python manage.py makemigrations
   after_script:
     - rm $CI_PROJECT_DIR/.env
-#  only:
-#    variables:
-#      - $BRANCH == "develop"
+  tags:
+    - django
+    - staging
+  only:
+    changes:
+      - apps/*/models.py
 
 staging:
   stage: deploy
+  variables:
+    PROJECT_ABR: "instaflw"
   before_script:
+    - cd /var/www/$PROJECT_DIR/project/
     - source /var/www/$PROJECT_DIR/venv/bin/activate
   script:
     - pwd
-    - export
-#    - git pull origin develop
-#    - pip install -r requirements.txt
-#    - python manage.py migrate
-#    - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
-#    - supervisorctl restart $PROJECT_ABR:*
-  only:
-    - develop
+    - git pull
+    - pip install -r requirements.txt
+    - python manage.py makemigrations
+    - python manage.py migrate
+    - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
+    - supervisorctl restart $PROJECT_ABR:*
+  tags:
+    - django
+    - staging
+#  only:
+#    - develop
 
 production:
   stage: deploy
+  variables:
+    PROJECT_ABR: "instaflw"
   script:
-    - export
+    - git pull
+    - pip install -r requirements.txt
+    - python manage.py migrate
+    - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
+    - supervisorctl restart $PROJECT_ABR:*
+  tags:
+    - django
+    - release
   only:
    - master
-#   - tags
+   - tags
