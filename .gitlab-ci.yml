@@ -9,6 +9,8 @@ variables:
 
 test:
   stage: test
+  variables:
+    BRANCH: $CI_COMMIT_REF_NAME
   before_script:
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
     - virtualenv $CI_PROJECT_DIR/venv 
@@ -24,17 +26,16 @@ test:
   only:
     variables:
       - $CI_COMMIT_REF_NAME == $RELEASE
-  variables:
-    BRANCH: $CI_COMMIT_REF_NAME
 
 migrate:
   stage: migrate
   before_script:
-    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
-    - source $CI_PROJECT_DIR/venv/bin/activate
+#    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
+#    - source $CI_PROJECT_DIR/venv/bin/activate
   script:
-    - python manage.py makemigrations
-    - python manage.py check
+    - export
+#    - python manage.py makemigrations
+#    - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
 
