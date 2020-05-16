@@ -45,7 +45,6 @@ staging:
     - cd /var/www/$PROJECT_DIR/project/
     - source /var/www/$PROJECT_DIR/venv/bin/activate
   script:
-    - pwd
     - git pull
     - pip install -r requirements.txt
     - python manage.py makemigrations
@@ -72,5 +71,5 @@ production:
     - django
     - release
   only:
-   - master
-   - tags
+    - master
+    - tags

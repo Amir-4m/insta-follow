@@ -1,3 +1,4 @@
+# test migrate
 import logging
 
 from django.core.exceptions import ValidationError
