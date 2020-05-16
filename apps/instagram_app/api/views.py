@@ -18,7 +18,7 @@ from .serializers import (
     InstaActionSerializer,
     DeviceSerializer
 )
-from ..pagination import CoinTransactionPagination, OrderPagination
+from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination
 from ..tasks import collect_order_link_info
 from apps.instagram_app.models import (
     InstaAction, UserPage, Order,
@@ -105,21 +105,17 @@ class OrderViewSet(viewsets.GenericViewSet,
         return Response(serializer.data)
 
 
-class UserInquiryViewSet(viewsets.ViewSet):
+class UserInquiryViewSet(viewsets.GenericViewSet):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
     queryset = UserInquiry.objects.all()
     serializer_class = UserInquirySerializer
+    pagination_class = InquiryPagination
 
     def get_inquiry(self, request, action_type):
         page_id = request.query_params.get('page_id')
         if not page_id:
             return Response({'Error': _('page_id is required')}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            limit = abs(min(int(request.query_params.get('limit', 0)), 100))
-        except ValueError:
-            raise ValidationError(detail={'detail': _('make sure the limit value is a positive number!')})
 
         try:
             user_page = UserPage.objects.get(page_id=page_id, user=self.request.user)
@@ -136,8 +132,10 @@ class UserInquiryViewSet(viewsets.ViewSet):
             if user_inquiry:
                 valid_inquiries.append(user_inquiry)
                 given_entities.append(order.entity_id)
-            if len(valid_inquiries) == limit:
-                break
+        page = self.paginate_queryset(valid_inquiries)
+        if page is not None:
+            serializer = self.serializer_class(page, many=True)
+            return self.get_paginated_response(serializer.data)
 
         serializer = self.serializer_class(valid_inquiries, many=True)
         return Response(serializer.data)
