@@ -14,13 +14,13 @@ test:
     BRANCH: $CI_COMMIT_REF_NAME
   before_script:
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
-    - virtualenv $CI_PROJECT_DIR/venv 
-    - source $CI_PROJECT_DIR/venv/bin/activate
+#    - virtualenv $CI_PROJECT_DIR/venv
+#    - source $CI_PROJECT_DIR/venv/bin/activate
   script:
-    # - cd $CI_PROJECT_DIR 
+#    - cd $CI_PROJECT_DIR
     - export
-    - pip install --no-cache-dir -r requirements.txt
-    - python manage.py check
+#    - pip install --no-cache-dir -r requirements.txt
+#    - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
 
@@ -28,12 +28,12 @@ migrate:
   stage: migrate
   before_script:
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
-    - source $CI_PROJECT_DIR/venv/bin/activate
+#    - source $CI_PROJECT_DIR/venv/bin/activate
   script:
     - pwd
     - export
-    - python manage.py makemigrations
-    - python manage.py check
+#    - python manage.py makemigrations
+#    - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
 #  only:
