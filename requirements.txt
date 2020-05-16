@@ -1,4 +1,3 @@
-#asdfadf
 sqlparse==0.2.4
 
 Django>=2.2, <2.3
