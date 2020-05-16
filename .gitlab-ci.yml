@@ -24,7 +24,7 @@ test:
     - rm $CI_PROJECT_DIR/.env
   only:
     variables:
-      - $CI_COMMIT_REF_NAME == $MONBRANCH
+      - $CI_COMMIT_REF_NAME == $BRANCH
 
 migrate:
   stage: migrate
@@ -33,15 +33,16 @@ migrate:
     - source $CI_PROJECT_DIR/venv/bin/activate
   script:
     - python manage.py makemigrations
+    - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
   only:
     - develop
-    - $STAGING
-    change:
-      - apps/*/models.py 
+      #change:
+      #- apps/*/models.py 
     variables:
-      - $CI_COMMIT_REF_NAME == $MONBRANCH
+      - $RELEASE == "staging"
+      - $CI_COMMIT_REF_NAME == $BRANCH
 
 staging:
   stage: deploy
@@ -56,7 +57,10 @@ staging:
     # - supervisorctl restart $PROJECT_ABR:*
   only:
     - develop
-    - $STAGING
+  variables:
+    - $RELEASE == "staging"
+    - $CI_COMMIT_REF_NAME == $BRANCH
+
 
 production:
   stage: deploy
@@ -65,3 +69,6 @@ production:
   only:
     - master
     # - tags
+  variables:
+    - $CI_COMMIT_REF_NAME == $BRANCH
+
