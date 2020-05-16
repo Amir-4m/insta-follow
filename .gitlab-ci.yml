@@ -15,13 +15,12 @@ test:
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
     - virtualenv $CI_PROJECT_DIR/venv 
     - source $CI_PROJECT_DIR/venv/bin/activate
-    - pip install -r /var/www/$PROJECT_DIR/project/requirements.txt
   script:
     # - cd $CI_PROJECT_DIR 
     # - pwd
     - export
     - pip install -r requirements.txt
-    - python manage.py check --deploy
+    - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
       #only:
