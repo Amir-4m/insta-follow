@@ -1,8 +1,8 @@
-workflow:
-  rules:
-    - if: $CI_COMMIT_REF_SLUG != $RELEASE
-      when: never
-    - when: always
+#workflow:
+#  rules:
+#    - if: $CI_COMMIT_REF_SLUG != $RELEASE
+#      when: never
+#    - when: always
 
 stages:
   - build
@@ -17,14 +17,14 @@ create container:
   stage: build
   script:
     - virtualenv -q $CI_PROJECT_DIR/venv
-#  cache:
-#    key: ${CI_BUILD_REF_NAME}
-#    paths:
-#      - venv/
-#    policy: pull
-#  artifacts:
-#    paths:
-#      - venv/
+  cache:
+    key: ${CI_BUILD_REF_NAME}
+    paths:
+      - venv/
+    policy: pull
+  artifacts:
+    paths:
+      - venv/
   tags:
     - python
 
