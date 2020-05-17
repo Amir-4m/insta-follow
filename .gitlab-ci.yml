@@ -1,3 +1,9 @@
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == "develop"
+
 stages:
   - build
   - test
@@ -11,7 +17,7 @@ build:
   stage: build
   script:
     - virtualenv --prompt='($PROJECT_DIR)' -q venv
-    - virtualenv --relocatable venv
+#    - virtualenv --relocatable venv
     - source venv/bin/activate
     - pip install -r requirements.txt
   cache:
@@ -20,9 +26,6 @@ build:
       - venv/
     policy: push
   only:
-    refs:
-      - develop
-      - master
     changes:
       - requirements.txt
   tags:
@@ -34,7 +37,7 @@ test:
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
   script:
     - source $CI_PROJECT_DIR/venv/bin/activate
-    - python manage.py check
+    - python manage.py test
   after_script:
     - rm $CI_PROJECT_DIR/.env
   cache:
@@ -42,9 +45,6 @@ test:
     paths:
       - venv/
     policy: pull
-  only:
-    - develop
-    - master
   tags:
     - django
 
@@ -82,8 +82,7 @@ staging:
     - python manage.py migrate
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_ABR:*
-  only:
-    - develop
+#  only:
 #    - /^staging-.*$/
 #  except:
 #    - branches
