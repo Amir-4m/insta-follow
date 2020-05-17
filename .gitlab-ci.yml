@@ -13,7 +13,7 @@ variables:
   PROJECT_DIR: "insta_follow"
   PROJECT_ABR: "instaflw"
 
-create container:
+build:
   stage: build
   script:
     - virtualenv -q $CI_PROJECT_DIR/venv
@@ -23,18 +23,7 @@ create container:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
       - venv/
-    policy: pull
-  artifacts:
-    paths:
-      - venv/
-  tags:
-    - python
-
-install packages:
-  stage: build
-  script:
-    - source $CI_PROJECT_DIR/venv/bin/activate
-    - pip install -q -r requirements.txt
+    policy: push
   only:
     changes:
       - requirements.txt
@@ -50,6 +39,11 @@ test:
     - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - venv/
+    policy: pull
   tags:
     - django
 
