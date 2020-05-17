@@ -1,9 +1,3 @@
-#workflow:
-#  rules:
-#    - if: $CI_COMMIT_REF_SLUG != $RELEASE
-#      when: never
-#    - when: always
-
 stages:
   - build
   - test
@@ -16,17 +10,21 @@ variables:
 build:
   stage: build
   script:
-    - virtualenv --prompt='($PROJECT_DIR)' -q --relocatable $CI_PROJECT_DIR/venv
-    - source $CI_PROJECT_DIR/venv/bin/activate
+    - virtualenv --prompt='($PROJECT_DIR)' -q venv
+    - virtualenv --relocatable venv
+    - source venv/bin/activate
     - pip install --no-cache-dir -r requirements.txt
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
       - venv/
     policy: push
-#  only:
-#    changes:
-#      - requirements.txt
+  only:
+    refs:
+      - $RELEASE
+      - tags
+    changes:
+      - requirements.txt
   tags:
     - python
 
@@ -44,6 +42,9 @@ test:
     paths:
       - venv/
     policy: pull
+  only:
+    - $RELEASE
+    - tags
   tags:
     - django
 
@@ -82,7 +83,9 @@ staging:
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_ABR:*
   only:
+    - tags
     - develop
+    - /^staging-.*$/
   tags:
     - django
     - staging
@@ -100,8 +103,9 @@ production:
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_ABR:*
   only:
-    - master
     - tags
+    - master
+    - /^release-.*$/
   tags:
     - django
     - release
