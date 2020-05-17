@@ -1,4 +1,5 @@
 stages:
+  - build
   - test
   - deploy
 
@@ -6,35 +7,106 @@ variables:
   PROJECT_DIR: "insta_follow"
   PROJECT_ABR: "instaflw"
 
-test1:
-  stage: test
+build:
+  stage: build
   script:
-    - echo $CI_COMMIT_REF_NAME          
-      #- export
+    - virtualenv --prompt='($PROJECT_DIR)' -q venv
+    - virtualenv --relocatable venv
+    - source venv/bin/activate
+    - pip install -r requirements.txt
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - venv/
+    policy: push
+  only:
+    refs:
+      - develop
+      - master
+    changes:
+      - requirements.txt
+  tags:
+    - python
 
 test:
   stage: test
   before_script:
-    - virtualenv $CI_PROJECT_DIR/venv 
-  script:
-    - cd $CI_PROJECT_DIR 
-    - source $CI_PROJECT_DIR/venv/bin/activate
-    - pip install -r requirements.txt
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
+  script:
+    - source $CI_PROJECT_DIR/venv/bin/activate
     - python manage.py check
+  after_script:
+    - rm $CI_PROJECT_DIR/.env
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - venv/
+    policy: pull
+  only:
+    - develop
+    - master
+  tags:
+    - django
+
+.migrate:
+  stage: migrate
+  before_script:
+    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
+  script:
+    - source $CI_PROJECT_DIR/venv/bin/activate
+    - python manage.py makemigrations
+  after_script:
+    - rm $CI_PROJECT_DIR/.env
+  only:
+    changes:
+      - apps/*/models.py
+  tags:
+    - django
+    - staging
+
+#.deploy:
+#  before_script:
+#    - cd /var/www/$PROJECT_DIR/project/
+#    - source /var/www/$PROJECT_DIR/venv/bin/activate
 
 staging:
   stage: deploy
+#  extends: .deploy
+  before_script:
+    - cd /var/www/$PROJECT_DIR/project/
+    - source /var/www/$PROJECT_DIR/venv/bin/activate
   script:
-    - git pull origin develop
+    - git pull
+    - pip install -r requirements.txt
+    - python manage.py makemigrations
+    - python manage.py migrate
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_ABR:*
   only:
     - develop
+#    - /^staging-.*$/
+#  except:
+#    - branches
+  tags:
+    - django
+    - staging
 
 production:
   stage: deploy
+#  extends: .deploy
+  before_script:
+    - cd /var/www/$PROJECT_DIR/project/
+    - source /var/www/$PROJECT_DIR/venv/bin/activate
   script:
-    - echo $PROJECT_DIR
+    - git pull
+    - pip install -r requirements.txt
+    - python manage.py migrate
+    - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
+    - supervisorctl restart $PROJECT_ABR:*
   only:
-    - tags
+    - /^release-.*$/
+  except:
+    - branches
+  tags:
+    - django
+    - release

@@ -1,23 +1,21 @@
 sqlparse==0.2.4
+requests==2.21.0
+djongo==1.3.2
+igramscraper
 
 Django>=2.2, <2.3
 djangorestframework>=3.11, <4.0
 djangorestframework-simplejwt>=4.4, <4.5
 
+python-decouple
 celery>=4.4, <4.5
 django-celery-beat
-python-decouple
 python-telegram-bot>=12.6, <12.7
 drf-yasg==1.17.1
-igramscraper
 coverage==5.1
 mock==4.0.2
-
-djongo
 
 PyJWT
 psycopg2-binary
 python-memcached
-requests
 Pillow
-
