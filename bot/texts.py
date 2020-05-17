@@ -18,7 +18,7 @@ CHOICE_BY_FOLLOW = "جمع آوری سکه دنبال کردن"
 
 PAGE_CREATED = """
 
-نام کاربری 💬: {{ page.username }}
+نام کاربری 💬: {{ page.instagram_username }}
 تعداد پست 🎰: {{ page.post_no }}
 فالو کنندگان ⬅️: {{ page.followers }}
 فالو شده ها ➡️:{{ page.following }}
@@ -30,7 +30,7 @@ GET_PROFILE = """
 تعداد سکه ها : {{ coin }}
 صفحات اینستاگرامی شما:
 {% for page in user_pages %}
-{{ page }} -{{ forloop.counter }}
+{{ page.page.instagram_username }} -{{ forloop.counter }}
 {% endfor %}
 """
 

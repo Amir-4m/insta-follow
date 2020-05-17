@@ -31,7 +31,7 @@ class InstaBotService(object):
             try:
                 user, _c = TelegramUser.objects.get_or_create(
                     telegram_user_id=user_info.id,
-                    username=user_info.username,
+                    username='t-' + str(user_info.id),
                     defaults=dict(
                         first_name=user_info.first_name or '',
                     )
@@ -57,19 +57,17 @@ class InstaBotService(object):
     def add_insta_page(bot, update, user, instagram_username):
         try:
             page_info = InstagramAppService.get_page_info(instagram_username, full_info=True)
-
             page, i_created = InstaPage.objects.get_or_create(
                 instagram_user_id=page_info[0],
                 instagram_username=instagram_username,
-                defaults={
-                    dict(
-                        followers=page_info[2],
-                        following=page_info[3],
-                        post_no=page_info[4]
-                    )
+                defaults=dict(
+                    followers=page_info[2],
+                    following=page_info[3],
+                    post_no=page_info[4]
+                )
 
-                }
             )
+
             user_page, u_created = UserPage.objects.get_or_create(user=user, page=page)
 
             if not u_created and user_page.is_active is False:

@@ -177,7 +177,7 @@ INSTAGRAM_CREDENTIALS = {
     'PASSWORD': config('INSTAGRAM_PASSWORD', default=''),
 }
 
-FCM_TOKEN = config('FCM_TOKEN', default=''),
+DEVLYTIC_TOKEN = config('DEVLYTIC_TOKEN', default=''),
 
 # FIXTURE_DIRS = [
 #     BASE_DIR / 'fixtures',
