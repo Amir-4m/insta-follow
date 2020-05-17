@@ -6,7 +6,12 @@ stages:
 variables:
   PROJECT_DIR: "insta_follow"
 
-test:
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - $CI_PROJECT_DIR/venv
+
+.tests:
   stage: test
   before_script:
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
@@ -21,6 +26,16 @@ test:
     - rm $CI_PROJECT_DIR/.env
   tags:
     - django
+
+staging test:
+  extends: .tests
+  only:
+    - develop
+
+production test:
+  extends: .tests
+  only:
+    - master
 
 #migrate:
 #  stage: migrate
@@ -63,6 +78,9 @@ production:
   stage: deploy
   variables:
     PROJECT_ABR: "instaflw"
+  before_script:
+    - cd /var/www/$PROJECT_DIR/project/
+    - source /var/www/$PROJECT_DIR/venv/bin/activate
   script:
     - git pull
     - pip install -r requirements.txt
