@@ -81,9 +81,10 @@ staging:
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_ABR:*
   only:
-    - /^staging-.*$/
-  except:
-    - branches
+    - develop
+#    - /^staging-.*$/
+#  except:
+#    - branches
   tags:
     - django
     - staging
