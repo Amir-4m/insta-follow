@@ -27,6 +27,9 @@ from apps.instagram_app.models import (
 
 
 class DeviceViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
+    """
+    add the given device ID to user
+    """
     serializer_class = DeviceSerializer
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
@@ -181,6 +184,10 @@ class CoinTransactionAPIView(viewsets.GenericViewSet, mixins.ListModelMixin):
         queryset = super().get_queryset()
         return queryset.filter(user=self.request.user).order_by('-created_time')
 
+    @method_decorator(name='total', decorator=swagger_auto_schema(
+        operation_description="Get user total coin balance",
+        responses={"200": 'Successful'}
+    ))
     @action(methods=['get'], detail=False, url_path='total')
     def total(self, request, *args, **kwargs):
         serializer = self.serializer_class(self.get_queryset().aggregate(amount=Sum('amount')))
