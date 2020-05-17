@@ -19,10 +19,9 @@ build:
     paths:
       - venv/
     policy: push
+  rules:
+    - if: '$RELEASE == $CI_COMMIT_REF_SLUG'
   only:
-    refs:
-      - $RELEASE
-      - tags
     changes:
       - requirements.txt
   tags:
@@ -42,9 +41,8 @@ test:
     paths:
       - venv/
     policy: pull
-  only:
-    - $RELEASE
-    - tags
+  rules:
+    - if: '$RELEASE == $CI_COMMIT_REF_SLUG'
   tags:
     - django
 
@@ -83,9 +81,9 @@ staging:
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_ABR:*
   only:
-    - tags
-    - develop
     - /^staging-.*$/
+  except:
+    - branches
   tags:
     - django
     - staging
@@ -103,9 +101,9 @@ production:
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_ABR:*
   only:
-    - tags
-    - master
     - /^release-.*$/
+  except:
+    - branches
   tags:
     - django
     - release
