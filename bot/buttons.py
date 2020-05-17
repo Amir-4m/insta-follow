@@ -3,7 +3,7 @@ from bot import texts
 
 
 def start():
-    button = [
+    buttons = [
         [KeyboardButton(texts.CHOICE_PROFILE)],
         [KeyboardButton(texts.CHOICE_CREATE_ORDER)],
         [KeyboardButton(texts.CHOICE_GET_ORDERS)],
@@ -12,7 +12,58 @@ def start():
         [KeyboardButton(texts.CHOICE_COLLECT_COIN)]
     ]
 
-    return ReplyKeyboardMarkup(button, one_time_keyboard=True)
+    return ReplyKeyboardMarkup(buttons, one_time_keyboard=True)
+
+
+def collect_coin_type():
+    buttons = [
+        [KeyboardButton(texts.CHOICE_BY_LIKE),
+         KeyboardButton(texts.CHOICE_BY_COMMENT),
+         KeyboardButton(texts.CHOICE_BY_FOLLOW)
+         ],
+
+    ]
+
+    return ReplyKeyboardMarkup(buttons, one_time_keyboard=True)
+
+
+def collect_coin_page(user):
+    buttons = [
+        [KeyboardButton(user_page.page.instagram_username)] for user_page in user.user_pages.filter(is_active=True)
+    ]
+
+    return ReplyKeyboardMarkup(buttons, one_time_keyboard=True)
+
+
+def inquiry():
+    buttons = [
+        [KeyboardButton(texts.DONE_INQUIRY),
+         KeyboardButton(texts.BACK)
+         ],
+
+    ]
+    return ReplyKeyboardMarkup(buttons, one_time_keyboard=True)
+
+
+def order_action():
+    buttons = [
+        [KeyboardButton(texts.LIKE),
+         KeyboardButton(texts.COMMENT),
+         KeyboardButton(texts.FOLLOW)
+         ],
+
+    ]
+
+    return ReplyKeyboardMarkup(buttons, one_time_keyboard=True)
+
+
+def order_check():
+    buttons = [
+        [InlineKeyboardButton(texts.SUBMIT_ORDER, callback_data="submit_order")],
+        [InlineKeyboardButton(texts.CANCEL, callback_data="cancel")],
+    ]
+
+    return InlineKeyboardMarkup(buttons)
 
 
 def pagination_button(has_next, has_previous):

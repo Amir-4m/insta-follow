@@ -61,7 +61,10 @@ class ProfileSerializer(serializers.ModelSerializer):
             instagram_user_id=user_id,
             instagram_username=page_id,
         )
-        UserPage.objects.get_or_create(user=user, page=page)
+        user_page, u_created = UserPage.objects.get_or_create(user=user, page=page)
+        if user_page.is_active is False:
+            user_page.is_active = True
+            user_page.save()
         return user
 
 
