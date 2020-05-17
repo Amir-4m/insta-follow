@@ -19,10 +19,11 @@ build:
     paths:
       - venv/
     policy: push
-  rules:
-    - if: '$RELEASE != $CI_COMMIT_REF_SLUG'
-      when: never
-    - changes:
+  only:
+    refs:
+      - develop
+      - master
+    changes:
       - requirements.txt
   tags:
     - python
@@ -41,8 +42,9 @@ test:
     paths:
       - venv/
     policy: pull
-  rules:
-    - if: '$RELEASE == $CI_COMMIT_REF_SLUG'
+  only:
+    - develop
+    - master
   tags:
     - django
 
