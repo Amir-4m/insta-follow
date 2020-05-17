@@ -82,6 +82,8 @@ staging:
     - python manage.py migrate
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_ABR:*
+  after_script:
+    - deactivate
 #  only:
 #    - /^staging-.*$/
 #  except:
@@ -102,6 +104,8 @@ production:
     - python manage.py migrate
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_ABR:*
+  after_script:
+    - deactivate
   only:
     - /^release-.*$/
   except:
