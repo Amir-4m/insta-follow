@@ -18,7 +18,7 @@ from .serializers import (
     InstaActionSerializer,
     DeviceSerializer
 )
-from ..pagination import CoinTransactionPagination
+from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination
 from ..tasks import collect_order_link_info
 from apps.instagram_app.models import (
     InstaAction, UserPage, Order,
@@ -27,6 +27,9 @@ from apps.instagram_app.models import (
 
 
 class DeviceViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
+    """
+    add the given device ID to user
+    """
     serializer_class = DeviceSerializer
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
@@ -79,10 +82,11 @@ class OrderViewSet(viewsets.GenericViewSet,
     permission_classes = (IsAuthenticated,)
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
+    pagination_class = OrderPagination
 
     def get_queryset(self):
         qs = super(OrderViewSet, self).get_queryset()
-        return qs.filter(owner=self.request.user)
+        return qs.filter(owner=self.request.user).order_by('-created_time')
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -104,21 +108,17 @@ class OrderViewSet(viewsets.GenericViewSet,
         return Response(serializer.data)
 
 
-class UserInquiryViewSet(viewsets.ViewSet):
+class UserInquiryViewSet(viewsets.GenericViewSet):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
     queryset = UserInquiry.objects.all()
     serializer_class = UserInquirySerializer
+    pagination_class = InquiryPagination
 
     def get_inquiry(self, request, action_type):
         page_id = request.query_params.get('page_id')
         if not page_id:
             return Response({'Error': _('page_id is required')}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            limit = abs(min(int(request.query_params.get('limit', 0)), 100))
-        except ValueError:
-            raise ValidationError(detail={'detail': _('make sure the limit value is a positive number!')})
 
         try:
             user_page = UserPage.objects.get(page_id=page_id, user=self.request.user)
@@ -132,11 +132,13 @@ class UserInquiryViewSet(viewsets.ViewSet):
             if order.entity_id in given_entities:
                 continue
             user_inquiry, _c = UserInquiry.objects.get_or_create(order=order, defaults=dict(user_page=user_page))
-            if _c:
+            if user_inquiry:
                 valid_inquiries.append(user_inquiry)
                 given_entities.append(order.entity_id)
-            if len(valid_inquiries) == limit:
-                break
+        page = self.paginate_queryset(valid_inquiries)
+        if page is not None:
+            serializer = self.serializer_class(page, many=True)
+            return self.get_paginated_response(serializer.data)
 
         serializer = self.serializer_class(valid_inquiries, many=True)
         return Response(serializer.data)
@@ -182,6 +184,10 @@ class CoinTransactionAPIView(viewsets.GenericViewSet, mixins.ListModelMixin):
         queryset = super().get_queryset()
         return queryset.filter(user=self.request.user).order_by('-created_time')
 
+    @method_decorator(name='total', decorator=swagger_auto_schema(
+        operation_description="Get user total coin balance",
+        responses={"200": 'Successful'}
+    ))
     @action(methods=['get'], detail=False, url_path='total')
     def total(self, request, *args, **kwargs):
         serializer = self.serializer_class(self.get_queryset().aggregate(amount=Sum('amount')))

@@ -1,10 +1,10 @@
-from .services import SupportBotService
+from .services import InstaBotService
 
 
 def add_session(view_func=None, clear=False):
     def inner(function):
         def params(*args, **kwargs):
-            user_session = SupportBotService.refresh_session(*args, **kwargs, clear=clear)
+            user_session = InstaBotService.refresh_session(*args, **kwargs, clear=clear)
             return function(*args, **kwargs, session=user_session)
 
         return params
