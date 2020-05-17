@@ -1,66 +1,68 @@
 stages:
+  - build
   - test
-#  - migrate
   - deploy
 
 variables:
   PROJECT_DIR: "insta_follow"
+  PROJECT_ABR: "instaflw"
 
-cache:
-  key: ${CI_COMMIT_REF_SLUG}
-  paths:
-    - $CI_PROJECT_DIR/venv
+build:
+  stage: build
+  script:
+    - virtualenv -q $CI_PROJECT_DIR/venv
+    - source $CI_PROJECT_DIR/venv/bin/activate
+    - pip install -q -r requirements.txt
+  only:
+    refs:
+      - master
+      - develop
+    changes:
+      - requirements.txt
+  tags:
+    - python
 
-.tests:
+test:
   stage: test
   before_script:
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
-    - virtualenv $CI_PROJECT_DIR/venv
-    - source $CI_PROJECT_DIR/venv/bin/activate
   script:
-#    - pip install --no-cache-dir -r requirements.txt
-    - pip install -r requirements.txt
-    - python manage.py makemigrations
+    - source $CI_PROJECT_DIR/venv/bin/activate
     - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
+  only:
+    - master
+    - develop
   tags:
     - django
 
-staging test:
-  extends: .tests
+.migrate:
+  stage: migrate
+  before_script:
+    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
+  script:
+    - source $CI_PROJECT_DIR/venv/bin/activate
+    - python manage.py makemigrations
+  after_script:
+    - rm $CI_PROJECT_DIR/.env
   only:
-    - develop
+    changes:
+      - apps/*/models.py
+  tags:
+    - django
+    - staging
 
-production test:
-  extends: .tests
-  only:
-    - master
-
-#migrate:
-#  stage: migrate
-#  before_script:
-#    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
-#    - virtualenv $CI_PROJECT_DIR/venv
-#    - source $CI_PROJECT_DIR/venv/bin/activate
-#  script:
-#    - python manage.py makemigrations
-#  after_script:
-#    - rm $CI_PROJECT_DIR/.env
-#  only:
-#    changes:
-#      - apps/*/models.py
-#  tags:
-#    - django
-#    - staging
-
-staging:
-  stage: deploy
-  variables:
-    PROJECT_ABR: "instaflw"
+.deploy:
   before_script:
     - cd /var/www/$PROJECT_DIR/project/
     - source /var/www/$PROJECT_DIR/venv/bin/activate
+  tags:
+    - django
+
+staging:
+  stage: deploy
+  extends: .deploy
   script:
     - git pull
     - pip install -r requirements.txt
@@ -71,16 +73,11 @@ staging:
   only:
     - develop
   tags:
-    - django
     - staging
 
 production:
   stage: deploy
-  variables:
-    PROJECT_ABR: "instaflw"
-  before_script:
-    - cd /var/www/$PROJECT_DIR/project/
-    - source /var/www/$PROJECT_DIR/venv/bin/activate
+  extends: .deploy
   script:
     - git pull
     - pip install -r requirements.txt
@@ -91,5 +88,4 @@ production:
     - master
     - tags
   tags:
-    - django
     - release
