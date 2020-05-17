@@ -1,3 +1,9 @@
+workflow:
+  rules:
+    - if: $CI_COMMIT_REF_SLUG != $RELEASE
+      when: never
+    - when: always
+
 stages:
   - build
   - test
@@ -7,16 +13,27 @@ variables:
   PROJECT_DIR: "insta_follow"
   PROJECT_ABR: "instaflw"
 
-build:
+create container:
   stage: build
   script:
     - virtualenv -q $CI_PROJECT_DIR/venv
+  cache:
+    key: ${CI_BUILD_REF_NAME}
+    paths:
+      - venv/
+    policy: pull
+  artifacts:
+    paths:
+      - venv/
+  tags:
+    - python
+
+install packages:
+  stage: build
+  script:
     - source $CI_PROJECT_DIR/venv/bin/activate
     - pip install -q -r requirements.txt
   only:
-    refs:
-      - master
-      - develop
     changes:
       - requirements.txt
   tags:
@@ -31,9 +48,6 @@ test:
     - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
-  only:
-    - master
-    - develop
   tags:
     - django
 
