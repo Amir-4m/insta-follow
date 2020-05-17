@@ -17,14 +17,14 @@ create container:
   stage: build
   script:
     - virtualenv -q $CI_PROJECT_DIR/venv
-  cache:
-    key: ${CI_BUILD_REF_NAME}
-    paths:
-      - venv/
-    policy: pull
-  artifacts:
-    paths:
-      - venv/
+#  cache:
+#    key: ${CI_BUILD_REF_NAME}
+#    paths:
+#      - venv/
+#    policy: pull
+#  artifacts:
+#    paths:
+#      - venv/
   tags:
     - python
 
