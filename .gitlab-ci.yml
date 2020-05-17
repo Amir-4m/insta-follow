@@ -17,8 +17,10 @@ create container:
   stage: build
   script:
     - virtualenv -q $CI_PROJECT_DIR/venv
+    - source $CI_PROJECT_DIR/venv/bin/activate
+    - pip install -q -r requirements.txt
   cache:
-    key: ${CI_BUILD_REF_NAME}
+    key: ${CI_COMMIT_REF_SLUG}
     paths:
       - venv/
     policy: pull
