@@ -13,7 +13,7 @@ build:
     - virtualenv --prompt='($PROJECT_DIR)' -q venv
     - virtualenv --relocatable venv
     - source venv/bin/activate
-    - pip install --no-cache-dir -r requirements.txt
+    - pip install -r requirements.txt
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
