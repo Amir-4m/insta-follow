@@ -20,7 +20,8 @@ build:
       - venv/
     policy: push
   rules:
-    - if: '$RELEASE == $CI_COMMIT_REF_SLUG'
+    - if: '$RELEASE != $CI_COMMIT_REF_SLUG'
+      when: never
     - changes:
       - requirements.txt
   tags:
