@@ -21,8 +21,7 @@ build:
     policy: push
   rules:
     - if: '$RELEASE == $CI_COMMIT_REF_SLUG'
-  only:
-    changes:
+    - changes:
       - requirements.txt
   tags:
     - python
