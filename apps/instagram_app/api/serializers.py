@@ -56,7 +56,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         page_id = validated_data.get('instagram_username')
         user_id = validated_data.get('user_id')
-        user = self.context['request'].user
+        user = self.context['user']
         page, created = InstaPage.objects.get_or_create(
             instagram_user_id=user_id,
             instagram_username=page_id,

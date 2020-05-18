@@ -5,6 +5,8 @@ import requests
 
 from datetime import datetime, timedelta
 
+from celery.schedules import crontab
+from celery.task import periodic_task
 from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import F
@@ -196,7 +198,7 @@ def incomplete_order_notifier(order_id):
 
 
 # PERIODIC TASK
-@shared_task
+@periodic_task(run_every=(crontab(minute='*/20')), name="collect_order_data", ignore_result=True)
 def collect_order_data():
     lock_key = 'collect-order-data'
     if cache.get(lock_key):
@@ -223,7 +225,7 @@ def collect_order_data():
 
 
 # PERIODIC TASK
-@shared_task
+@periodic_task(run_every=(crontab(hour='*/1')), name="validate_user_inquiries", ignore_result=True)
 def validate_user_inquiries():
     with transaction.atomic():
         qs = UserInquiry.objects.select_for_update(of=('self',)).select_related('user_page').filter(
@@ -245,7 +247,7 @@ def validate_user_inquiries():
 
 
 # PERIODIC TASK
-@shared_task
+@periodic_task(run_every=(crontab(hour='*/24')), name="final_validate_user_inquiries", ignore_result=True)
 def final_validate_user_inquiries():
     for inquiry in UserInquiry.objects.select_for_update().filter(
             validated_time__isnull=False,
@@ -273,7 +275,7 @@ def final_validate_user_inquiries():
 
 
 # PERIODIC TASK
-@shared_task
+@periodic_task(run_every=(crontab(minute='*/30')), name="check_expired_inquiries", ignore_result=True)
 def check_expired_inquiries():
     qs = UserInquiry.objects.filter(
         status=UserInquiry.STATUS_OPEN,

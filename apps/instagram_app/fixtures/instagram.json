@@ -77,6 +77,21 @@
     }
   },
   {
+    "model": "instagram_app.instapage",
+    "pk": 3,
+    "fields": {
+      "created_time": "2020-05-06T11:39:11.965",
+      "updated_time": "2020-05-06T11:39:11.965",
+      "instagram_username": "test3",
+      "instagram_user_id": 12312378,
+      "followers": null,
+      "following": null,
+      "post_no": null,
+      "is_banned": false,
+      "category": []
+    }
+  },
+  {
     "model": "instagram_app.userpage",
     "pk": 1,
     "fields": {
@@ -96,6 +111,17 @@
       "user": 1,
       "page": 2,
       "is_active": true
+    }
+  },
+  {
+    "model": "instagram_app.userpage",
+    "pk": 3,
+    "fields": {
+      "created_time": "2020-05-06T11:39:11.971",
+      "updated_time": "2020-05-06T11:39:11.971",
+      "user": 1,
+      "page": 3,
+      "is_active": false
     }
   },
   {
@@ -159,6 +185,22 @@
       "instagram_username": "test",
       "description": "",
       "is_enable": true,
+      "owner": 1
+    }
+  },
+  {
+    "model": "instagram_app.order",
+    "pk": 5,
+    "fields": {
+      "entity_id": 5,
+      "created_time": "2020-05-06T11:37:15.704",
+      "action": "C",
+      "target_no": 20,
+      "link": "https://www.instagram.com/p/tes484/",
+      "media_url": "",
+      "instagram_username": "test",
+      "description": "",
+      "is_enable": false,
       "owner": 1
     }
   },

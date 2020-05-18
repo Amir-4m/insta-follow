@@ -89,7 +89,6 @@ class InstagramAppService(object):
         author = ''
         thumbnail_url = ''
         is_private = False
-
         try:
             short_code = InstagramAppService.get_shortcode(link)
             r = requests.get(f"https://www.instagram.com/p/{short_code}/?__a=1")

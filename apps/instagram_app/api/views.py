@@ -53,7 +53,7 @@ class ProfileViewSet(viewsets.ViewSet):
     permission_classes = (IsAuthenticated,)
 
     def create(self, request, *args, **kwargs):
-        serializer = ProfileSerializer(data=self.request.data, context={'request': request})
+        serializer = ProfileSerializer(data=self.request.data, context={'user': request.user})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -132,16 +132,11 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
             if order.entity_id in given_entities:
                 continue
             user_inquiry, _c = UserInquiry.objects.get_or_create(order=order, defaults=dict(user_page=user_page))
-            if user_inquiry:
-                valid_inquiries.append(user_inquiry)
-                given_entities.append(order.entity_id)
+            valid_inquiries.append(user_inquiry)
+            given_entities.append(order.entity_id)
         page = self.paginate_queryset(valid_inquiries)
-        if page is not None:
-            serializer = self.serializer_class(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer = self.serializer_class(valid_inquiries, many=True)
-        return Response(serializer.data)
+        serializer = self.serializer_class(page, many=True)
+        return self.get_paginated_response(serializer.data)
 
     @action(methods=["get"], detail=False, url_path="like")
     def like(self, request, *args, **kwargs):
