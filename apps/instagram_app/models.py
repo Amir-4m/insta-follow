@@ -97,7 +97,7 @@ class Order(models.Model):
     action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
     target_no = models.IntegerField(_("target number"))
     link = models.URLField(_("link"))
-    entity_id = models.IntegerField(_('entity ID'), null=True, db_index=True)
+    entity_id = models.BigIntegerField(_('entity ID'), null=True, db_index=True)
     media_url = models.TextField(_("media url"), blank=True)
     instagram_username = models.CharField(_("instagram username"), max_length=120, blank=True)
     description = models.TextField(_("description"), blank=True, default='')
