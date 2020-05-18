@@ -99,9 +99,9 @@ class InstagramAppService(object):
             thumbnail_url = r['thumbnail_url']
         except requests.HTTPError as e:
             logger.error(f"error while getting post: {link} information HTTPError: {e}")
-            if r.status_code == 404:
-                is_private = True
+            is_private = True
         except Exception as e:
+            is_private = True
             logger.error(f"error while getting post: {link} information {e}")
 
         return media_id, author, thumbnail_url, is_private
