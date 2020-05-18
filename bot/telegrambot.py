@@ -3,10 +3,9 @@ import logging
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
-from django.template import Template, Context
 from telegram.ext.dispatcher import run_async
 from telegram.parsemode import ParseMode
-from apps.instagram_app.models import UserPage, InstaPage, InstaAction, Order, UserInquiry, CoinTransaction
+from apps.instagram_app.models import UserPage, InstaAction, Order, UserInquiry, CoinTransaction
 from apps.instagram_app.services import InstagramAppService
 from apps.telegram_app.models import TelegramUser
 from .decorators import add_session
@@ -51,6 +50,7 @@ def dispatcher(bot, update, session):
     if text.startswith('@') and not UserPage.objects.filter(user=user, is_active=True).exists():
         page_id = text.lstrip('@')
         InstaBotService.add_insta_page(bot, update, user, page_id)
+        return
 
     """
     Shows user profile such as telegram username, coin balance, insta pages
@@ -63,11 +63,12 @@ def dispatcher(bot, update, session):
                 texts.GET_PROFILE,
                 user_pages=user_pages,
                 user=user,
-                coin=user.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet', 0)
+                coin=user.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet', 0) or 0
             ),
             chat_id=update.effective_user.id,
             reply_markup=buttons.start()
         )
+        return
 
     """
     Add the page with the given instagram username to user pages
@@ -79,6 +80,7 @@ def dispatcher(bot, update, session):
             text=texts.ENTER_PAGE_USERNAME,
             chat_id=update.effective_user.id,
         )
+        return
 
     """
     Remove the page with the given id from user active pages
@@ -111,6 +113,7 @@ def dispatcher(bot, update, session):
         session['list_type'] = 'order_list'
 
         InstaBotService.get_order_list(bot, update, user)
+        return
 
     if text == texts.CHOICE_CREATE_ORDER:
         session['state'] = 'create_order_action'
@@ -123,7 +126,6 @@ def dispatcher(bot, update, session):
     else:
         call_state_function(bot, update)
         return
-
     InstaBotService.refresh_session(bot, update, session)
 
 
@@ -138,7 +140,6 @@ def call_state_function(bot, update, session):
         return InstaBotService.paginate_data(bot, update, session, user, data, list_type)
 
     state = session.get('state')
-
     try:
         eval(state)(bot, update)
     except Exception:
@@ -154,6 +155,7 @@ def add_page(bot, update, session=None):
     text = update.message.text
     user = session.get('user')
     InstaBotService.add_insta_page(bot, update, user, text)
+    return
 
 
 @run_async
@@ -174,18 +176,21 @@ def delete_page(bot, update, session=None):
                 chat_id=update.effective_user.id,
                 reply_markup=buttons.start()
             )
+            return
         except UserPage.DoesNotExist:
             bot.send_message(
                 text=texts.PAGE_NOT_FOUND,
                 chat_id=update.effective_user.id,
                 reply_markup=buttons.start()
             )
+            return
     else:
         bot.send_message(
             text=texts.ERROR_MESSAGE,
             chat_id=update.effective_user.id,
             reply_markup=buttons.start()
         )
+        return
 
 
 @run_async
@@ -345,7 +350,7 @@ def create_order_check(bot, update, session=None):
             link=link,
             target=target,
             price=price,
-            username=user.username
+            username=user.first_name
         ),
         chat_id=update.effective_user.id,
         reply_markup=buttons.order_check()
