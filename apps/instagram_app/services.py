@@ -91,32 +91,23 @@ class InstagramAppService(object):
         is_private = False
 
         try:
-            r = requests.get(f"https://api.instagram.com/oembed/?callback=&url={link}")
+            short_code = InstagramAppService.get_shortcode(link)
+            r = requests.get(f"https://www.instagram.com/p/{short_code}/?__a=1")
             r.raise_for_status()
             r = r.json()
-            media_id = r['media_id'].split('_')[0]
-            author = r['author_name']
-            thumbnail_url = r['thumbnail_url']
+            r = r['graphql']['shortcode_media']
+
+            media_id = r['id']
+            author = r['owner']['username']
+            thumbnail_url = r['display_url']
         except requests.HTTPError as e:
             logger.error(f"error while getting post: {link} information HTTPError: {e}")
             is_private = True
         except Exception as e:
-            is_private = True
             logger.error(f"error while getting post: {link} information {e}")
+            is_private = True
 
         return media_id, author, thumbnail_url, is_private
-
-    @staticmethod
-    def get_post_media_url(short_code):
-        try:
-            response = requests.get(f"https://www.instagram.com/p/{short_code}/?__a=1")
-            response.raise_for_status()
-            response = response.json()
-            return response['graphql']['shortcode_media']['display_url']
-        except requests.HTTPError as e:
-            logger.error(f"error while getting post: {short_code} information HTTPError: {e}")
-        except Exception as e:
-            logger.error(f"error while getting post: {short_code} information {e}")
 
     @staticmethod
     def check_activity_from_db(post_link, username, check_type):
