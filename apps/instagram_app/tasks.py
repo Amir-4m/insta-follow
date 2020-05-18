@@ -179,23 +179,20 @@ def incomplete_order_notifier(order_id):
     order.is_enable = False
     order.description = "problem in getting information"
     order.save()
-    if not isinstance(order.owner, TelegramUser):
-        devices = [device.device_id for device in order.owner.devices.all()]
-        if len(devices) >= 1:
-            data = {
-                "devices": [devices],
-                "data": {
-                    "title": _("Error in submitting order"),
-                    "alert": _("Please make assurance that your instagram page has not any problem) !")
-                }
+    devices = [device.device_id for device in order.owner.devices.all()]
+    if len(devices) >= 1:
+        data = {
+            "devices": [devices],
+            "data": {
+                "title": _("Error in submitting order"),
+                "alert": _("Please make assurance that your instagram page has not any problem) !")
             }
-            header = {'Authorization': settings.FCM_TOKEN}
-            try:
-                requests.post('https://devlytic.myblueapi.com:8443/api/push/devices/', data, headers=header)
-            except Exception as e:
-                logger.error(f"push message for private account failed due : {e}")
-    else:
-        pass
+        }
+        header = {'Authorization': settings.FCM_TOKEN}
+        try:
+            requests.post('https://devlytic.myblueapi.com:8443/api/push/devices/', data, headers=header)
+        except Exception as e:
+            logger.error(f"push message for private account failed due : {e}")
 
 
 # PERIODIC TASK
