@@ -3,11 +3,12 @@ import re
 import time
 import requests
 from django.db import transaction
+from django.db.models import F, Sum, Case, When, IntegerField
 from django.utils import timezone
 from django.conf import settings
 from igramscraper.instagram import Instagram
 
-from .models import BaseInstaEntity, InstaAction, UserPage, UserInquiry
+from .models import BaseInstaEntity, InstaAction, UserPage, UserInquiry, Order
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,21 @@ class InstagramAppService(object):
         return media_id, author, thumbnail_url, is_private
 
     @staticmethod
+    def get_user_followers(instagram_username):
+        instagram = Instagram()
+        instagram.with_credentials(
+            settings.INSTAGRAM_CREDENTIALS['USERNAME'],
+            settings.INSTAGRAM_CREDENTIALS['PASSWORD']
+        )
+        instagram.login(force=False, two_step_verificator=True)
+        username = instagram_username
+        account = instagram.get_account(username)
+        followers = instagram.get_followers(account.identifier, 150, 100, delayed=True)
+        return followers
+
+
+class CustomService(object):
+    @staticmethod
     def check_activity_from_db(post_link, username, check_type):
         try:
             model = BaseInstaEntity.get_model(check_type, username)
@@ -125,6 +141,46 @@ class InstagramAppService(object):
         ).exists()
 
     @staticmethod
+    def get_or_create_inquiries(user_page, action_type, limit=100):
+        valid_orders = Order.objects.filter(is_enable=True, action=action_type).annotate(
+            remaining=F('target_no') - Sum(
+                Case(
+
+                    When(
+                        user_inquiries__status__in=[UserInquiry.STATUS_DONE, UserInquiry.STATUS_VALIDATED], then=1
+                    )
+                ),
+                output_field=IntegerField()
+            ),
+            open_inquiries_count=Sum(
+                Case(
+
+                    When(
+                        user_inquiries__status=UserInquiry.STATUS_OPEN, then=1
+                    )
+                ),
+                output_field=IntegerField()
+            )
+        ).filter(
+            open_inquiries_count__lt=0.10 * F('remaining') + F('remaining')
+        )
+
+        valid_inquiries = []
+        given_entities = []
+
+        for order in valid_orders:
+            if order.entity_id in given_entities:
+                continue
+            user_inquiry, _c = UserInquiry.objects.get_or_create(order=order, defaults=dict(user_page=user_page))
+            valid_inquiries.append(user_inquiry)
+            given_entities.append(order.entity_id)
+
+            if len(valid_inquiries) == limit:
+                break
+
+        return valid_inquiries
+
+    @staticmethod
     def check_user_action(user_inquiry_ids, user_page_id):
         user_page = UserPage.objects.get(id=user_page_id)
         with transaction.atomic():
@@ -133,22 +189,9 @@ class InstagramAppService(object):
                 user_inquiry.status = UserInquiry.STATUS_DONE
                 if user_inquiry.validated_time is not None or user_inquiry.done_time is not None:
                     continue
-                if InstagramAppService.check_activity_from_db(
+                if CustomService.check_activity_from_db(
                         user_inquiry.order.link,
                         user_page.user.username,
                         user_inquiry.order.action):
                     user_inquiry.done_time = timezone.now()
                 user_inquiry.save()
-
-    @staticmethod
-    def get_user_followers(instagram_username):
-        instagram = Instagram()
-        instagram.with_credentials(
-            settings.INSTAGRAM_CREDENTIALS['USERNAME'],
-            settings.INSTAGRAM_CREDENTIALS['PASSWORD']
-        )
-        instagram.login(force=False, two_step_verificator=True)
-        username = instagram_username
-        account = instagram.get_account(username)
-        followers = instagram.get_followers(account.identifier, 150, 100, delayed=True)
-        return followers

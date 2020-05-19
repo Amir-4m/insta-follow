@@ -5,8 +5,8 @@ from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from telegram.ext.dispatcher import run_async
 from telegram.parsemode import ParseMode
-from apps.instagram_app.models import UserPage, InstaAction, Order, UserInquiry, CoinTransaction
-from apps.instagram_app.services import InstagramAppService
+from apps.instagram_app.models import UserPage, InstaAction, Order, CoinTransaction
+from apps.instagram_app.services import CustomService
 from apps.telegram_app.models import TelegramUser
 from .decorators import add_session
 from . import texts, buttons
@@ -44,18 +44,22 @@ def dispatcher(bot, update, session):
     user = session.get('user')
     text = update.message.text
 
-    """
-    Creating user page on first login if user has no active page
-    """
     if text.startswith('@') and not UserPage.objects.filter(user=user, is_active=True).exists():
+
+        """
+        Creating user page on first login if user has no active page
+        """
+
         page_id = text.lstrip('@')
         InstaBotService.add_insta_page(bot, update, user, page_id)
         return
 
-    """
-    Shows user profile such as telegram username, coin balance, insta pages
-    """
-    if text == texts.CHOICE_PROFILE:
+    elif text == texts.CHOICE_PROFILE:
+
+        """
+        Shows user profile such as telegram username, coin balance, insta pages
+        """
+
         user_pages = UserPage.objects.filter(user=user, is_active=True)
 
         bot.send_message(
@@ -70,22 +74,24 @@ def dispatcher(bot, update, session):
         )
         return
 
-    """
-    Add the page with the given instagram username to user pages
-    """
-    if text == texts.CHOICE_ADD_PAGE:
+    elif text == texts.CHOICE_ADD_PAGE:
+
+        """
+        Add the page with the given instagram username to user pages
+        """
+
         session['state'] = 'add_page'
 
         bot.send_message(
             text=texts.ENTER_PAGE_USERNAME,
             chat_id=update.effective_user.id,
         )
-        return
 
-    """
-    Remove the page with the given id from user active pages
-    """
-    if text == texts.CHOICE_DELETE_PAGE:
+    elif text == texts.CHOICE_DELETE_PAGE:
+        """
+        Remove the page with the given id from user active pages
+        """
+
         session['state'] = 'delete_page'
         user_pages = UserPage.objects.filter(user=user, is_active=True)
 
@@ -94,10 +100,11 @@ def dispatcher(bot, update, session):
             chat_id=update.effective_user.id,
         )
 
-    """
-    Shows a list of inquiries that user must do with the chosen action
-    """
-    if text == texts.CHOICE_COLLECT_COIN:
+    elif text == texts.CHOICE_COLLECT_COIN:
+        """
+        Shows a list of inquiries that user must do with the chosen action
+        """
+
         session['state'] = 'collect_coin'
         bot.send_message(
             text=texts.COLLECT_COIN_TYPES,
@@ -105,17 +112,17 @@ def dispatcher(bot, update, session):
             reply_markup=buttons.collect_coin_type()
         )
 
-    """
-    Shows a list of user orders
-    """
-    if text == texts.CHOICE_GET_ORDERS:
+    elif text == texts.CHOICE_GET_ORDERS:
+        """
+        Shows a list of user orders
+        """
         session['counter'] = 1
         session['list_type'] = 'order_list'
 
         InstaBotService.get_order_list(bot, update, user)
         return
 
-    if text == texts.CHOICE_CREATE_ORDER:
+    elif text == texts.CHOICE_CREATE_ORDER:
         session['state'] = 'create_order_action'
         bot.send_message(
             text=texts.ORDER_CREATE_ACTION,
@@ -126,6 +133,7 @@ def dispatcher(bot, update, session):
     else:
         call_state_function(bot, update)
         return
+
     InstaBotService.refresh_session(bot, update, session)
 
 
@@ -137,7 +145,8 @@ def call_state_function(bot, update, session):
     if update.callback_query:
         data = update.callback_query.data
         list_type = session.get('list_type')
-        return InstaBotService.paginate_data(bot, update, session, user, data, list_type)
+        if list_type:
+            return InstaBotService.paginate_data(bot, update, session, user, data, list_type)
 
     state = session.get('state')
     try:
@@ -177,7 +186,8 @@ def delete_page(bot, update, session=None):
                 reply_markup=buttons.start()
             )
             return
-        except UserPage.DoesNotExist:
+        except UserPage.DoesNotExist as e:
+            logger.error(f"TLG-error occurred in getting insta page: {e}")
             bot.send_message(
                 text=texts.PAGE_NOT_FOUND,
                 chat_id=update.effective_user.id,
@@ -234,7 +244,9 @@ def get_inquiry(bot, update, session=None):
     try:
         user_page = UserPage.objects.get(page__instagram_username=page_username, user=user, is_active=True)
         session['active_page'] = user_page.id
-    except UserPage.DoesNotExist:
+
+    except UserPage.DoesNotExist as e:
+        logger.error(f"TLG-error occurred in getting inquiry: {e}")
         bot.send_message(
             text=texts.PAGE_NOT_FOUND,
             chat_id=update.effective_user.id,
@@ -242,20 +254,11 @@ def get_inquiry(bot, update, session=None):
         )
         return
 
-    valid_orders = Order.objects.filter(is_enable=True, action=action).order_by('-id')
+    inquiries = CustomService.get_or_create_inquiries(user_page, action, limit=10)
 
-    valid_inquiries = []
-    given_entities = []
-    for order in valid_orders:
-        if order.entity_id in given_entities:
-            continue
-        user_inquiry, _c = UserInquiry.objects.get_or_create(order=order, defaults=dict(user_page=user_page))
-        if user_inquiry and user_inquiry.status == UserInquiry.STATUS_OPEN:
-            valid_inquiries.append(user_inquiry)
-            given_entities.append(order.entity_id)
-    session['inquiry_ids'] = [inquiry.id for inquiry in valid_inquiries[:10]]
+    session['inquiry_ids'] = [inquiry.id for inquiry in inquiries]
     bot.send_message(
-        text=InstaBotService.render_template(texts.INQUIRY_LIST, inquiries=valid_inquiries[:10]),
+        text=InstaBotService.render_template(texts.INQUIRY_LIST, inquiries=inquiries),
         chat_id=update.effective_user.id,
         reply_markup=buttons.inquiry(),
         parse_mode=ParseMode.MARKDOWN_V2
@@ -278,7 +281,7 @@ def check_inquiry(bot, update, session=None):
     elif text == texts.DONE_INQUIRY:
         done_ids = session.get('inquiry_ids')
         page_id = session.get('active_page')
-        InstagramAppService.check_user_action(done_ids, page_id)
+        CustomService.check_user_action(done_ids, page_id)
         bot.send_message(
             text=texts.CHECK_INQUIRY,
             chat_id=update.effective_user.id,
@@ -336,74 +339,96 @@ def create_order_link(bot, update, session=None):
 @run_async
 @add_session()
 def create_order_check(bot, update, session=None):
-    target = update.message.text
-    session['order_target'] = target
-    session['state'] = 'order_create_final'
-    user = session.get('user')
-    link = session.get('order_link')
-    order_action = session.get('order_action')
-    price = target * order_action.buy_value
-    bot.send_message(
-        text=InstaBotService.render_template(
-            texts.ORDER_CREATE_CHECK,
-            order_action=order_action,
-            link=link,
-            target=target,
-            price=price,
-            username=user.first_name
-        ),
-        chat_id=update.effective_user.id,
-        reply_markup=buttons.order_check()
-    )
+    try:
+        target = int(update.message.text)
+        session['order_target'] = target
+        session['state'] = 'order_create_final'
+        user = session.get('user')
+        link = session.get('order_link')
+        order_action = session.get('order_action')
+        insta_action = InstaAction.objects.get(action_type=order_action)
+        price = target * insta_action.buy_value
+        bot.send_message(
+            text=InstaBotService.render_template(
+                texts.ORDER_CREATE_CHECK,
+                order_action=insta_action.get_action_type_display(),
+                link=link,
+                target=target,
+                price=price,
+                username=user.first_name
+            ),
+            chat_id=update.effective_user.id,
+            reply_markup=buttons.order_check()
+        )
 
+    except Exception as e:
+        logger.error(f"TLG-error occurred in check section of create order: {e}")
+        bot.send_message(
+            text=texts.ERROR_MESSAGE,
+            chat_id=update.effective_user.id,
+            reply_markup=buttons.start()
+        )
+        return
     InstaBotService.refresh_session(bot, update, session)
 
 
 @run_async
 @add_session()
 def order_create_final(bot, update, session=None):
-    data = update.callback_query.data
-    user = session.get('user')
-    link = session.get('order_link')
-    order_action = session.get('order_action')
-    target = session.get('target')
-
-    if data == texts.SUBMIT_ORDER:
-        with transaction.atomic():
-            user = TelegramUser.objects.select_for_update().get(id=user.id)
-            if user.coin_transactions.all().aggregate(
-                    wallet=Coalesce(Sum('amount'), 0)
-            )['wallet'] < order_action.buy_value * target:
-                bot.send_message(
-                    text=texts.NOT_ENOUGH_COIN,
-                    chat_id=update.effective_user.id,
+    try:
+        data = update.callback_query.data
+        user = session.get('user')
+        link = session.get('order_link')
+        order_action = session.get('order_action')
+        insta_action = InstaAction.objects.get(action_type=order_action)
+        target = int(session.get('order_target'))
+        if data == 'submit_order':
+            with transaction.atomic():
+                user = TelegramUser.objects.select_for_update().get(id=user.id)
+                if user.coin_transactions.all().aggregate(
+                        wallet=Coalesce(Sum('amount'), 0)
+                )['wallet'] < insta_action.buy_value * target:
+                    bot.send_message(
+                        text=texts.NOT_ENOUGH_COIN,
+                        chat_id=update.effective_user.id,
+                    )
+                    return
+                ct = CoinTransaction.objects.create(user=user, amount=-(insta_action.buy_value * target))
+                order = Order.objects.create(
+                    action=insta_action,
+                    link=link,
+                    target_no=target,
+                    owner=user,
                 )
-                return
+                ct.order = order
+                ct.description = f"create order {order.id}"
+                ct.save()
 
-            ct = CoinTransaction.objects.create(user=user, amount=-(order_action.buy_value * target))
-            order = Order.objects.create(
-                action=order_action,
-                link=link,
-                target_no=target,
-                owner=user,
+            bot.send_message(
+                text=texts.ORDER_CREATE_FINAL,
+                chat_id=update.effective_user.id,
+                reply_markup=buttons.start()
+
             )
-            ct.order = order
-            ct.description = f"create order {order.id}"
-            ct.save()
 
+            session.pop('order_link')
+            session.pop('order_action')
+            session.pop('target')
+
+        elif data == 'cancel':
+            bot.send_message(
+                text=texts.ORDER_CANCEL,
+                chat_id=update.effective_user.id,
+                reply_markup=buttons.start()
+            )
+
+    except Exception as e:
+
+        logger.error(f"TLG-error occurred in final section of create order: {e}")
         bot.send_message(
-            text=texts.ORDER_CREATE_FINAL,
+            text=texts.ERROR_MESSAGE,
             chat_id=update.effective_user.id,
             reply_markup=buttons.start()
-
         )
-    elif data == texts.CANCEL:
-        bot.send_message(
-            text=texts.ORDER_CANCEL,
-            chat_id=update.effective_user.id,
-            reply_markup=buttons.start()
-        )
-    session.pop('order_link')
-    session.pop('order_action')
-    session.pop('target')
-    InstaBotService.refresh_session(bot, update, session)
+        return
+    InstaBotService.refresh_session(bot, update, session, clear=True)

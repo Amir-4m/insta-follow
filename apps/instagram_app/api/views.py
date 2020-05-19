@@ -21,6 +21,7 @@ from .serializers import (
     InstaActionSerializer,
     DeviceSerializer
 )
+from ..services import CustomService
 from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination
 from ..tasks import collect_order_link_info
 from apps.instagram_app.models import (
@@ -134,43 +135,9 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
         except UserPage.DoesNotExist:
             raise ValidationError(detail={'detail': _('user and page does not match!')})
 
-        valid_orders = Order.objects.filter(is_enable=True, action=action_type).annotate(
-            remaining=F('target_no') - Sum(
-                Case(
+        inquiries = CustomService.get_or_create_inquiries(user_page, action_type, limit)
 
-                    When(
-                        user_inquiries__status__in=[UserInquiry.STATUS_DONE, UserInquiry.STATUS_VALIDATED], then=1
-                    )
-                ),
-                output_field=IntegerField()
-            ),
-            open_inquiries_count=Sum(
-                Case(
-
-                    When(
-                        user_inquiries__status=UserInquiry.STATUS_OPEN, then=1
-                    )
-                ),
-                output_field=IntegerField()
-            )
-        ).filter(
-            open_inquiries_count__lt=0.10 * F('remaining') + F('remaining')
-        )
-
-        valid_inquiries = []
-        given_entities = []
-
-        for order in valid_orders:
-            if order.entity_id in given_entities:
-                continue
-            user_inquiry, _c = UserInquiry.objects.get_or_create(order=order, defaults=dict(user_page=user_page))
-            valid_inquiries.append(user_inquiry)
-            given_entities.append(order.entity_id)
-
-            if len(valid_inquiries) == limit:
-                break
-
-        serializer = self.serializer_class(valid_inquiries, many=True)
+        serializer = self.serializer_class(inquiries, many=True)
         return Response(serializer.data)
 
     def get_inquiry_report(self, request):

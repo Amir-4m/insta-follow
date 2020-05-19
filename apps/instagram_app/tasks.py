@@ -17,7 +17,7 @@ from django.conf import settings
 from celery import shared_task
 
 from .endpoints import LIKES_BY_SHORTCODE, COMMENTS_BY_SHORTCODE
-from .services import InstagramAppService
+from .services import InstagramAppService, CustomService
 from .models import Order, UserInquiry, BaseInstaEntity, InstaAction, CoinTransaction
 from ..telegram_app.models import TelegramUser
 
@@ -238,7 +238,7 @@ def validate_user_inquiries():
             user_inquiry.status = UserInquiry.STATUS_DONE
             if user_inquiry.validated_time is not None or user_inquiry.done_time is not None:
                 continue
-            if InstagramAppService.check_activity_from_db(
+            if CustomService.check_activity_from_db(
                     user_inquiry.order.link,
                     user_inquiry.user_page.user.username,
                     user_inquiry.order.action):
@@ -255,7 +255,7 @@ def final_validate_user_inquiries():
             status=UserInquiry.STATUS_DONE
     ):
         inquiry.last_check_time = timezone.now()
-        is_passed = InstagramAppService.check_activity_from_db(inquiry.order.link, inquiry.user.username,
+        is_passed = CustomService.check_activity_from_db(inquiry.order.link, inquiry.user.username,
                                                                inquiry.order.action)
         if is_passed is True:
             inquiry.status = UserInquiry.STATUS_VALIDATED
