@@ -6,6 +6,7 @@ igramscraper
 Django>=2.2, <2.3
 djangorestframework>=3.11, <4.0
 djangorestframework-simplejwt>=4.4, <4.5
+django-filter
 
 python-decouple
 celery>=4.4, <4.5

@@ -1,14 +1,16 @@
 from django.utils.translation import ugettext_lazy as _
-from django.db.models import Sum
+from django.db.models import Sum, Case, When, IntegerField, F
 from django.db.models.functions import Coalesce
 from django.utils.decorators import method_decorator
-from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets, generics, mixins
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
+
+from drf_yasg.utils import swagger_auto_schema
+from django_filters.rest_framework import DjangoFilterBackend
 
 from ..swagger_schemas import ORDER_POST_DOCS, INQUIRY_POST_DOC, PROFILE_POST_DOC
 from .serializers import (
@@ -115,29 +117,74 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
     queryset = UserInquiry.objects.all()
     serializer_class = UserInquirySerializer
     pagination_class = InquiryPagination
+    filterset_fields = ['status', 'order__action']
 
     def get_inquiry(self, request, action_type):
         page_id = request.query_params.get('page_id')
         if not page_id:
             return Response({'Error': _('page_id is required')}, status=status.HTTP_400_BAD_REQUEST)
 
-        # TODO: check how many inquires have been distributed so we don't bypass target_no
+        try:
+            limit = abs(min(int(request.query_params.get('limit', 0)), 100))
+        except ValueError:
+            raise ValidationError(detail={'detail': _('make sure the limit value is a positive number!')})
 
         try:
             user_page = UserPage.objects.get(page_id=page_id, user=self.request.user)
         except UserPage.DoesNotExist:
             raise ValidationError(detail={'detail': _('user and page does not match!')})
-        valid_orders = Order.objects.filter(is_enable=True, action=action_type).order_by('-id')
+
+        valid_orders = Order.objects.filter(is_enable=True, action=action_type).annotate(
+            remaining=F('target_no') - Sum(
+                Case(
+
+                    When(
+                        user_inquiries__status__in=[UserInquiry.STATUS_DONE, UserInquiry.STATUS_VALIDATED], then=1
+                    )
+                ),
+                output_field=IntegerField()
+            ),
+            open_inquiries_count=Sum(
+                Case(
+
+                    When(
+                        user_inquiries__status=UserInquiry.STATUS_OPEN, then=1
+                    )
+                ),
+                output_field=IntegerField()
+            )
+        ).filter(
+            open_inquiries_count__lt=0.10 * F('remaining') + F('remaining')
+        )
 
         valid_inquiries = []
         given_entities = []
+
         for order in valid_orders:
             if order.entity_id in given_entities:
                 continue
             user_inquiry, _c = UserInquiry.objects.get_or_create(order=order, defaults=dict(user_page=user_page))
             valid_inquiries.append(user_inquiry)
             given_entities.append(order.entity_id)
-        page = self.paginate_queryset(valid_inquiries)
+
+            if len(valid_inquiries) == limit:
+                break
+
+        serializer = self.serializer_class(valid_inquiries, many=True)
+        return Response(serializer.data)
+
+    def get_inquiry_report(self, request):
+        self.filter_backends = [DjangoFilterBackend]
+        inquiries = self.filter_queryset(self.get_queryset())
+        inquiries = inquiries.filter(user_page__user=request.user)
+        page_id = request.query_params.get('page_id')
+        if page_id:
+            try:
+                user_page = UserPage.objects.get(page_id=page_id, user=request.user)
+                inquiries = inquiries.filter(user_page=user_page)
+            except UserPage.DoesNotExist:
+                raise ValidationError(detail={'detail': _('user and page does not match!')})
+        page = self.paginate_queryset(inquiries)
         serializer = self.serializer_class(page, many=True)
         return self.get_paginated_response(serializer.data)
 
@@ -155,6 +202,11 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
     def follow(self, request, *args, **kwargs):
         """Get a list of follow orders that user must follow"""
         return self.get_inquiry(request, InstaAction.ACTION_FOLLOW)
+
+    @action(methods=['get'], detail=False, url_path="report")
+    def report(self, request, *args, **kwargs):
+        """Get a list of user inquiries report"""
+        return self.get_inquiry_report(request)
 
     @swagger_auto_schema(
         operation_description='Check whether or not the user did the action properly for the order such as (like, comment or follow).',
@@ -188,7 +240,7 @@ class CoinTransactionAPIView(viewsets.GenericViewSet, mixins.ListModelMixin):
     ))
     @action(methods=['get'], detail=False, url_path='total')
     def total(self, request, *args, **kwargs):
-        wallet = self.get_queryset().aggregate(amount=Coalesce(Sum('amount'), 0))
+        wallet = self.get_queryset().aggregate(amount=Coalesce(Sum('amount'), 0)).get('amount')
         return Response({'wallet': wallet})
 
 

@@ -178,7 +178,7 @@ INSTAGRAM_CREDENTIALS = {
 }
 
 DEVLYTIC_TOKEN = config('DEVLYTIC_TOKEN', default=''),
-
+PUSH_API_URL = config('PUSH_API_URL', default=''),
 # FIXTURE_DIRS = [
 #     BASE_DIR / 'fixtures',
 # ]

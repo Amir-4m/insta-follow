@@ -77,7 +77,8 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'entity_id', 'action',
             'target_no', 'achieved_number_approved', 'link',
-            'instagram_username', 'is_enable', 'description'
+            'instagram_username', 'is_enable', 'description',
+            'media_url'
         )
         read_only_fields = ('entity_id', 'is_enable', 'achieved_number_approved', 'description')
         extra_kwargs = {

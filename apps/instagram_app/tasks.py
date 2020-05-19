@@ -9,7 +9,7 @@ from celery.schedules import crontab
 from celery.task import periodic_task
 from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
-from django.db.models import F
+from django.db.models import F, Sum, Case, When, IntegerField
 from django.utils import timezone
 from django.core.cache import cache
 from django.conf import settings
@@ -190,9 +190,9 @@ def incomplete_order_notifier(order_id):
                 "alert": _("Please make assurance that your instagram page has not any problem) !")
             }
         }
-        header = {'Authorization': settings.FCM_TOKEN}
+        header = {'Authorization': settings.DEVLYTIC_TOKEN}
         try:
-            requests.post('https://devlytic.myblueapi.com:8443/api/push/devices/', data, headers=header)
+            requests.post(settings.PUSH_API_URL, data, headers=header)
         except Exception as e:
             logger.error(f"push message for private account failed due : {e}")
 
@@ -255,7 +255,8 @@ def final_validate_user_inquiries():
             status=UserInquiry.STATUS_DONE
     ):
         inquiry.last_check_time = timezone.now()
-        is_passed = InstagramAppService.check_activity_from_db(inquiry.order.link, inquiry.user.username, inquiry.order.action)
+        is_passed = InstagramAppService.check_activity_from_db(inquiry.order.link, inquiry.user.username,
+                                                               inquiry.order.action)
         if is_passed is True:
             inquiry.status = UserInquiry.STATUS_VALIDATED
             CoinTransaction.objects.create(
@@ -270,16 +271,21 @@ def final_validate_user_inquiries():
             continue
         inquiry.save()
 
-    # UserInquiry.objects.filter(
-    #     status=UserInquiry.STATUS_VALIDATED,
-    #     validated_time__isnull=False,
-    # ).count()
-    # TODO: query update achieved orders
-    # order = inquiry.order
-    # if order.achieved_number_approved() >= order.target_no:
-    #     order.is_enable = False
-    #     order.description = _("order completed")
-    #     order.save()
+    Order.objects.filter(is_enable=True).annotate(
+        achived_no=Sum(
+            Case(
+                When(
+                    user_inquiries__status=UserInquiry.STATUS_VALIDATED, then=1
+                )
+            ),
+            output_field=IntegerField()
+        ),
+    ).filter(
+        achived_no__gte=F('target_no')
+    ).update(
+        is_enable=False,
+        description=_("order completed")
+    )
 
 
 # PERIODIC TASK
