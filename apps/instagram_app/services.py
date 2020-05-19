@@ -3,6 +3,7 @@ import re
 import time
 import requests
 from django.db import transaction
+from django.db.models.functions import Coalesce
 from django.db.models import F, Sum, Case, When, IntegerField
 from django.utils import timezone
 from django.conf import settings
@@ -143,15 +144,14 @@ class CustomService(object):
     @staticmethod
     def get_or_create_inquiries(user_page, action_type, limit=100):
         valid_orders = Order.objects.filter(is_enable=True, action=action_type).annotate(
-            remaining=F('target_no') - Sum(
+            remaining=F('target_no') - Coalesce(Sum(
                 Case(
-
                     When(
                         user_inquiries__status__in=[UserInquiry.STATUS_DONE, UserInquiry.STATUS_VALIDATED], then=1
                     )
                 ),
                 output_field=IntegerField()
-            ),
+            ), 0),
             open_inquiries_count=Sum(
                 Case(
 

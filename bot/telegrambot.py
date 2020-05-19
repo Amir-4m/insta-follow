@@ -246,7 +246,7 @@ def get_inquiry(bot, update, session=None):
         session['active_page'] = user_page.id
 
     except UserPage.DoesNotExist as e:
-        logger.error(f"TLG-error occurred in getting inquiry: {e}")
+        logger.error(f"TLG-error occurred in getting user page of inquiry: {e}")
         bot.send_message(
             text=texts.PAGE_NOT_FOUND,
             chat_id=update.effective_user.id,
@@ -254,15 +254,30 @@ def get_inquiry(bot, update, session=None):
         )
         return
 
-    inquiries = CustomService.get_or_create_inquiries(user_page, action, limit=10)
+    try:
+        inquiries = CustomService.get_or_create_inquiries(user_page, action, limit=10)
+        if len(inquiries) >= 1:
+            session['inquiry_ids'] = [inquiry.id for inquiry in inquiries]
+            bot.send_message(
+                text=InstaBotService.render_template(texts.INQUIRY_LIST, inquiries=inquiries),
+                chat_id=update.effective_user.id,
+                reply_markup=buttons.inquiry(),
+            )
+        else:
+            bot.send_message(
+                text=texts.INQUIRY_NOT_FOUND,
+                chat_id=update.effective_user.id,
+                reply_markup=buttons.start(),
+            )
 
-    session['inquiry_ids'] = [inquiry.id for inquiry in inquiries]
-    bot.send_message(
-        text=InstaBotService.render_template(texts.INQUIRY_LIST, inquiries=inquiries),
-        chat_id=update.effective_user.id,
-        reply_markup=buttons.inquiry(),
-        parse_mode=ParseMode.MARKDOWN_V2
-    )
+    except Exception as e:
+        logger.error(f"TLG-error occurred in getting inquiry: {e}")
+        bot.send_message(
+            text=texts.ERROR_MESSAGE,
+            chat_id=update.effective_user.id,
+            reply_markup=buttons.start()
+        )
+        return
 
     InstaBotService.refresh_session(bot, update, session)
 
@@ -279,14 +294,23 @@ def check_inquiry(bot, update, session=None):
             reply_markup=buttons.collect_coin_type()
         )
     elif text == texts.DONE_INQUIRY:
-        done_ids = session.get('inquiry_ids')
-        page_id = session.get('active_page')
-        CustomService.check_user_action(done_ids, page_id)
-        bot.send_message(
-            text=texts.CHECK_INQUIRY,
-            chat_id=update.effective_user.id,
-            reply_markup=buttons.start()
-        )
+        try:
+            done_ids = session.get('inquiry_ids')
+            page_id = session.get('active_page')
+            CustomService.check_user_action(done_ids, page_id)
+            bot.send_message(
+                text=texts.CHECK_INQUIRY,
+                chat_id=update.effective_user.id,
+                reply_markup=buttons.start()
+            )
+        except Exception as e:
+            logger.error(f"TLG-error occurred in checking inquiry: {e}")
+            bot.send_message(
+                text=texts.ERROR_MESSAGE,
+                chat_id=update.effective_user.id,
+                reply_markup=buttons.start()
+            )
+            return
 
     session.pop('inquiry_ids')
     session.pop('active_page')
