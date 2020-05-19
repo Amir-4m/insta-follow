@@ -247,40 +247,45 @@ def validate_user_inquiries():
 
 
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(hour='*/24')), name="final_validate_user_inquiries", ignore_result=True)
+@periodic_task(run_every=(crontab(minute='*/10')), name="final_validate_user_inquiries")
 def final_validate_user_inquiries():
-    for inquiry in UserInquiry.objects.select_for_update().filter(
-            validated_time__isnull=False,
-            validated_time__gte=timezone.now() - timedelta(days=1),
+    for inquiry in UserInquiry.objects.select_related('order').filter(
+            validated_time__lt=timezone.now() - timedelta(hours=24),
             done_time__isnull=False,
             status=UserInquiry.STATUS_DONE
     ):
         inquiry.last_check_time = timezone.now()
-        order = Order.objects.select_for_update().filter(id=inquiry.order.id)
-        if InstagramAppService.check_activity_from_db(inquiry.order.link, inquiry.user.username, inquiry.order.action):
+        is_passed = InstagramAppService.check_activity_from_db(inquiry.order.link, inquiry.user.username, inquiry.order.action)
+        if is_passed is True:
             inquiry.status = UserInquiry.STATUS_VALIDATED
             CoinTransaction.objects.create(
                 user=inquiry.user_page.user,
                 inquiry=inquiry,
-                amount=order.action.action_value,
+                amount=inquiry.order.action.action_value,
                 description=f"validated inquiry {inquiry.id}"
             )
-            if order.achieved_number_approved() == order.target_no:
-                order.is_enable = False
-                order.description = _("order completed")
-                order.save()
-        else:
+        elif is_passed is False:
             inquiry.status = UserInquiry.STATUS_REJECTED
+        elif is_passed is None:
+            continue
         inquiry.save()
+
+    # UserInquiry.objects.filter(
+    #     status=UserInquiry.STATUS_VALIDATED,
+    #     validated_time__isnull=False,
+    # ).count()
+    # TODO: query update achieved orders
+    # order = inquiry.order
+    # if order.achieved_number_approved() >= order.target_no:
+    #     order.is_enable = False
+    #     order.description = _("order completed")
+    #     order.save()
 
 
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(minute='*/30')), name="check_expired_inquiries", ignore_result=True)
+@periodic_task(run_every=(crontab(minute='*/30')), name="check_expired_inquiries")
 def check_expired_inquiries():
-    qs = UserInquiry.objects.filter(
+    UserInquiry.objects.filter(
         status=UserInquiry.STATUS_OPEN,
-        created_time__gte=F('created_time') + timedelta(hours=2)
-    )
-    for obj in qs:
-        obj.status = UserInquiry.STATUS_EXPIRED
-        obj.save()
+        created_time__lt=timezone.now() - timedelta(hours=2)
+    ).update(status=UserInquiry.STATUS_EXPIRED)

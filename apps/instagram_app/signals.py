@@ -8,12 +8,6 @@ from .tasks import collect_order_link_info
 logger = logging.getLogger(__name__)
 
 
-@receiver(post_save, sender=User)
-def user_coin_transaction(sender, instance, **kwargs):
-    if not instance.coin_transactions.exists():
-        CoinTransaction.objects.create(user=instance, amount=0)
-
-
 @receiver(post_save, sender=Order)
 def order_receiver(sender, instance, created, raw=False, **kwargs):
     if created and not raw:

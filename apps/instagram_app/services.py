@@ -94,16 +94,18 @@ class InstagramAppService(object):
             r = requests.get(f"https://www.instagram.com/p/{short_code}/?__a=1")
             r.raise_for_status()
             r = r.json()
-            r = r['graphql']['shortcode_media']
 
+            r = r['graphql']['shortcode_media']
             media_id = r['id']
             author = r['owner']['username']
             thumbnail_url = r['display_url']
         except requests.HTTPError as e:
             logger.error(f"error while getting post: {link} information HTTPError: {e}")
+            # Should be set only on http 404
             is_private = True
         except Exception as e:
             logger.error(f"error while getting post: {link} information {e}")
+            # Should not be called
             is_private = True
 
         return media_id, author, thumbnail_url, is_private
@@ -116,23 +118,11 @@ class InstagramAppService(object):
             logger.warning(f"can't get model for username: {username} to check activity : {e}")
             return
 
-        if check_type == InstaAction.ACTION_LIKE:
-            q = model.objects.filter(
-                username=username,
-                action=InstaAction.ACTION_LIKE,
-                media_url=post_link)
-        elif check_type == InstaAction.ACTION_COMMENT:
-            q = model.objects.filter(
-                username=username,
-                action=InstaAction.ACTION_COMMENT,
-                media_url=post_link)
-        else:
-            q = model.objects.filter(
-                username=username,
-                action=InstaAction.ACTION_FOLLOW,
-                media_url=post_link)
-
-        return q.exists()
+        return model.objects.filter(
+            username=username,
+            action=check_type,
+            media_url=post_link
+        ).exists()
 
     @staticmethod
     def check_user_action(user_inquiry_ids, user_page_id):

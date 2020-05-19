@@ -1,8 +1,10 @@
 import logging
 
-from django.core.exceptions import ValidationError
 from django.db import models, connection
 from django.utils.translation import ugettext_lazy as _
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
+
 from djongo import models as djongo_models
 
 logger = logging.getLogger(__name__)
@@ -95,7 +97,7 @@ class UserPage(models.Model):
 class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
-    target_no = models.IntegerField(_("target number"))
+    target_no = models.IntegerField(_("target number"), validators=[MinValueValidator(1)])
     link = models.URLField(_("link"))
     entity_id = models.BigIntegerField(_('entity ID'), null=True, db_index=True)
     media_url = models.TextField(_("media url"), blank=True)

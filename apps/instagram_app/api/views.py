@@ -1,5 +1,6 @@
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import Sum
+from django.db.models.functions import Coalesce
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status, viewsets, generics, mixins
@@ -53,17 +54,17 @@ class ProfileViewSet(viewsets.ViewSet):
     permission_classes = (IsAuthenticated,)
 
     def create(self, request, *args, **kwargs):
-        serializer = ProfileSerializer(data=self.request.data, context={'user': request.user})
+        serializer = self.serializer_class(data=request.data, context={'user': request.user})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
 
     def list(self, request):
-        serializer = self.serializer_class(self.request.user)
+        serializer = self.serializer_class(request.user)
         return Response(serializer.data)
 
     def destroy(self, request, pk=None):
-        UserPage.objects.filter(page=pk, user=self.request.user).update(is_active=False)
+        UserPage.objects.filter(page=pk, user=request.user).update(is_active=False)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -119,6 +120,8 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
         page_id = request.query_params.get('page_id')
         if not page_id:
             return Response({'Error': _('page_id is required')}, status=status.HTTP_400_BAD_REQUEST)
+
+        # TODO: check how many inquires have been distributed so we don't bypass target_no
 
         try:
             user_page = UserPage.objects.get(page_id=page_id, user=self.request.user)
@@ -185,8 +188,8 @@ class CoinTransactionAPIView(viewsets.GenericViewSet, mixins.ListModelMixin):
     ))
     @action(methods=['get'], detail=False, url_path='total')
     def total(self, request, *args, **kwargs):
-        serializer = self.serializer_class(self.get_queryset().aggregate(amount=Sum('amount')))
-        return Response(serializer.data)
+        wallet = self.get_queryset().aggregate(amount=Coalesce(Sum('amount'), 0))
+        return Response({'wallet': wallet})
 
 
 class InstaActionAPIView(generics.ListAPIView):
