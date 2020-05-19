@@ -16,7 +16,7 @@ variables:
 build:
   stage: build
   script:
-    - virtualenv --prompt='($PROJECT_DIR)' -q venv
+    - virtualenv --prompt='($PROJECT_DIR) ' -q venv
 #    - virtualenv --relocatable venv
     - source venv/bin/activate
     - pip install -r requirements.txt
