@@ -29,7 +29,7 @@ def collect_like(order_id, order_link, order_page_id):
     try:
         model = BaseInstaEntity.get_model(InstaAction.ACTION_LIKE, order_page_id)
     except Exception as e:
-        logger.warning(f"can't get model for order: {order_id} to collect likes : {e}")
+        logger.error(f"can't get model for order: {order_id} to collect likes : {e}")
         return
 
     shortcode = InstagramAppService.get_shortcode(order_link)
@@ -37,9 +37,8 @@ def collect_like(order_id, order_link, order_page_id):
         "shortcode": shortcode,
         "first": 50,
     }
-
-    has_next_page = True
-    while has_next_page:
+    limit = 0
+    while limit <= 2000:
         io_likes = []
         try:
             response = InstagramAppService.req(LIKES_BY_SHORTCODE % urllib.parse.quote_plus(
@@ -52,33 +51,34 @@ def collect_like(order_id, order_link, order_page_id):
             edges = response_data['edges']
             for edge in edges:
                 node = edge['node']
-                io_likes.append(
-                    dict(
-                        media_url=order_link,
-                        media_id=media_id,
-                        action=InstaAction.ACTION_LIKE,
-                        username=node['username'],
-                        user_id=node['id']
-                    ))
 
-            objs = model.objects.mongo_insert_many(io_likes)
-            if len(objs) != len(io_likes):
-                logger.warning(
-                    f"bulk create like for order: {order_id}, io_count: {len(io_likes)}, created: {len(objs)}")
-                break
+                if not CustomService.mongo_exists(model, user_id=node['id']):
+                    limit += 1
+                    io_likes.append(
+                        dict(
+                            media_url=order_link,
+                            media_id=media_id,
+                            action=InstaAction.ACTION_LIKE,
+                            username=node['username'],
+                            user_id=node['id']
+                        ))
+                else:
+                    limit = 2000
+                    break
+
+            model.objects.mongo_insert_many(io_likes)
 
             max_id = page_info['end_cursor']
             variables["after"] = max_id
-            has_next_page = page_info['has_next_page']
         except Exception as e:
             logger.error(f"getting like error for {order_link} _ {e}")
             break
 
 
 @shared_task
-def collect_comment(order_id, order_link, order_page_id):
+def collect_comment(order_id, order_link, order_entity):
     try:
-        model = BaseInstaEntity.get_model(InstaAction.ACTION_COMMENT, order_page_id)
+        model = BaseInstaEntity.get_model(InstaAction.ACTION_COMMENT, order_entity)
     except Exception as e:
         logger.warning(f"can't get model for order: {order_id} to collect comments: {e}")
         return
@@ -103,23 +103,22 @@ def collect_comment(order_id, order_link, order_page_id):
             edges = response_data['edges']
             for edge in edges:
                 node = edge['node']
-                io_comments.append(
-                    dict(media_url=order_link,
-                         media_id=media_id,
-                         action=InstaAction.ACTION_COMMENT,
-                         username=node['owner']['username'],
-                         user_id=node['owner']['id'],
-                         comment=node['text'],
-                         comment_id=node['id'],
-                         comment_time=datetime.fromtimestamp(node['created_at']))
+                if not CustomService.mongo_exists(model, user_id=node['id']):
+                    io_comments.append(
+                        dict(media_url=order_link,
+                             media_id=media_id,
+                             action=InstaAction.ACTION_COMMENT,
+                             username=node['owner']['username'],
+                             user_id=node['owner']['id'],
+                             comment=node['text'],
+                             comment_id=node['id'],
+                             comment_time=datetime.fromtimestamp(node['created_at']))
 
-                )
+                    )
+                else:
+                    break
 
-            objs = model.objects.mongo_insert_many(io_comments)
-            if len(objs) != len(io_comments):
-                logger.warning(
-                    f"bulk create comments for order: {order_id}, io_count: {len(io_comments)}, created: {len(objs)}")
-                break
+            model.objects.mongo_insert_many(io_comments)
 
             max_id = page_info['end_cursor']
             variables["after"] = max_id
@@ -130,27 +129,31 @@ def collect_comment(order_id, order_link, order_page_id):
 
 
 @shared_task
-def collect_follower(order_id, order_entity_id, order_link, order_page_id):
+def collect_follower(order_id, order_entity_id, order_link, order_entity, order_instagram_id):
     try:
-        model = BaseInstaEntity.get_model(InstaAction.ACTION_FOLLOW, order_page_id)
+        model = BaseInstaEntity.get_model(InstaAction.ACTION_FOLLOW, order_entity)
     except Exception as e:
         logger.warning(f"can't get model for order: {order_id} to collect followers: {e}")
         return
     try:
-        followers = InstagramAppService.get_user_followers(order_page_id)
+        followers = InstagramAppService.get_user_followers(order_instagram_id)
         io_followers = []
         for follower in followers['accounts']:
-            io_followers.append(
-                dict(
-                    media_url=order_link,
-                    media_id=order_entity_id,
-                    action=InstaAction.ACTION_FOLLOW,
-                    username=follower.username,
-                    user_id=follower.identifier
-                ))
+            if not CustomService.mongo_exists(model, user_id=follower.identifier):
+                io_followers.append(
+                    dict(
+                        media_url=order_link,
+                        media_id=order_entity_id,
+                        action=InstaAction.ACTION_FOLLOW,
+                        username=follower.username,
+                        user_id=follower.identifier
+                    ))
+            else:
+                break
         model.objects.mongo_insert_many(io_followers)
     except Exception as e:
-        logger.error(f"error occurred for getting followers for order {order_id} and username {order_page_id}: {e}")
+        logger.error(
+            f"error occurred for getting followers for order {order_id} and username {order_instagram_id}: {e}")
 
 
 @shared_task
@@ -200,48 +203,40 @@ def incomplete_order_notifier(order_id):
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(minute='*/20')), name="collect_order_data", ignore_result=True)
 def collect_order_data():
-    lock_key = 'collect-order-data'
-    if cache.get(lock_key):
-        logger.warning("collecting data for orders process still locked!!")
-        return
-
-    cache.set(lock_key, True, 60 * 60)
-
     orders = Order.objects.filter(is_enable=True)
     for order in orders:
         logger.info(f"collecting data for order: {order.link}")
         try:
             if order.action.action_type == InstaAction.ACTION_LIKE:
-                collect_like.delay(order.id, order.link, order.instagram_username)
+                collect_like.delay(order.id, order.link, order.entity_id)
             if order.action.action_type == InstaAction.ACTION_COMMENT:
-                collect_comment.delay(order.id, order.link, order.instagram_username)
+                collect_comment.delay(order.id, order.link, order.entity_id)
             if order.action.action_type == InstaAction.ACTION_FOLLOW:
-                collect_follower.delay(order.id, order.entity_id, order.link, order.instagram_username)
+                collect_follower.delay(order.id, order.entity_id, order.link, order.entity_id, order.instagram_username)
         except Exception as e:
             logger.error(
                 f"collecting data for order: {order.link} error: {e}")
-
-    cache.delete(lock_key)
 
 
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(hour='*/1')), name="validate_user_inquiries", ignore_result=True)
 def validate_user_inquiries():
     with transaction.atomic():
-        qs = UserInquiry.objects.select_for_update(of=('self',)).select_related('user_page').filter(
-            done_time__isnull=False,
+        qs = UserInquiry.objects.select_for_update(of=('self',)).select_related('user_page', 'user_page__page').filter(
+            done_time__isnull=True,
             validated_time__isnull=True,
             status=UserInquiry.STATUS_DONE
         )
         for user_inquiry in qs:
             user_inquiry.last_check_time = timezone.now()
-            user_inquiry.status = UserInquiry.STATUS_DONE
             if user_inquiry.validated_time is not None or user_inquiry.done_time is not None:
                 continue
             if CustomService.check_activity_from_db(
                     user_inquiry.order.link,
-                    user_inquiry.user_page.user.username,
-                    user_inquiry.order.action):
+                    user_inquiry.user_page.page.instagram_user_id,
+                    user_inquiry.order.entity_id,
+                    user_inquiry.order.action.action_type
+            ):
                 user_inquiry.done_time = timezone.now()
             user_inquiry.save()
 
@@ -249,14 +244,18 @@ def validate_user_inquiries():
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(minute='*/10')), name="final_validate_user_inquiries")
 def final_validate_user_inquiries():
-    for inquiry in UserInquiry.objects.select_related('order').filter(
+    for inquiry in UserInquiry.objects.select_related('order', 'user_page__page').filter(
             validated_time__lt=timezone.now() - timedelta(hours=24),
             done_time__isnull=False,
             status=UserInquiry.STATUS_DONE
     ):
         inquiry.last_check_time = timezone.now()
-        is_passed = CustomService.check_activity_from_db(inquiry.order.link, inquiry.user.username,
-                                                               inquiry.order.action)
+        is_passed = CustomService.check_activity_from_db(
+            inquiry.order.link,
+            inquiry.user_page.page.instagram_user_id,
+            inquiry.order.entity_id,
+            inquiry.order.action.action_type
+        )
         if is_passed is True:
             inquiry.status = UserInquiry.STATUS_VALIDATED
             CoinTransaction.objects.create(

@@ -94,6 +94,7 @@ class InstagramAppService(object):
         try:
             short_code = InstagramAppService.get_shortcode(link)
             r = requests.get(f"https://www.instagram.com/p/{short_code}/?__a=1")
+            time.sleep(2)
             r.raise_for_status()
             r = r.json()
 
@@ -128,18 +129,20 @@ class InstagramAppService(object):
 
 class CustomService(object):
     @staticmethod
-    def check_activity_from_db(post_link, username, check_type):
+    def check_activity_from_db(post_link, inquiry_user_id, order_entity_id, check_type):
+
         try:
-            model = BaseInstaEntity.get_model(check_type, username)
+            model = BaseInstaEntity.get_model(check_type, order_entity_id)
         except Exception as e:
-            logger.warning(f"can't get model for username: {username} to check activity : {e}")
+            logger.warning(f"can't get model for username: {order_entity_id} to check activity : {e}")
             return
 
-        return model.objects.filter(
-            username=username,
+        return CustomService.mongo_exists(
+            model,
+            user_id=inquiry_user_id,
             action=check_type,
             media_url=post_link
-        ).exists()
+        )
 
     @staticmethod
     def get_or_create_inquiries(user_page, action_type, limit=100):
@@ -152,7 +155,7 @@ class CustomService(object):
                 ),
                 output_field=IntegerField()
             ), 0),
-            open_inquiries_count=Sum(
+            open_inquiries_count=Coalesce(Sum(
                 Case(
 
                     When(
@@ -160,7 +163,7 @@ class CustomService(object):
                     )
                 ),
                 output_field=IntegerField()
-            )
+            ), 0)
         ).filter(
             open_inquiries_count__lt=0.10 * F('remaining') + F('remaining')
         )
@@ -191,7 +194,16 @@ class CustomService(object):
                     continue
                 if CustomService.check_activity_from_db(
                         user_inquiry.order.link,
-                        user_page.user.username,
-                        user_inquiry.order.action):
+                        user_page.page.instagram_user_id,
+                        user_inquiry.order.entity_id,
+                        user_inquiry.order.action,
+                ):
                     user_inquiry.done_time = timezone.now()
                 user_inquiry.save()
+
+    @staticmethod
+    def mongo_exists(collection, **kwargs):
+        try:
+            return collection.objects.mongo_find({}, dict(kwargs)).retrieved > 0
+        except Exception as e:
+            logger.error(f"error in mongo filter occurred :{e}")
