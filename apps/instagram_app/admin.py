@@ -51,6 +51,3 @@ class CoinPackageModelAdmin(admin.ModelAdmin):
     sortable_by = ('-created_time', 'price')
 
 
-@admin.register(CoinTransaction)
-class AA(admin.ModelAdmin):
-    pass

@@ -134,7 +134,6 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
             user_page = UserPage.objects.get(page_id=page_id, user=self.request.user)
         except UserPage.DoesNotExist:
             raise ValidationError(detail={'detail': _('user and page does not match!')})
-        print(user_page)
         inquiries = CustomService.get_or_create_inquiries(user_page, action_type, limit)
 
         serializer = self.serializer_class(inquiries, many=True)
