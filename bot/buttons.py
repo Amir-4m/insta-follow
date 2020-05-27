@@ -17,10 +17,9 @@ def start():
 
 def collect_coin_type():
     buttons = [
-        [KeyboardButton(texts.CHOICE_BY_LIKE),
-         KeyboardButton(texts.CHOICE_BY_COMMENT),
-         KeyboardButton(texts.CHOICE_BY_FOLLOW)
-         ],
+        [KeyboardButton(texts.CHOICE_BY_LIKE)],
+        [KeyboardButton(texts.CHOICE_BY_COMMENT)],
+        [KeyboardButton(texts.CHOICE_BY_FOLLOW)],
 
     ]
 
@@ -37,9 +36,8 @@ def collect_coin_page(user):
 
 def inquiry():
     buttons = [
-        [KeyboardButton(texts.DONE_INQUIRY),
-         KeyboardButton(texts.BACK)
-         ],
+        [KeyboardButton(texts.DONE_INQUIRY)],
+        [KeyboardButton(texts.BACK)],
 
     ]
     return ReplyKeyboardMarkup(buttons, one_time_keyboard=True)
@@ -47,10 +45,9 @@ def inquiry():
 
 def order_action():
     buttons = [
-        [KeyboardButton(texts.LIKE),
-         KeyboardButton(texts.COMMENT),
-         KeyboardButton(texts.FOLLOW)
-         ],
+        [KeyboardButton(texts.LIKE)],
+        [KeyboardButton(texts.COMMENT)],
+        [KeyboardButton(texts.FOLLOW)]
 
     ]
 

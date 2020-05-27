@@ -70,6 +70,9 @@ INQUIRY_LIST = """
 ___
 {% endfor %}
 """
+INQUIRY_NOT_FOUND = """
+متاسفانه هیچ رکوردی یافت نشد !
+"""
 BACK = "بازگشت ⬅"
 
 DONE_INQUIRY = "انجام دادم"
@@ -119,28 +122,3 @@ ORDER_CREATE_CHECK = """
 سکه قابل پرداخت برای ثبت سفارش : {{ price }}
 """
 
-# INQUIRYadaws_LIST = """
-# پست های که باید لایک کنید:
-# {% for inquiry in inquiries %}
-#
-# {{ inquiry.order.link }} : لینک
-# {% if inquiry.status == 0 %}
-# وضعیت : باز
-#
-# {% elif inquiry.status == 1 %}
-# وضعیت : انجام شده
-#
-# {% elif inquiry.status == 2 %}
-# وضعیت : تایید شده
-#
-# {% elif inquiry.status == 3 %}
-# وضعیت : منقضی شده
-#
-# {% elif inquiry.status == 4 %}
-# وضعیت : رد شده
-#
-# {% endif %}
-#
-# ___
-# {% endfor %}
-# """

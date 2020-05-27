@@ -1,4 +1,7 @@
+import logging
+
 from django.db.models import Sum
+from django.test import override_settings
 from django.urls import reverse
 from mock import patch
 
@@ -8,10 +11,12 @@ from rest_framework.test import APITestCase, APIClient
 
 from apps.accounts.models import User
 from apps.instagram_app.services import InstagramAppService
-from apps.instagram_app.models import UserPage, CoinTransaction, InstaAction
-from apps.instagram_app.api.serializers import ProfileSerializer, OrderSerializer, UserInquirySerializer
+from apps.instagram_app.models import UserPage, CoinTransaction, InstaAction, Order
+from apps.instagram_app.api.serializers import ProfileSerializer, OrderSerializer, UserInquirySerializer, \
+    DeviceSerializer
 
 
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 class InstagramAPITestCase(APITestCase):
     fixtures = ['instagram']
 
@@ -19,6 +24,10 @@ class InstagramAPITestCase(APITestCase):
         self.user = User.objects.get(id=1)
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
+        logging.disable(logging.CRITICAL)
+
+    def tearDown(self):
+        logging.disable(logging.NOTSET)
 
     def test_get_profile(self):
         url = reverse('profile-list')
@@ -66,6 +75,16 @@ class InstagramAPITestCase(APITestCase):
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    def test_recheck_order_not_enable(self):
+        url = reverse('order-recheck', kwargs={'pk': 5})
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_recheck_order_enable(self):
+        url = reverse('order-recheck', kwargs={'pk': 4})
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     def test_get_user_inquiry_comment(self):
         url = reverse('userinquiry-comment')
         response = self.client.get(url, {'page_id': 1}, format='json')
@@ -92,13 +111,6 @@ class InstagramAPITestCase(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {'Error': 'page_id is required'})
-
-    def test_get_user_inquiry_invalid_limit(self):
-        url = reverse('userinquiry-like')
-        response = self.client.get(url, {'page_id': 1, 'limit': 'test'}, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertRaisesMessage(ValueError, 'make sure the limit value is a positive number!')
 
     def test_get_user_inquiry_invalid_page(self):
         url = reverse('userinquiry-like')
@@ -132,12 +144,24 @@ class InstagramAPITestCase(APITestCase):
             self.user.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet') or 0
         )
 
+    def test_post_device_id(self):
+        url = reverse('device-list')
+        data = {
+            'device_id': 2,
+        }
+        response = self.client.post(url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
 
 class InstagramSerializerTestCase(APITestCase):
     fixtures = ['instagram']
 
     def setUp(self):
         self.user = User.objects.get(id=1)
+        logging.disable(logging.CRITICAL)
+
+    def tearDown(self):
+        logging.disable(logging.NOTSET)
 
     def test_profile_serializer(self):
         data = {
@@ -147,6 +171,19 @@ class InstagramSerializerTestCase(APITestCase):
         serializer = ProfileSerializer(data=data)
 
         self.assertTrue(serializer.is_valid())
+
+    def test_insta_page_not_active(self):
+        data = {
+            "instagram_username": 'test3',
+            "user_id": 12312378
+        }
+        serializer = ProfileSerializer(data=data, context={'user': self.user})
+        user_page = UserPage.objects.get(page__instagram_user_id=12312378)
+
+        self.assertTrue(serializer.is_valid())
+        serializer.save()
+        user_page.refresh_from_db()
+        self.assertTrue(user_page.is_active)
 
     def test_order_serializer_valid_lc_data(self):
         data = {
@@ -245,7 +282,7 @@ class InstagramSerializerTestCase(APITestCase):
     def test_user_inquiry_invalid_user_page_data(self):
         data = {
             'done_ids': [1],
-            'page_id': 3
+            'page_id': 10000
         }
         serializer = UserInquirySerializer(data=data, context={'user': self.user})
         self.assertFalse(serializer.is_valid())
@@ -283,3 +320,12 @@ class InstagramSerializerTestCase(APITestCase):
             serializer.validate,
             data
         )
+
+    def test_device_id_create(self):
+        data = {
+            "device_id": '1'
+        }
+        serializer = DeviceSerializer(data=data)
+        self.assertTrue(serializer.is_valid(raise_exception=True))
+        serializer.save(user=self.user)
+        self.assertEqual(self.user.devices.last().device_id, serializer.data['device_id'])
