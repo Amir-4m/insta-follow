@@ -1,6 +1,6 @@
 import logging
 
-from django.db import models, connection
+from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -194,8 +194,6 @@ class RoutedDjongoManager(djongo_models.DjongoManager):
 
 class BaseInstaEntity(djongo_models.Model):
     created_time = djongo_models.DateTimeField(auto_now_add=True)
-    media_url = djongo_models.CharField(max_length=150)
-    media_id = djongo_models.BigIntegerField()
     action = djongo_models.CharField(max_length=10, choices=InstaAction.ACTION_CHOICES)
     username = djongo_models.CharField(max_length=100)
     user_id = djongo_models.BigIntegerField()
@@ -208,7 +206,7 @@ class BaseInstaEntity(djongo_models.Model):
 
     class Meta:
         managed = False
-        unique_together = ('media_id', 'user_id', 'action')
+        unique_together = ('user_id', 'action')
 
     @classmethod
     def get_model(cls, action, entity_id):

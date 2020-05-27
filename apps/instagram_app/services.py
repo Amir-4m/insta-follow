@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.conf import settings
 from igramscraper.instagram import Instagram
 
-from .models import BaseInstaEntity, InstaAction, UserPage, UserInquiry, Order
+from .models import BaseInstaEntity, UserPage, UserInquiry, Order
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,11 @@ class InstagramAppService(object):
         followers, following, posts_count = 0, 0, 0
 
         try:
-            r = requests.get(f"https://www.instagram.com/{instagram_id}/?__a=1")
+            instagram = InstagramAppService.instagram_login()
+            r = requests.get(
+                url=f"https://www.instagram.com/{instagram_id}/?__a=1",
+                headers=instagram.generate_headers(instagram.user_session)
+            )
             r.raise_for_status()
             r_json = r.json()
 
@@ -92,16 +96,19 @@ class InstagramAppService(object):
         thumbnail_url = ''
         is_private = False
         try:
+            instagram = InstagramAppService.instagram_login()
             short_code = InstagramAppService.get_shortcode(link)
-            r = requests.get(f"https://www.instagram.com/p/{short_code}/?__a=1")
-            time.sleep(2)
+            r = requests.get(
+                f"https://www.instagram.com/p/{short_code}/?__a=1",
+                headers=instagram.generate_headers(instagram.user_session)
+            )
             r.raise_for_status()
-            r = r.json()
+            r_json = r.json()
 
-            r = r['graphql']['shortcode_media']
-            media_id = r['id']
-            author = r['owner']['username']
-            thumbnail_url = r['display_url']
+            temp = r_json['graphql']['shortcode_media']
+            media_id = temp['id']
+            author = temp['owner']['username']
+            thumbnail_url = temp['display_url']
         except requests.HTTPError as e:
             logger.error(f"error while getting post: {link} information HTTPError: {e}")
             # Should be set only on http 404
@@ -114,13 +121,18 @@ class InstagramAppService(object):
         return media_id, author, thumbnail_url, is_private
 
     @staticmethod
-    def get_user_followers(instagram_username):
+    def instagram_login():
         instagram = Instagram()
         instagram.with_credentials(
             settings.INSTAGRAM_CREDENTIALS['USERNAME'],
             settings.INSTAGRAM_CREDENTIALS['PASSWORD']
         )
-        instagram.login(force=False, two_step_verificator=True)
+        instagram.login()
+        return instagram
+
+    @staticmethod
+    def get_user_followers(instagram_username):
+        instagram = InstagramAppService.instagram_login()
         username = instagram_username
         account = instagram.get_account(username)
         followers = instagram.get_followers(account.identifier, 150, 100, delayed=True)
@@ -129,8 +141,7 @@ class InstagramAppService(object):
 
 class CustomService(object):
     @staticmethod
-    def check_activity_from_db(post_link, inquiry_user_id, order_entity_id, check_type):
-
+    def check_activity_from_db(inquiry_user_id, order_entity_id, check_type):
         try:
             model = BaseInstaEntity.get_model(check_type, order_entity_id)
         except Exception as e:
@@ -139,9 +150,8 @@ class CustomService(object):
 
         return CustomService.mongo_exists(
             model,
-            user_id=inquiry_user_id,
+            user_id=str(inquiry_user_id),
             action=check_type,
-            media_url=post_link
         )
 
     @staticmethod
@@ -189,21 +199,20 @@ class CustomService(object):
         with transaction.atomic():
             for user_inquiry in UserInquiry.objects.select_for_update().filter(id__in=user_inquiry_ids):
                 user_inquiry.last_check_time = timezone.now()
-                user_inquiry.status = UserInquiry.STATUS_DONE
                 if user_inquiry.validated_time is not None or user_inquiry.done_time is not None:
                     continue
+                user_inquiry.done_time = timezone.now()
                 if CustomService.check_activity_from_db(
-                        user_inquiry.order.link,
                         user_page.page.instagram_user_id,
                         user_inquiry.order.entity_id,
                         user_inquiry.order.action,
                 ):
-                    user_inquiry.done_time = timezone.now()
+                    user_inquiry.status = UserInquiry.STATUS_DONE
                 user_inquiry.save()
 
     @staticmethod
     def mongo_exists(collection, **kwargs):
         try:
-            return collection.objects.mongo_find({}, dict(kwargs)).retrieved > 0
+            return bool(collection.objects.mongo_find_one(dict(kwargs)))
         except Exception as e:
             logger.error(f"error in mongo filter occurred :{e}")
