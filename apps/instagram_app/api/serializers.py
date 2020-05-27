@@ -170,7 +170,6 @@ class CoinTransactionSerializer(serializers.ModelSerializer):
 
 
 class InstaActionSerializer(serializers.ModelSerializer):
-    action_display = serializers.CharField(source='get_action_type_display')
 
     class Meta:
         model = InstaAction
