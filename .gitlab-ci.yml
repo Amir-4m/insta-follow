@@ -20,8 +20,8 @@ build:
     - virtualenv --relocatable venv
     - source venv/bin/activate
     - pip install -r requirements.txt
-    - pip uninstall pymongo
-    - pip uninstall djongo
+    - pip uninstall -y pymongo
+    - pip uninstall -y djongo
     - pip install djongo
   cache:
     key: ${CI_COMMIT_REF_SLUG}
