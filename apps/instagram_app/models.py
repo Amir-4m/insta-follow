@@ -1,8 +1,10 @@
 import logging
 
-from django.core.exceptions import ValidationError
-from django.db import models, connection
+from django.db import models
 from django.utils.translation import ugettext_lazy as _
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
+
 from djongo import models as djongo_models
 
 logger = logging.getLogger(__name__)
@@ -95,7 +97,7 @@ class UserPage(models.Model):
 class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
-    target_no = models.IntegerField(_("target number"))
+    target_no = models.IntegerField(_("target number"), validators=[MinValueValidator(1)])
     link = models.URLField(_("link"))
     entity_id = models.BigIntegerField(_('entity ID'), null=True, db_index=True)
     media_url = models.TextField(_("media url"), blank=True)
@@ -192,8 +194,6 @@ class RoutedDjongoManager(djongo_models.DjongoManager):
 
 class BaseInstaEntity(djongo_models.Model):
     created_time = djongo_models.DateTimeField(auto_now_add=True)
-    media_url = djongo_models.CharField(max_length=150)
-    media_id = djongo_models.BigIntegerField()
     action = djongo_models.CharField(max_length=10, choices=InstaAction.ACTION_CHOICES)
     username = djongo_models.CharField(max_length=100)
     user_id = djongo_models.BigIntegerField()
@@ -206,54 +206,49 @@ class BaseInstaEntity(djongo_models.Model):
 
     class Meta:
         managed = False
-        unique_together = ('media_id', 'user_id', 'action')
+        unique_together = ('user_id', 'action')
 
     @classmethod
-    def _get_table_model(cls, action, page_id, create=True):
+    def get_model(cls, action, entity_id):
+        class Meta:
+            # Using type('Meta', ...) gives a dictproxy error during model creation
+            pass
+
         table_name = ""
         model_name = ""
         if action == InstaAction.ACTION_LIKE or action == InstaAction.ACTION_COMMENT:
-            table_name = f"post_{page_id}"
-            model_name = f"Post{page_id}"
+            table_name = f"post_{entity_id}"
+            model_name = f"Post{entity_id}"
         elif action == InstaAction.ACTION_FOLLOW:
-            table_name = f"page_{page_id}"
-            model_name = f"Page{page_id}"
-        app_models = cls._meta.apps.all_models[cls._meta.app_label]
-        if model_name not in app_models:
-            model = type(model_name, (cls,), {'__module__': cls.__module__})
-            model._meta.db_table = table_name
-            if create:
-                all_tables = connection.introspection.table_names()
-                with connection.schema_editor() as schema:
-                    try:
-                        if model._meta.db_table not in all_tables:
-                            schema.create_model(model)
-                    except Exception as e:
-                        logger.error(f"create table got exception: {e}")
-                        raise
-        else:
-            model = app_models[model_name]
+            table_name = f"page_{entity_id}"
+            model_name = f"Page{entity_id}"
+
+        setattr(Meta, 'app_label', 'instagram_app')
+        setattr(Meta, 'unique_together', ('media_id', 'user_id', 'action'))
+        setattr(Meta, 'db_table', table_name)
+        attrs = {'__module__': cls.__module__, 'Meta': Meta}
+        _f = {'objects': RoutedDjongoManager()}
+        for f in cls._meta.fields:
+            _f[f.attname] = f
+        attrs.update(_f)
+        model = type(model_name, (djongo_models.Model,), attrs)
         return model
 
-    @classmethod
-    def get_model(cls, action, page_id):
-        return cls._get_table_model(action, page_id)
-
-    @classmethod
-    def drop_model(cls, action, page_id):
-        try:
-            model = cls._get_table_model(action, page_id, False)
-            all_tables = connection.introspection.table_names()
-        except Exception as e:
-            logger.error(f"hash table got exception: {e}")
-            return False
-
-        with connection.schema_editor() as schema:
-            try:
-                if model._meta.db_table in all_tables:
-                    schema.delete_model(model)
-            except Exception as e:
-                logger.error(f"create table got exception: {e}")
-                return False
-
-        return True
+    # @classmethod
+    # def drop_model(cls, action, page_id):
+    #     try:
+    #         model = cls._get_table_model(action, page_id)
+    #         all_tables = connection.introspection.table_names()
+    #     except Exception as e:
+    #         logger.error(f"hash table got exception: {e}")
+    #         return False
+    #
+    #     with connection.schema_editor() as schema:
+    #         try:
+    #             if model._meta.db_table in all_tables:
+    #                 schema.delete_model(model)
+    #         except Exception as e:
+    #             logger.error(f"create table got exception: {e}")
+    #             return False
+    #
+    #     return True

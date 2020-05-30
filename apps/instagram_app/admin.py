@@ -49,3 +49,5 @@ class InstaActionModelAdmin(admin.ModelAdmin):
 class CoinPackageModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'amount', 'price', 'updated_time', 'created_time')
     sortable_by = ('-created_time', 'price')
+
+

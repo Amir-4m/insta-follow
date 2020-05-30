@@ -3,11 +3,13 @@ import re
 import time
 import requests
 from django.db import transaction
+from django.db.models.functions import Coalesce
+from django.db.models import F, Sum, Case, When, IntegerField
 from django.utils import timezone
 from django.conf import settings
 from igramscraper.instagram import Instagram
 
-from .models import BaseInstaEntity, InstaAction, UserPage, UserInquiry
+from .models import BaseInstaEntity, UserPage, UserInquiry, Order
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +24,11 @@ class InstagramAppService(object):
         followers, following, posts_count = 0, 0, 0
 
         try:
-            r = requests.get(f"https://www.instagram.com/{instagram_id}/?__a=1")
+            instagram = InstagramAppService.instagram_login()
+            r = requests.get(
+                url=f"https://www.instagram.com/{instagram_id}/?__a=1",
+                headers=instagram.generate_headers(instagram.user_session)
+            )
             r.raise_for_status()
             r_json = r.json()
 
@@ -89,51 +95,103 @@ class InstagramAppService(object):
         author = ''
         thumbnail_url = ''
         is_private = False
-
         try:
+            instagram = InstagramAppService.instagram_login()
             short_code = InstagramAppService.get_shortcode(link)
-            r = requests.get(f"https://www.instagram.com/p/{short_code}/?__a=1")
+            r = requests.get(
+                f"https://www.instagram.com/p/{short_code}/?__a=1",
+                headers=instagram.generate_headers(instagram.user_session)
+            )
             r.raise_for_status()
-            r = r.json()
-            r = r['graphql']['shortcode_media']
+            r_json = r.json()
 
-            media_id = r['id']
-            author = r['owner']['username']
-            thumbnail_url = r['display_url']
+            temp = r_json['graphql']['shortcode_media']
+            media_id = temp['id']
+            author = temp['owner']['username']
+            thumbnail_url = temp['display_url']
         except requests.HTTPError as e:
             logger.error(f"error while getting post: {link} information HTTPError: {e}")
+            # Should be set only on http 404
             is_private = True
         except Exception as e:
             logger.error(f"error while getting post: {link} information {e}")
+            # Should not be called
             is_private = True
 
         return media_id, author, thumbnail_url, is_private
 
     @staticmethod
-    def check_activity_from_db(post_link, username, check_type):
+    def instagram_login():
+        instagram = Instagram()
+        instagram.with_credentials(
+            settings.INSTAGRAM_CREDENTIALS['USERNAME'],
+            settings.INSTAGRAM_CREDENTIALS['PASSWORD']
+        )
+        instagram.login()
+        return instagram
+
+    @staticmethod
+    def get_user_followers(instagram_username):
+        instagram = InstagramAppService.instagram_login()
+        username = instagram_username
+        account = instagram.get_account(username)
+        followers = instagram.get_followers(account.identifier, 150, 100, delayed=True)
+        return followers
+
+
+class CustomService(object):
+    @staticmethod
+    def check_activity_from_db(inquiry_user_id, order_entity_id, check_type):
         try:
-            model = BaseInstaEntity.get_model(check_type, username)
+            model = BaseInstaEntity.get_model(check_type, order_entity_id)
         except Exception as e:
-            logger.warning(f"can't get model for username: {username} to check activity : {e}")
+            logger.warning(f"can't get model for username: {order_entity_id} to check activity : {e}")
             return
 
-        if check_type == InstaAction.ACTION_LIKE:
-            q = model.objects.filter(
-                username=username,
-                action=InstaAction.ACTION_LIKE,
-                media_url=post_link)
-        elif check_type == InstaAction.ACTION_COMMENT:
-            q = model.objects.filter(
-                username=username,
-                action=InstaAction.ACTION_COMMENT,
-                media_url=post_link)
-        else:
-            q = model.objects.filter(
-                username=username,
-                action=InstaAction.ACTION_FOLLOW,
-                media_url=post_link)
+        return CustomService.mongo_exists(
+            model,
+            user_id=str(inquiry_user_id),
+            action=check_type,
+        )
 
-        return q.exists()
+    @staticmethod
+    def get_or_create_inquiries(user_page, action_type, limit=100):
+        valid_orders = Order.objects.filter(is_enable=True, action=action_type).annotate(
+            remaining=F('target_no') - Coalesce(Sum(
+                Case(
+                    When(
+                        user_inquiries__status__in=[UserInquiry.STATUS_DONE, UserInquiry.STATUS_VALIDATED], then=1
+                    )
+                ),
+                output_field=IntegerField()
+            ), 0),
+            open_inquiries_count=Coalesce(Sum(
+                Case(
+
+                    When(
+                        user_inquiries__status=UserInquiry.STATUS_OPEN, then=1
+                    )
+                ),
+                output_field=IntegerField()
+            ), 0)
+        ).filter(
+            open_inquiries_count__lt=0.10 * F('remaining') + F('remaining')
+        )
+
+        valid_inquiries = []
+        given_entities = []
+
+        for order in valid_orders:
+            if order.entity_id in given_entities:
+                continue
+            user_inquiry, _c = UserInquiry.objects.get_or_create(order=order, defaults=dict(user_page=user_page))
+            valid_inquiries.append(user_inquiry)
+            given_entities.append(order.entity_id)
+
+            if len(valid_inquiries) == limit:
+                break
+
+        return valid_inquiries
 
     @staticmethod
     def check_user_action(user_inquiry_ids, user_page_id):
@@ -141,25 +199,20 @@ class InstagramAppService(object):
         with transaction.atomic():
             for user_inquiry in UserInquiry.objects.select_for_update().filter(id__in=user_inquiry_ids):
                 user_inquiry.last_check_time = timezone.now()
-                user_inquiry.status = UserInquiry.STATUS_DONE
                 if user_inquiry.validated_time is not None or user_inquiry.done_time is not None:
                     continue
-                if InstagramAppService.check_activity_from_db(
-                        user_inquiry.order.link,
-                        user_page.user.username,
-                        user_inquiry.order.action):
-                    user_inquiry.done_time = timezone.now()
+                user_inquiry.done_time = timezone.now()
+                if CustomService.check_activity_from_db(
+                        user_page.page.instagram_user_id,
+                        user_inquiry.order.entity_id,
+                        user_inquiry.order.action,
+                ):
+                    user_inquiry.status = UserInquiry.STATUS_DONE
                 user_inquiry.save()
 
     @staticmethod
-    def get_user_followers(instagram_username):
-        instagram = Instagram()
-        instagram.with_credentials(
-            settings.INSTAGRAM_CREDENTIALS['USERNAME'],
-            settings.INSTAGRAM_CREDENTIALS['PASSWORD']
-        )
-        instagram.login(force=False, two_step_verificator=True)
-        username = instagram_username
-        account = instagram.get_account(username)
-        followers = instagram.get_followers(account.identifier, 150, 100, delayed=True)
-        return followers
+    def mongo_exists(collection, **kwargs):
+        try:
+            return bool(collection.objects.mongo_find_one(dict(kwargs)))
+        except Exception as e:
+            logger.error(f"error in mongo filter occurred :{e}")

@@ -6,7 +6,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from apps.instagram_app.models import InstaPage, UserPage, UserInquiry, CoinTransaction, Order, InstaAction, Device
-from apps.instagram_app.services import InstagramAppService
+from apps.instagram_app.services import CustomService
 from apps.accounts.models import User
 
 
@@ -40,14 +40,14 @@ class ProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ('id',)
 
     def get_approved_wallet(self, obj):
-        return obj.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet') or 0
+        return obj.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet']
 
     def get_unapproved_wallet(self, obj):
         return UserInquiry.objects.filter(
             user_page__user=obj,
             status=UserInquiry.STATUS_DONE,
             done_time__isnull=False
-        ).aggregate(coins=Sum('order__action__action_value')).get('coins') or 0
+        ).aggregate(coins=Coalesce(Sum('order__action__action_value'), 0))['coins']
 
     def get_insta_pages(self, obj):
         qs = obj.insta_pages.filter(user_pages__is_active=True)
@@ -56,15 +56,18 @@ class ProfileSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         page_id = validated_data.get('instagram_username')
         user_id = validated_data.get('user_id')
-        user = self.context['request'].user
+        user = self.context['user']
         page, created = InstaPage.objects.get_or_create(
             instagram_user_id=user_id,
             instagram_username=page_id,
         )
-        user_page, u_created = UserPage.objects.get_or_create(user=user, page=page)
-        if user_page.is_active is False:
-            user_page.is_active = True
-            user_page.save()
+        UserPage.objects.update_or_create(
+            user=user,
+            page=page,
+            defaults={
+                'is_active': True
+            }
+        )
         return user
 
 
@@ -74,7 +77,8 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'entity_id', 'action',
             'target_no', 'achieved_number_approved', 'link',
-            'instagram_username', 'is_enable', 'description'
+            'instagram_username', 'is_enable', 'description',
+            'media_url'
         )
         read_only_fields = ('entity_id', 'is_enable', 'achieved_number_approved', 'description')
         extra_kwargs = {
@@ -83,7 +87,6 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         action_value = attrs.get('action')
-        target_no = attrs.get('target_no')
         link = attrs.get('link')
         instagram_username = attrs.get('instagram_username')
         if (action_value.pk == InstaAction.ACTION_LIKE or action_value.pk == InstaAction.ACTION_COMMENT) and not link:
@@ -91,8 +94,6 @@ class OrderSerializer(serializers.ModelSerializer):
         if action_value.pk == InstaAction.ACTION_FOLLOW and not instagram_username:
             raise ValidationError(
                 detail={'detail': _('instagram_username field is required for follow!')})
-        if target_no <= 0:
-            raise ValidationError(detail={'detail': _('target number could not be 0!')})
         return attrs
 
     def create(self, validated_data):
@@ -158,7 +159,7 @@ class UserInquirySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user_page = validated_data.get('user_page')
         user_inquiry_ids = validated_data.get('user_inquiry_ids')
-        InstagramAppService.check_user_action(user_inquiry_ids, user_page.id)
+        CustomService.check_user_action(user_inquiry_ids, user_page.id)
         return True
 
 
@@ -169,6 +170,7 @@ class CoinTransactionSerializer(serializers.ModelSerializer):
 
 
 class InstaActionSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = InstaAction
         fields = ('action_type', 'action_value', 'buy_value')
