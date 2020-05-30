@@ -184,7 +184,10 @@ class CustomService(object):
         for order in valid_orders:
             if order.entity_id in given_entities:
                 continue
-            user_inquiry, _c = UserInquiry.objects.get_or_create(order=order, defaults=dict(user_page=user_page))
+            user_inquiry, _c = UserInquiry.objects.get_or_create(
+                order=order, status=UserInquiry.STATUS_OPEN,
+                defaults=dict(user_page=user_page)
+            )
             valid_inquiries.append(user_inquiry)
             given_entities.append(order.entity_id)
 
