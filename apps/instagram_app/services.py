@@ -185,7 +185,9 @@ class CustomService(object):
             if order.entity_id in given_entities:
                 continue
             user_inquiry, _c = UserInquiry.objects.get_or_create(
-                order=order, status=UserInquiry.STATUS_OPEN,
+                order=order,
+                status=UserInquiry.STATUS_OPEN,
+                user_page=user_page,
                 defaults=dict(user_page=user_page)
             )
             valid_inquiries.append(user_inquiry)
