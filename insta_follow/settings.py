@@ -58,6 +58,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'insta_follow.urls'
+APPEND_SLASH = False
 
 TEMPLATES = [
     {
@@ -78,10 +79,30 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'insta_follow.wsgi.application'
 AUTH_USER_MODEL = 'accounts.User'
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'apps.accounts.backends.GoogleAuthBackend',
+]
+
+SIMPLE_JWT = {
+    'ROTATE_REFRESH_TOKENS': True,
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('ACCESS_TOKEN_LIFETIME', default=30, cast=int)),
+    'REFRESH_TOKEN_LIFETIME': timedelta(minutes=config('REFRESH_TOKEN_LIFETIME', default=90, cast=int)),
+}
+
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
+    'SECURITY_DEFINITIONS': {
+        'JWT': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    },
+}
 
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': config('DB_ENGINE'),
@@ -106,7 +127,6 @@ DATABASES = {
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -136,27 +156,6 @@ CELERY_BROKER_URL = 'amqp://%(USER)s:%(PASS)s@%(HOST)s' % {
     'HOST': config('CELERY_HOST'),
 }
 
-PROXY4TELEGRAM_HOST = config('PROXY4TELEGRAM_HOST', default='')
-PROXY4TELEGRAM_PORT = config('PROXY4TELEGRAM_PORT', default=0, cast=int)
-AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-    'apps.accounts.backends.GoogleAuthBackend',
-]
-TELEGRAM_BOT = {
-    'TOKEN': config('TELEGRAM_BOT_TOKEN'),
-    'MODE': config('TELEGRAM_BOT_MODE', default='POLLING'),
-    'WEBHOOK_SITE': config('TELEGRAM_BOT_WEBHOOK_SITE', default=''),
-    'PROXY': f"http://{PROXY4TELEGRAM_HOST}:{PROXY4TELEGRAM_PORT}" if PROXY4TELEGRAM_HOST else '',
-}
-
-SIMPLE_JWT = {
-    'ROTATE_REFRESH_TOKENS': True,
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('ACCESS_TOKEN_LIFETIME', default=30, cast=int)),
-    'REFRESH_TOKEN_LIFETIME': timedelta(minutes=config('REFRESH_TOKEN_LIFETIME', default=90, cast=int)),
-}
-
-APPEND_SLASH = False
-
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
 LANGUAGE_CODE = 'en-us'
@@ -172,13 +171,7 @@ STATIC_URL = '/static/'
 
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
-INSTAGRAM_CREDENTIALS = {
-    'USERNAME': config('INSTAGRAM_USERNAME', default=''),
-    'PASSWORD': config('INSTAGRAM_PASSWORD', default=''),
-}
 
-DEVLYTIC_TOKEN = config('DEVLYTIC_TOKEN', default=''),
-PUSH_API_URL = config('PUSH_API_URL', default=''),
 # FIXTURE_DIRS = [
 #     BASE_DIR / 'fixtures',
 # ]
@@ -246,38 +239,44 @@ LOGGING = ({
     },
 })
 
-# TODO: use when sentry add for this project
-# if DEVEL is False:
-#     import sentry_sdk
-#     from sentry_sdk.integrations.django import DjangoIntegration
-#     from sentry_sdk.integrations.celery import CeleryIntegration
-#
-#     SENTRY_KEY = config('SENTRY_KEY')
-#     SENTRY_HOST = config('SENTRY_HOST')
-#     SENTRY_PROJECT_ID = config('SENTRY_PROJECT_ID')
-#     SENTRY_ENV = config('SENTRY_ENV')
-#
-#     sentry_sdk.init(
-#         dsn=f"https://{SENTRY_KEY}@{SENTRY_HOST}/{SENTRY_PROJECT_ID}",
-#         integrations=[DjangoIntegration(), CeleryIntegration()],
-#         default_integrations=False,
-#
-#         # If you wish to associate users to errors (assuming you are using
-#         # django.contrib.auth) you may enable sending PII data.
-#         send_default_pii=True,
-#
-#         # Custom settings
-#         debug=DEBUG,
-#         environment=SENTRY_ENV
-#     )
+PROXY4TELEGRAM_HOST = config('PROXY4TELEGRAM_HOST', default='')
+PROXY4TELEGRAM_PORT = config('PROXY4TELEGRAM_PORT', default=0, cast=int)
 
-SWAGGER_SETTINGS = {
-    'USE_SESSION_AUTH': False,
-    'SECURITY_DEFINITIONS': {
-        'JWT': {
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header'
-        }
-    },
+TELEGRAM_BOT = {
+    'TOKEN': config('TELEGRAM_BOT_TOKEN'),
+    'MODE': config('TELEGRAM_BOT_MODE', default='POLLING'),
+    'WEBHOOK_SITE': config('TELEGRAM_BOT_WEBHOOK_SITE', default=''),
+    'PROXY': f"http://{PROXY4TELEGRAM_HOST}:{PROXY4TELEGRAM_PORT}" if PROXY4TELEGRAM_HOST else '',
 }
+
+INSTAGRAM_CREDENTIALS = {
+    'USERNAME': config('INSTAGRAM_USERNAME', default=''),
+    'PASSWORD': config('INSTAGRAM_PASSWORD', default=''),
+}
+
+DEVLYTIC_TOKEN = config('DEVLYTIC_TOKEN', default=''),
+PUSH_API_URL = config('PUSH_API_URL', default=''),
+
+if DEVEL is False:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+
+    SENTRY_KEY = config('SENTRY_KEY')
+    SENTRY_HOST = config('SENTRY_HOST')
+    SENTRY_PROJECT_ID = config('SENTRY_PROJECT_ID')
+    SENTRY_ENV = config('SENTRY_ENV')
+
+    sentry_sdk.init(
+        dsn=f"https://{SENTRY_KEY}@{SENTRY_HOST}/{SENTRY_PROJECT_ID}",
+        integrations=[DjangoIntegration(), CeleryIntegration()],
+        default_integrations=False,
+
+        # If you wish to associate users to errors (assuming you are using
+        # django.contrib.auth) you may enable sending PII data.
+        send_default_pii=True,
+
+        # Custom settings
+        debug=DEBUG,
+        environment=SENTRY_ENV
+    )
