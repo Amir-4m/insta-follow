@@ -187,7 +187,6 @@ class CustomService(object):
 
             user_inquiry, _c = UserInquiry.objects.get_or_create(
                 order=order,
-                status=UserInquiry.STATUS_OPEN,
                 user_page=user_page,
                 defaults=dict(user_page=user_page)
             )
