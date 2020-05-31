@@ -254,8 +254,8 @@ INSTAGRAM_CREDENTIALS = {
     'PASSWORD': config('INSTAGRAM_PASSWORD', default=''),
 }
 
-DEVLYTIC_TOKEN = config('DEVLYTIC_TOKEN', default=''),
-PUSH_API_URL = config('PUSH_API_URL', default=''),
+DEVLYTIC_TOKEN = config('DEVLYTIC_TOKEN', default='')
+PUSH_API_URL = config('PUSH_API_URL', default='')
 
 if DEVEL is False:
     import sentry_sdk
