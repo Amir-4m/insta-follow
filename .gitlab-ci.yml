@@ -1,9 +1,3 @@
-workflow:
-  rules:
-    - if: $CI_MERGE_REQUEST_ID
-    - if: $CI_COMMIT_TAG
-    - if: $CI_COMMIT_BRANCH == "develop"
-
 stages:
   - build
   - test
@@ -16,19 +10,19 @@ variables:
 build:
   stage: build
   script:
-    - virtualenv --prompt='($PROJECT_DIR) ' -q venv
+    - virtualenv --prompt='($PROJECT_DIR)' -q venv
     - virtualenv --relocatable venv
     - source venv/bin/activate
     - pip install -r requirements.txt
-    - pip uninstall -y pymongo
-    - pip uninstall -y djongo
-    - pip install djongo
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
       - venv/
     policy: push
   only:
+    refs:
+      - develop
+      - master
     changes:
       - requirements.txt
   tags:
@@ -49,6 +43,9 @@ test:
     paths:
       - venv/
     policy: pull
+  only:
+    - develop
+    - master
   tags:
     - django
 
@@ -86,9 +83,8 @@ staging:
     - python manage.py migrate
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_ABR:*
-  after_script:
-    - deactivate
-#  only:
+  only:
+    - develop
 #    - /^staging-.*$/
 #  except:
 #    - branches
@@ -108,8 +104,6 @@ production:
     - python manage.py migrate
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_ABR:*
-  after_script:
-    - deactivate
   only:
     - /^release-.*$/
   except:
