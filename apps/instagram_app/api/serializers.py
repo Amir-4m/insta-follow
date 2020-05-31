@@ -131,11 +131,10 @@ class UserInquirySerializer(serializers.ModelSerializer):
     page_id = serializers.IntegerField(write_only=True)
     done_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True)
     instagram_username = serializers.ReadOnlyField(source='order.instagram_username')
-    user_page = serializers.ReadOnlyField(source='user_page.page.instagram_username')
 
     class Meta:
         model = UserInquiry
-        fields = ('id', 'link', 'instagram_username', 'media_url', 'page_id', 'done_ids', 'status', 'user_page')
+        fields = ('id', 'link', 'instagram_username', 'media_url', 'page_id', 'done_ids', 'status')
 
     def validate(self, attrs):
         user = self.context['user']
@@ -171,6 +170,7 @@ class CoinTransactionSerializer(serializers.ModelSerializer):
 
 
 class InstaActionSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = InstaAction
         fields = ('action_type', 'action_value', 'buy_value')
