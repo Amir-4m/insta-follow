@@ -135,7 +135,7 @@ class InstagramAppService(object):
         instagram = InstagramAppService.instagram_login()
         username = instagram_username
         account = instagram.get_account(username)
-        followers = instagram.get_followers(account.identifier, 150, 100, delayed=True)
+        followers = instagram.get_followers(account.identifier, 2000, 100, delayed=True)
         return followers
 
 
@@ -184,6 +184,7 @@ class CustomService(object):
         for order in valid_orders:
             if order.entity_id in given_entities:
                 continue
+
             user_inquiry, _c = UserInquiry.objects.get_or_create(
                 order=order,
                 status=UserInquiry.STATUS_OPEN,
