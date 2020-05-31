@@ -25,9 +25,11 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
-def collect_like(order_id, order_link, order_page_id):
+def collect_like(order_id, order_link, order_entity):
     try:
-        model = BaseInstaEntity.get_model(InstaAction.ACTION_LIKE, order_page_id)
+        model = BaseInstaEntity.get_model(InstaAction.ACTION_LIKE, order_entity)
+        model.objects.mongo_create_index([('user_id', 1), ('action', 1)], unique=True)
+
     except Exception as e:
         logger.error(f"can't get model for order: {order_id} to collect likes : {e}")
         return
@@ -37,9 +39,11 @@ def collect_like(order_id, order_link, order_page_id):
         "shortcode": shortcode,
         "first": 50,
     }
+
     limit = 0
-    while limit < 2000:
-        io_likes = []
+    io_likes = []
+    has_next_page = True
+    while limit < 2000 and has_next_page:
         try:
             response = InstagramAppService.req(LIKES_BY_SHORTCODE % urllib.parse.quote_plus(
                 json.dumps(variables, separators=(',', ':'))
@@ -62,23 +66,26 @@ def collect_like(order_id, order_link, order_page_id):
                 else:
                     limit = 2000
                     break
-            try:
-                model.objects.mongo_create_index([('user_id', 1), ('action', 1)], unique=True)
-                model.objects.mongo_insert_many(io_likes)
-            except Exception as e:
-                logger.error(f'mongo insert for order {order_id} collecting like got exception: {e}')
 
             max_id = page_info['end_cursor']
             variables["after"] = max_id
+            has_next_page = page_info['has_next_page']
         except Exception as e:
             logger.error(f"getting like error for {order_link} _ {e}")
             break
+    try:
+        io_likes.reverse()
+        model.objects.mongo_insert_many(io_likes)
+    except Exception as e:
+        logger.error(f'mongo insert for order {order_id} collecting like got exception: {e}')
 
 
 @shared_task
 def collect_comment(order_id, order_link, order_entity):
     try:
         model = BaseInstaEntity.get_model(InstaAction.ACTION_COMMENT, order_entity)
+        model.objects.mongo_create_index({'user_id': 1, 'action': 1})
+
     except Exception as e:
         logger.warning(f"can't get model for order: {order_id} to collect comments: {e}")
         return
@@ -90,8 +97,10 @@ def collect_comment(order_id, order_link, order_entity):
     }
 
     limit = 0
-    while limit < 2000:
-        io_comments = []
+    io_comments = []
+
+    has_next_page = True
+    while limit < 2000 and has_next_page:
         try:
             response = InstagramAppService.req(COMMENTS_BY_SHORTCODE % urllib.parse.quote_plus(
                 json.dumps(variables, separators=(',', ':'))
@@ -117,23 +126,25 @@ def collect_comment(order_id, order_link, order_entity):
                     limit = 2000
                     break
 
-            try:
-                model.objects.mongo_create_index({'user_id': 1, 'action': InstaAction.ACTION_COMMENT})
-                model.objects.mongo_insert_many(io_comments)
-            except Exception as e:
-                logger.error(f'mongo insert for order {order_id} collecting comment got exception: {e}')
-
             max_id = page_info['end_cursor']
             variables["after"] = max_id
+            has_next_page = page_info['has_next_page']
         except Exception as e:
             logger.error(f"getting comment error for {order_id} link:{order_link} _ {e}")
             break
+    try:
+        io_comments.reverse()
+        model.objects.mongo_insert_many(io_comments)
+    except Exception as e:
+        logger.error(f'mongo insert for order {order_id} collecting comment got exception: {e}')
 
 
 @shared_task
 def collect_follower(order_id, order_entity, order_instagram_id):
     try:
         model = BaseInstaEntity.get_model(InstaAction.ACTION_FOLLOW, order_entity)
+        model.objects.mongo_create_index({'user_id': 1, 'action': 1})
+
     except Exception as e:
         logger.warning(f"can't get model for order: {order_id} to collect followers: {e}")
         return
@@ -151,7 +162,7 @@ def collect_follower(order_id, order_entity, order_instagram_id):
             else:
                 break
         try:
-            model.objects.mongo_create_index({'user_id': 1, 'action': InstaAction.ACTION_FOLLOW})
+            io_followers.reverse()
             model.objects.mongo_insert_many(io_followers)
         except Exception as e:
             logger.error(f'mongo insert for order {order_id} collecting like got exception: {e}')
