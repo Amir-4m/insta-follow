@@ -146,7 +146,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
         page_id = request.query_params.get('page_id')
         if page_id:
             try:
-                user_page = UserPage.objects.get(page_id=page_id, user=request.user)
+                user_page = UserPage.objects.get(page=page_id, user=request.user)
                 inquiries = inquiries.filter(user_page=user_page)
             except UserPage.DoesNotExist:
                 raise ValidationError(detail={'detail': _('user and page does not match!')})
