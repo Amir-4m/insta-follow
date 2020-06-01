@@ -190,8 +190,9 @@ class CustomService(object):
                 user_page=user_page,
                 defaults=dict(user_page=user_page)
             )
-            valid_inquiries.append(user_inquiry)
-            given_entities.append(order.entity_id)
+            if user_inquiry and _c:
+                valid_inquiries.append(user_inquiry)
+                given_entities.append(order.entity_id)
 
             if len(valid_inquiries) == limit:
                 break
