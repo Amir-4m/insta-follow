@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import Category, InstaPage, UserPage, Order, UserInquiry, InstaAction, CoinTransaction, CoinPackage
+from .models import (
+    Category, InstaPage, UserPage,
+    Order, UserInquiry, InstaAction,
+    CoinTransaction, CoinPackage, InstagramAccount
+)
 
 
 @admin.register(Category)
@@ -51,3 +55,6 @@ class CoinPackageModelAdmin(admin.ModelAdmin):
     sortable_by = ('-created_time', 'price')
 
 
+@admin.register(InstagramAccount)
+class InstagramAccountModelAdmin(admin.ModelAdmin):
+    list_display = ('id', 'username', 'priority', 'updated_time', 'created_time')
