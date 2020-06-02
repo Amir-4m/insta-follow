@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.conf import settings
 from igramscraper.instagram import Instagram
 
-from .models import BaseInstaEntity, UserPage, UserInquiry, Order
+from .models import BaseInstaEntity, UserPage, UserInquiry, Order, InstaAction, CoinTransaction
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,7 @@ class InstagramAppService(object):
             settings.INSTAGRAM_CREDENTIALS['USERNAME'],
             settings.INSTAGRAM_CREDENTIALS['PASSWORD']
         )
-        instagram.login()
+        instagram.login(force=True, two_step_verificator=True)
         return instagram
 
     @staticmethod
@@ -177,7 +177,6 @@ class CustomService(object):
         ).filter(
             open_inquiries_count__lt=0.10 * F('remaining') + F('remaining')
         )
-
         valid_inquiries = []
         given_entities = []
 
@@ -203,17 +202,28 @@ class CustomService(object):
     def check_user_action(user_inquiry_ids, user_page_id):
         user_page = UserPage.objects.get(id=user_page_id)
         with transaction.atomic():
-            for user_inquiry in UserInquiry.objects.select_for_update().filter(id__in=user_inquiry_ids):
+            for user_inquiry in UserInquiry.objects.select_for_update().select_related('order', 'order__action').filter(
+                    id__in=user_inquiry_ids
+            ):
                 user_inquiry.last_check_time = timezone.now()
                 if user_inquiry.validated_time is not None or user_inquiry.done_time is not None:
                     continue
                 user_inquiry.done_time = timezone.now()
+                user_inquiry.status = UserInquiry.STATUS_DONE
                 if CustomService.check_activity_from_db(
                         user_page.page.instagram_user_id,
                         user_inquiry.order.entity_id,
                         user_inquiry.order.action,
                 ):
-                    user_inquiry.status = UserInquiry.STATUS_DONE
+                    user_inquiry.validated_time = timezone.now()
+                    if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
+                        user_inquiry.status = UserInquiry.STATUS_VALIDATED
+                        CoinTransaction.objects.create(
+                            user=user_inquiry.user_page.user,
+                            inquiry=user_inquiry,
+                            amount=user_inquiry.order.action.action_value,
+                            description=f"validated inquiry {user_inquiry.id}"
+                        )
                 user_inquiry.save()
 
     @staticmethod
@@ -222,3 +232,43 @@ class CustomService(object):
             return bool(collection.objects.mongo_find_one(dict(kwargs)))
         except Exception as e:
             logger.error(f"error in mongo filter occurred :{e}")
+
+
+class MongoServices(object):
+    @staticmethod
+    def get_object_id(collection, **kwargs):
+        try:
+            obj = collection.objects.mongo_find_one(dict(kwargs))
+            return obj.get("_id")
+        except Exception as e:
+            logger.error(f"error in mongo get object id :{e}")
+
+    @staticmethod
+    def get_object_position(collection, object_id):
+        return collection.objects.mongo_find(
+            {
+                "_id": {
+                    "$lt": object_id
+                },
+            }
+        ).sort([("$natural", -1)]).count() + 1
+
+    @staticmethod
+    def get_object_neighbors(collection, object_id, limit=20):
+        top_neighbors = collection.objects.mongo_find(
+            {
+                "_id": {
+                    "$gt": object_id
+                },
+            }
+        ).sort([("$natural", -1)]).limit(limit)
+
+        bottom_neighbors = collection.objects.mongo_find(
+            {
+                "_id": {
+                    "$lt": object_id
+                },
+            }
+        ).sort([("$natural", -1)]).limit(limit)
+
+        return top_neighbors, bottom_neighbors

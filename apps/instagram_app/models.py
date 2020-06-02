@@ -146,8 +146,8 @@ class UserInquiry(models.Model):
     last_check_time = models.DateTimeField(_("last check time"), null=True, blank=True)
 
     status = models.PositiveSmallIntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_OPEN, db_index=True)
-    done_time = models.DateTimeField(_('done time'), null=True, blank=True)
-    validated_time = models.DateTimeField(_("validated time"), null=True, blank=True)
+    done_time = models.DateTimeField(_('done time'), null=True, blank=True, db_index=True)
+    validated_time = models.DateTimeField(_("validated time"), null=True, blank=True, db_index=True)
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='user_inquiries')
     user_page = models.ForeignKey(UserPage, on_delete=models.CASCADE)

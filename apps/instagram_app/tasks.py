@@ -11,7 +11,6 @@ from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import F, Sum, Case, When, IntegerField
 from django.utils import timezone
-from django.core.cache import cache
 from django.conf import settings
 
 from celery import shared_task
@@ -84,7 +83,7 @@ def collect_like(order_id, order_link, order_entity):
 def collect_comment(order_id, order_link, order_entity):
     try:
         model = BaseInstaEntity.get_model(InstaAction.ACTION_COMMENT, order_entity)
-        model.objects.mongo_create_index({'user_id': 1, 'action': 1})
+        model.objects.mongo_create_index([('user_id', 1), ('action', 1)], unique=True)
 
     except Exception as e:
         logger.warning(f"can't get model for order: {order_id} to collect comments: {e}")
@@ -111,7 +110,7 @@ def collect_comment(order_id, order_link, order_entity):
             edges = response_data['edges']
             for edge in edges:
                 node = edge['node']
-                if not CustomService.mongo_exists(model, user_id=node['id']):
+                if not CustomService.mongo_exists(model, user_id=node['id'], action=InstaAction.ACTION_COMMENT):
                     io_comments.append(
                         dict(
                             action=InstaAction.ACTION_COMMENT,
@@ -143,7 +142,7 @@ def collect_comment(order_id, order_link, order_entity):
 def collect_follower(order_id, order_entity, order_instagram_id):
     try:
         model = BaseInstaEntity.get_model(InstaAction.ACTION_FOLLOW, order_entity)
-        model.objects.mongo_create_index({'user_id': 1, 'action': 1})
+        model.objects.mongo_create_index([('user_id', 1), ('action', 1)], unique=True)
 
     except Exception as e:
         logger.warning(f"can't get model for order: {order_id} to collect followers: {e}")
@@ -152,7 +151,7 @@ def collect_follower(order_id, order_entity, order_instagram_id):
         followers = InstagramAppService.get_user_followers(order_instagram_id)
         io_followers = []
         for follower in followers['accounts']:
-            if not CustomService.mongo_exists(model, user_id=follower.identifier):
+            if not CustomService.mongo_exists(model, user_id=follower.identifier, action=InstaAction.ACTION_FOLLOW):
                 io_followers.append(
                     dict(
                         action=InstaAction.ACTION_FOLLOW,
@@ -179,7 +178,6 @@ def collect_order_link_info(order_id, action, link, media_url):
 
     else:
         entity_id, author, media_url, is_private = InstagramAppService.get_post_info(link)
-
     if is_private:
         incomplete_order_notifier.delay(order_id)
 
@@ -239,7 +237,7 @@ def validate_user_inquiries():
         qs = UserInquiry.objects.select_for_update(of=('self',)).select_related('user_page', 'user_page__page').filter(
             done_time__isnull=False,
             validated_time__isnull=True,
-            status=UserInquiry.STATUS_OPEN
+            status=UserInquiry.STATUS_DONE
         )
         for user_inquiry in qs:
             user_inquiry.last_check_time = timezone.now()
@@ -251,7 +249,15 @@ def validate_user_inquiries():
                     user_inquiry.order.action.action_type
             ):
                 user_inquiry.validated_time = timezone.now()
-                user_inquiry.status = UserInquiry.STATUS_DONE
+                if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
+                    user_inquiry.status = UserInquiry.STATUS_VALIDATED
+                    CoinTransaction.objects.create(
+                        user=user_inquiry.user_page.user,
+                        inquiry=user_inquiry,
+                        amount=user_inquiry.order.action.action_value,
+                        description=f"validated inquiry {user_inquiry.id}"
+                    )
+
             user_inquiry.save()
 
 
@@ -261,7 +267,8 @@ def final_validate_user_inquiries():
     for inquiry in UserInquiry.objects.select_related('order', 'user_page__page').filter(
             validated_time__lt=timezone.now() - timedelta(hours=24),
             done_time__isnull=False,
-            status=UserInquiry.STATUS_DONE
+            status=UserInquiry.STATUS_DONE,
+            order__action__action_type=InstaAction.ACTION_FOLLOW
     ):
         try:
             inquiry.last_check_time = timezone.now()
@@ -270,7 +277,10 @@ def final_validate_user_inquiries():
                 inquiry.order.entity_id,
                 inquiry.order.action.action_type
             )
-            if is_passed is True:
+            followers = InstagramAppService.get_user_followers(inquiry.order.instagram_username)
+            followers_username = [follower.username for follower in followers['accounts']]
+
+            if is_passed is True and inquiry.user_page.page.instagram_username in followers_username:
                 inquiry.status = UserInquiry.STATUS_VALIDATED
                 CoinTransaction.objects.create(
                     user=inquiry.user_page.user,
@@ -279,29 +289,42 @@ def final_validate_user_inquiries():
                     description=f"validated inquiry {inquiry.id}"
                 )
             elif is_passed is False:
+                CoinTransaction.objects.create(
+                    user=inquiry.user_page.user,
+                    inquiry=inquiry,
+                    amount=-(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT),
+                    description=f"rejected inquiry {inquiry.id}"
+                )
                 inquiry.status = UserInquiry.STATUS_REJECTED
             elif is_passed is None:
                 continue
             inquiry.save()
 
-            Order.objects.filter(is_enable=True).annotate(
-                achived_no=Sum(
-                    Case(
-                        When(
-                            user_inquiries__status=UserInquiry.STATUS_VALIDATED, then=1
-                        )
-                    ),
-                    output_field=IntegerField()
-                ),
-            ).filter(
-                achived_no__gte=F('target_no')
-            ).update(
-                is_enable=False,
-                description=_("order completed")
-            )
-
         except Exception as e:
             logger.error(f"final validate for iqnuiry {inquiry.id} got exception: {e}")
+
+
+# PERIODIC TASK
+@periodic_task(run_every=(crontab(minute='*/5')), name="update_orders_achieved_number")
+def update_orders_achieved_number():
+    try:
+        Order.objects.filter(is_enable=True).annotate(
+            achived_no=Sum(
+                Case(
+                    When(
+                        user_inquiries__status=UserInquiry.STATUS_VALIDATED, then=1
+                    )
+                ),
+                output_field=IntegerField()
+            ),
+        ).filter(
+            achived_no__gte=F('target_no')
+        ).update(
+            is_enable=False,
+            description=_("order completed")
+        )
+    except Exception as e:
+        logger.error(f"updating orders achieved number got exception: {e}")
 
 
 # PERIODIC TASK

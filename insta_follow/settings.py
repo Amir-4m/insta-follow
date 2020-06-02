@@ -257,6 +257,8 @@ INSTAGRAM_CREDENTIALS = {
 DEVLYTIC_TOKEN = config('DEVLYTIC_TOKEN', default='')
 PUSH_API_URL = config('PUSH_API_URL', default='')
 
+USER_PENALTY_AMOUNT = config('USER_PENALTY_AMOUNT', default=1.5, cast=int)
+
 if DEVEL is False:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
