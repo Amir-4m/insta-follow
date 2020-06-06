@@ -150,7 +150,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
                 inquiries = inquiries.filter(user_page=user_page)
             except UserPage.DoesNotExist:
                 raise ValidationError(detail={'detail': _('user and page does not match!')})
-        page = self.paginate_queryset(inquiries)
+        page = self.paginate_queryset(inquiries.order_by('-created_time'))
         serializer = self.serializer_class(page, many=True)
         return self.get_paginated_response(serializer.data)
 
