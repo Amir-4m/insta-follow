@@ -83,7 +83,9 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'apps.accounts.backends.GoogleAuthBackend',
 ]
-
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'apps.instagram_app.utils.custom_exception_handler'
+}
 SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('ACCESS_TOKEN_LIFETIME', default=30, cast=int)),
@@ -258,6 +260,8 @@ DEVLYTIC_TOKEN = config('DEVLYTIC_TOKEN', default='')
 PUSH_API_URL = config('PUSH_API_URL', default='')
 
 USER_PENALTY_AMOUNT = config('USER_PENALTY_AMOUNT', default=1.5, cast=int)
+
+FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=20000, cast=int)
 
 if DEVEL is False:
     import sentry_sdk

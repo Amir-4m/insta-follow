@@ -180,12 +180,14 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
         request_body=INQUIRY_POST_DOC
 
     )
-    @action(methods=['post'], detail=False, url_path="done")
-    def post(self, request, *args, **kwargs):
-        serializer = UserInquirySerializer(data=request.data, context={'user': request.user})
+    @action(methods=['post'], detail=False)
+    def done(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response()
+        queryset = UserInquiry.objects.filter(id__in=serializer.data['done_ids'])
+        queryset.update(status=UserInquiry.STATUS_DONE)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class CoinTransactionAPIView(viewsets.GenericViewSet, mixins.ListModelMixin):

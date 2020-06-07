@@ -1,8 +1,10 @@
 from django.contrib import admin
+
+from .forms import InstagramAccountForm
 from .models import (
     Category, InstaPage, UserPage,
     Order, UserInquiry, InstaAction,
-    CoinTransaction, CoinPackage, InstagramAccount
+    CoinPackage, InstagramAccount
 )
 
 
@@ -38,9 +40,10 @@ class OrderModelAdmin(admin.ModelAdmin):
 
 
 @admin.register(UserInquiry)
-class UserAssignmentModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'order', 'user_page', 'last_check_time', 'updated_time', 'created_time')
+class UserInquiryModelAdmin(admin.ModelAdmin):
+    list_display = ('id', 'order', 'user_page', 'status', 'validated_time', 'updated_time', 'created_time')
     list_select_related = ['order', 'user_page']
+    list_filter = ('status',)
     sortable_by = ('-created_time',)
 
 
@@ -57,4 +60,6 @@ class CoinPackageModelAdmin(admin.ModelAdmin):
 
 @admin.register(InstagramAccount)
 class InstagramAccountModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'username', 'priority', 'updated_time', 'created_time')
+    form = InstagramAccountForm
+    list_display = ('id', 'username', 'updated_time', 'created_time')
+    readonly_fields = ('login_attempt',)

@@ -231,77 +231,82 @@ def collect_order_data():
 
 
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(hour='*/1')), name="validate_user_inquiries", ignore_result=True)
+@periodic_task(run_every=(crontab(minute='*')), name="validate_user_inquiries", ignore_result=True)
 def validate_user_inquiries():
-    with transaction.atomic():
-        qs = UserInquiry.objects.select_for_update(of=('self',)).select_related('user_page', 'user_page__page').filter(
-            done_time__isnull=False,
-            validated_time__isnull=True,
-            status=UserInquiry.STATUS_DONE
-        )
-        for user_inquiry in qs:
-            user_inquiry.last_check_time = timezone.now()
-            if user_inquiry.validated_time is not None:
-                continue
-            if CustomService.check_activity_from_db(
-                    user_inquiry.user_page.page.instagram_user_id,
-                    user_inquiry.order.entity_id,
-                    user_inquiry.order.action.action_type
-            ):
-                user_inquiry.validated_time = timezone.now()
-                if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
-                    user_inquiry.status = UserInquiry.STATUS_VALIDATED
-                    CoinTransaction.objects.create(
-                        user=user_inquiry.user_page.user,
-                        inquiry=user_inquiry,
-                        amount=user_inquiry.order.action.action_value,
-                        description=f"validated inquiry {user_inquiry.id}"
-                    )
+    # updating expired inquiries status
+    UserInquiry.objects.filter(
+        status=UserInquiry.STATUS_OPEN, created_time__lt=timezone.now() - timedelta(hours=2)
+    ).update(status=UserInquiry.STATUS_EXPIRED)
 
+    # updating rejected like and comment inquiries status
+    UserInquiry.objects.filter(
+        status=UserInquiry.STATUS_DONE,
+        updated_time__lt=timezone.now() - timedelta(hours=2),
+        order__action__in=[InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]
+    ).update(status=UserInquiry.STATUS_REJECTED)
+
+    done_inquiries = UserInquiry.objects.select_related('user_page', 'user_page__page').filter(
+        status=UserInquiry.STATUS_DONE
+    )
+
+    # validating inquiries and create coin for validated like and comment inquiries
+    for user_inquiry in done_inquiries:
+        if CustomService.check_activity_from_db(
+                user_inquiry.user_page.page.instagram_user_id,
+                user_inquiry.order.entity_id,
+                user_inquiry.order.action.action_type
+        ):
+            user_inquiry.status = UserInquiry.STATUS_VALIDATED
+            if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
+                user_inquiry.validated_time = timezone.now()
+                CoinTransaction.objects.create(
+                    user=user_inquiry.user_page.user,
+                    inquiry=user_inquiry,
+                    amount=user_inquiry.order.action.action_value,
+                    description=f"validated inquiry {user_inquiry.id}"
+                )
             user_inquiry.save()
 
 
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(minute='*/10')), name="final_validate_user_inquiries", ignore_result=True)
+@periodic_task(run_every=(crontab(minute='0', hour='16')), name="final_validate_user_inquiries", ignore_result=True)
 def final_validate_user_inquiries():
-    for inquiry in UserInquiry.objects.select_related('order', 'user_page__page').filter(
-            validated_time__lt=timezone.now() - timedelta(hours=24),
-            done_time__isnull=False,
-            status=UserInquiry.STATUS_DONE,
+    open_orders = Order.objects.filter(is_enable=True, action__action_type=InstaAction.ACTION_FOLLOW)
+    for order in open_orders:
+        order_inquiries = order.user_inquiries.filter(
+            updated_time__lt=timezone.now().replace(hour=0, minute=0, second=0),
+            validated_time__isnull=True,
+            status=UserInquiry.STATUS_VALIDATED,
             order__action__action_type=InstaAction.ACTION_FOLLOW
-    ):
+        )
+        if not order_inquiries:
+            continue
+
         try:
-            inquiry.last_check_time = timezone.now()
-            is_passed = CustomService.check_activity_from_db(
-                inquiry.user_page.page.instagram_user_id,
-                inquiry.order.entity_id,
-                inquiry.order.action.action_type
-            )
-            followers = InstagramAppService.get_user_followers(inquiry.order.instagram_username)
-            followers_username = [follower.username for follower in followers['accounts']]
-
-            if is_passed is True and inquiry.user_page.page.instagram_username in followers_username:
-                inquiry.status = UserInquiry.STATUS_VALIDATED
-                CoinTransaction.objects.create(
-                    user=inquiry.user_page.user,
-                    inquiry=inquiry,
-                    amount=inquiry.order.action.action_value,
-                    description=f"validated inquiry {inquiry.id}"
-                )
-            elif is_passed is False:
-                CoinTransaction.objects.create(
-                    user=inquiry.user_page.user,
-                    inquiry=inquiry,
-                    amount=-(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT),
-                    description=f"rejected inquiry {inquiry.id}"
-                )
-                inquiry.status = UserInquiry.STATUS_REJECTED
-            elif is_passed is None:
-                continue
-            inquiry.save()
-
+            followers = InstagramAppService.get_user_followers(order.instagram_username)
         except Exception as e:
-            logger.error(f"final validate for iqnuiry {inquiry.id} got exception: {e}")
+            logger.error(f"final inquiry validation for order {order.id} got exception: {e}")
+            continue
+
+        followers_username = [follower.username for follower in followers['accounts']]
+
+        for inquiry in order_inquiries:
+            if inquiry.user_page.page.instagram_username in followers_username:
+                inquiry.validated_time = timezone.now()
+                amount = inquiry.order.action.action_value
+                description = f"validated inquiry {inquiry.id}"
+            else:
+                inquiry.status = UserInquiry.STATUS_REJECTED
+                amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
+                description = f"rejected inquiry {inquiry.id}"
+
+            inquiry.save()
+            CoinTransaction.objects.create(
+                user=inquiry.user_page.user,
+                inquiry=inquiry,
+                amount=amount,
+                description=description
+            )
 
 
 # PERIODIC TASK

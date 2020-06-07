@@ -415,7 +415,13 @@ def order_create_final(bot, update, session=None):
                     bot.send_message(
                         text=texts.NOT_ENOUGH_COIN,
                         chat_id=update.effective_user.id,
+                        reply_markup=buttons.start()
+
                     )
+                    session.pop('order_link')
+                    session.pop('order_action')
+                    session.pop('target')
+                    InstaBotService.refresh_session(bot, update, session)
                     return
                 ct = CoinTransaction.objects.create(user=user, amount=-(insta_action.buy_value * target))
                 order = Order.objects.create(

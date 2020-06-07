@@ -2,14 +2,12 @@ import logging
 import re
 import time
 import requests
-from django.db import transaction
+from django.conf import settings
 from django.db.models.functions import Coalesce
 from django.db.models import F, Sum, Case, When, IntegerField
-from django.utils import timezone
-from django.conf import settings
 from igramscraper.instagram import Instagram
 
-from .models import BaseInstaEntity, UserPage, UserInquiry, Order, InstaAction, CoinTransaction
+from .models import BaseInstaEntity, UserInquiry, Order, InstagramAccount
 
 logger = logging.getLogger(__name__)
 
@@ -122,20 +120,37 @@ class InstagramAppService(object):
 
     @staticmethod
     def instagram_login():
-        instagram = Instagram()
-        instagram.with_credentials(
-            settings.INSTAGRAM_CREDENTIALS['USERNAME'],
-            settings.INSTAGRAM_CREDENTIALS['PASSWORD']
-        )
-        instagram.login(force=True, two_step_verificator=True)
-        return instagram
+        max_retries = 3
+        tries = 0
+
+        while tries < max_retries:
+            tries += 1
+
+            instagram_account = InstagramAccount.objects.filter(is_enable=True).order_by('login_attempt').first()
+            if instagram_account is None:
+                logger.error(f"no instagram account found")
+                return
+            instagram_account.login_attempt += 1
+            instagram_account.save()
+            instagram = Instagram()
+            instagram.with_credentials(
+                instagram_account.username,
+                instagram_account.password
+            )
+            try:
+                instagram.login(force=True, two_step_verificator=True)
+                return instagram
+
+            except Exception as e:
+                logger.error(f"logging in to instagram with account {instagram_account.username} got error: {e}")
+        raise Exception("instagram login reached max retries !")
 
     @staticmethod
     def get_user_followers(instagram_username):
         instagram = InstagramAppService.instagram_login()
         username = instagram_username
         account = instagram.get_account(username)
-        followers = instagram.get_followers(account.identifier, 2000, 100, delayed=True)
+        followers = instagram.get_followers(account.identifier, settings.FOLLOWER_LIMIT, 100, delayed=True)
         return followers
 
 
@@ -197,34 +212,6 @@ class CustomService(object):
                 break
 
         return valid_inquiries
-
-    @staticmethod
-    def check_user_action(user_inquiry_ids, user_page_id):
-        user_page = UserPage.objects.get(id=user_page_id)
-        with transaction.atomic():
-            for user_inquiry in UserInquiry.objects.select_for_update().select_related('order', 'order__action').filter(
-                    id__in=user_inquiry_ids
-            ):
-                user_inquiry.last_check_time = timezone.now()
-                if user_inquiry.validated_time is not None or user_inquiry.done_time is not None:
-                    continue
-                user_inquiry.done_time = timezone.now()
-                user_inquiry.status = UserInquiry.STATUS_DONE
-                if CustomService.check_activity_from_db(
-                        user_page.page.instagram_user_id,
-                        user_inquiry.order.entity_id,
-                        user_inquiry.order.action,
-                ):
-                    user_inquiry.validated_time = timezone.now()
-                    if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
-                        user_inquiry.status = UserInquiry.STATUS_VALIDATED
-                        CoinTransaction.objects.create(
-                            user=user_inquiry.user_page.user,
-                            inquiry=user_inquiry,
-                            amount=user_inquiry.order.action.action_value,
-                            description=f"validated inquiry {user_inquiry.id}"
-                        )
-                user_inquiry.save()
 
     @staticmethod
     def mongo_exists(collection, **kwargs):

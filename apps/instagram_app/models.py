@@ -11,19 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 class InstagramAccount(models.Model):
-    PRIORITY_HIGH = 'High'
-    PRIORITY_LOW = 'Low'
-
-    PRIORITY_CHOICES = [
-        (PRIORITY_HIGH, _('HIGH')),
-        (PRIORITY_LOW, _('LOW')),
-    ]
-
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     username = models.CharField(_("username"), max_length=120)
     password = models.CharField(_("password"), max_length=250)
-    priority = models.CharField(_("priority"), max_length=4, choices=PRIORITY_CHOICES, default=PRIORITY_LOW)
     login_attempt = models.IntegerField(_('login attempt'), default=0)
     is_enable = models.BooleanField(_("is enable"), default=True)
 
@@ -161,10 +152,8 @@ class UserInquiry(models.Model):
     ]
     created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
-    last_check_time = models.DateTimeField(_("last check time"), null=True, blank=True)
 
     status = models.PositiveSmallIntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_OPEN, db_index=True)
-    done_time = models.DateTimeField(_('done time'), null=True, blank=True, db_index=True)
     validated_time = models.DateTimeField(_("validated time"), null=True, blank=True, db_index=True)
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='user_inquiries')
