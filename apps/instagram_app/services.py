@@ -2,14 +2,12 @@ import logging
 import re
 import time
 import requests
-from django.db import transaction
+from django.conf import settings
 from django.db.models.functions import Coalesce
 from django.db.models import F, Sum, Case, When, IntegerField
-from django.utils import timezone
-from django.conf import settings
 from igramscraper.instagram import Instagram
 
-from .models import BaseInstaEntity, UserPage, UserInquiry, Order
+from .models import BaseInstaEntity, UserInquiry, Order, InstagramAccount
 
 logger = logging.getLogger(__name__)
 
@@ -122,20 +120,37 @@ class InstagramAppService(object):
 
     @staticmethod
     def instagram_login():
-        instagram = Instagram()
-        instagram.with_credentials(
-            settings.INSTAGRAM_CREDENTIALS['USERNAME'],
-            settings.INSTAGRAM_CREDENTIALS['PASSWORD']
-        )
-        instagram.login()
-        return instagram
+        max_retries = 3
+        tries = 0
+
+        while tries < max_retries:
+            tries += 1
+
+            instagram_account = InstagramAccount.objects.filter(is_enable=True).order_by('login_attempt').first()
+            if instagram_account is None:
+                logger.error(f"no instagram account found")
+                return
+            instagram_account.login_attempt += 1
+            instagram_account.save()
+            instagram = Instagram()
+            instagram.with_credentials(
+                instagram_account.username,
+                instagram_account.password
+            )
+            try:
+                instagram.login(force=True, two_step_verificator=True)
+                return instagram
+
+            except Exception as e:
+                logger.error(f"logging in to instagram with account {instagram_account.username} got error: {e}")
+        raise Exception("instagram login reached max retries !")
 
     @staticmethod
     def get_user_followers(instagram_username):
         instagram = InstagramAppService.instagram_login()
         username = instagram_username
         account = instagram.get_account(username)
-        followers = instagram.get_followers(account.identifier, 2000, 100, delayed=True)
+        followers = instagram.get_followers(account.identifier, settings.FOLLOWER_LIMIT, 100, delayed=True)
         return followers
 
 
@@ -177,7 +192,6 @@ class CustomService(object):
         ).filter(
             open_inquiries_count__lt=0.10 * F('remaining') + F('remaining')
         )
-
         valid_inquiries = []
         given_entities = []
 
@@ -200,25 +214,48 @@ class CustomService(object):
         return valid_inquiries
 
     @staticmethod
-    def check_user_action(user_inquiry_ids, user_page_id):
-        user_page = UserPage.objects.get(id=user_page_id)
-        with transaction.atomic():
-            for user_inquiry in UserInquiry.objects.select_for_update().filter(id__in=user_inquiry_ids):
-                user_inquiry.last_check_time = timezone.now()
-                if user_inquiry.validated_time is not None or user_inquiry.done_time is not None:
-                    continue
-                user_inquiry.done_time = timezone.now()
-                if CustomService.check_activity_from_db(
-                        user_page.page.instagram_user_id,
-                        user_inquiry.order.entity_id,
-                        user_inquiry.order.action,
-                ):
-                    user_inquiry.status = UserInquiry.STATUS_DONE
-                user_inquiry.save()
-
-    @staticmethod
     def mongo_exists(collection, **kwargs):
         try:
             return bool(collection.objects.mongo_find_one(dict(kwargs)))
         except Exception as e:
             logger.error(f"error in mongo filter occurred :{e}")
+
+
+class MongoServices(object):
+    @staticmethod
+    def get_object_id(collection, **kwargs):
+        try:
+            obj = collection.objects.mongo_find_one(dict(kwargs))
+            return obj.get("_id")
+        except Exception as e:
+            logger.error(f"error in mongo get object id :{e}")
+
+    @staticmethod
+    def get_object_position(collection, object_id):
+        return collection.objects.mongo_find(
+            {
+                "_id": {
+                    "$lt": object_id
+                },
+            }
+        ).sort([("$natural", -1)]).count() + 1
+
+    @staticmethod
+    def get_object_neighbors(collection, object_id, limit=20):
+        top_neighbors = collection.objects.mongo_find(
+            {
+                "_id": {
+                    "$gt": object_id
+                },
+            }
+        ).sort([("$natural", -1)]).limit(limit)
+
+        bottom_neighbors = collection.objects.mongo_find(
+            {
+                "_id": {
+                    "$lt": object_id
+                },
+            }
+        ).sort([("$natural", -1)]).limit(limit)
+
+        return top_neighbors, bottom_neighbors

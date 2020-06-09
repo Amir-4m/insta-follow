@@ -3,10 +3,9 @@ from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, ParseError
 
 from apps.instagram_app.models import InstaPage, UserPage, UserInquiry, CoinTransaction, Order, InstaAction, Device
-from apps.instagram_app.services import CustomService
 from apps.accounts.models import User
 
 
@@ -32,11 +31,10 @@ class ProfileSerializer(serializers.ModelSerializer):
     approved_wallet = serializers.SerializerMethodField(read_only=True)
     unapproved_wallet = serializers.SerializerMethodField(read_only=True)
     instagram_username = serializers.CharField(write_only=True)
-    user_id = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
-        fields = ('id', 'insta_pages', 'approved_wallet', 'unapproved_wallet', 'instagram_username', 'user_id')
+        fields = ('id', 'insta_pages', 'approved_wallet', 'unapproved_wallet', 'instagram_username')
         read_only_fields = ('id',)
 
     def get_approved_wallet(self, obj):
@@ -46,7 +44,6 @@ class ProfileSerializer(serializers.ModelSerializer):
         return UserInquiry.objects.filter(
             user_page__user=obj,
             status=UserInquiry.STATUS_DONE,
-            done_time__isnull=False
         ).aggregate(coins=Coalesce(Sum('order__action__action_value'), 0))['coins']
 
     def get_insta_pages(self, obj):
@@ -55,10 +52,8 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         page_id = validated_data.get('instagram_username')
-        user_id = validated_data.get('user_id')
         user = self.context['user']
         page, created = InstaPage.objects.get_or_create(
-            instagram_user_id=user_id,
             instagram_username=page_id,
         )
         UserPage.objects.update_or_create(
@@ -128,41 +123,22 @@ class OrderSerializer(serializers.ModelSerializer):
 class UserInquirySerializer(serializers.ModelSerializer):
     link = serializers.ReadOnlyField(source="order.link")
     media_url = serializers.ReadOnlyField(source="order.media_url")
-    page_id = serializers.IntegerField(write_only=True)
-    done_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True)
     instagram_username = serializers.ReadOnlyField(source='order.instagram_username')
     user_page = serializers.ReadOnlyField(source='user_page.page.instagram_username')
     action = serializers.ReadOnlyField(source='order.action.action_type')
+    done_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True)
 
     class Meta:
         model = UserInquiry
-        fields = ('id', 'link', 'instagram_username', 'media_url', 'page_id', 'done_ids', 'status', 'user_page', 'action')
+        fields = ('id', 'link', 'instagram_username', 'media_url', 'done_ids', 'status', 'user_page', 'action')
 
-    def validate(self, attrs):
-        user = self.context['user']
-        page_id = attrs.get('page_id')
-        id_list = attrs.get('done_ids')
-        try:
-            user_page = UserPage.objects.get(page=page_id, user=user)
-            user_inquiry_ids = [obj.id for obj in UserInquiry.objects.filter(id__in=id_list, user_page=user_page)]
-        except UserPage.DoesNotExist:
-            raise ValidationError(detail={'detail': _('user and page does not match together !')})
-        except Exception as e:
-            raise ValidationError(detail={'detail': f"{e}"})
-        if len(user_inquiry_ids) != len(id_list):
-            raise ValidationError(detail={'detail': _('invalid id for user inquiries')})
-
-        v_data = {
-            'user_page': user_page,
-            'user_inquiry_ids': user_inquiry_ids
-        }
-        return v_data
-
-    def create(self, validated_data):
-        user_page = validated_data.get('user_page')
-        user_inquiry_ids = validated_data.get('user_inquiry_ids')
-        CustomService.check_user_action(user_inquiry_ids, user_page.id)
-        return True
+    def validate_done_ids(self, value):
+        user = self.context['request'].user
+        id_list = UserInquiry.objects.filter(
+            id__in=value, user_page__user=user, status=UserInquiry.STATUS_OPEN
+        ).values_list('id', flat=True)
+        if not id_list:
+            raise ParseError(_('list is not valid!'))
 
 
 class CoinTransactionSerializer(serializers.ModelSerializer):
@@ -172,7 +148,6 @@ class CoinTransactionSerializer(serializers.ModelSerializer):
 
 
 class InstaActionSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = InstaAction
         fields = ('action_type', 'action_value', 'buy_value')
