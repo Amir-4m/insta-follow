@@ -184,7 +184,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
     def done(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        queryset = UserInquiry.objects.filter(id__in=serializer.data['done_ids'])
+        queryset = UserInquiry.objects.filter(id__in=serializer.validated_data['done_ids'])
         queryset.update(status=UserInquiry.STATUS_DONE)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)

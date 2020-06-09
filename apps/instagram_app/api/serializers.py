@@ -139,6 +139,7 @@ class UserInquirySerializer(serializers.ModelSerializer):
         ).values_list('id', flat=True)
         if not id_list:
             raise ParseError(_('list is not valid!'))
+        return value
 
 
 class CoinTransactionSerializer(serializers.ModelSerializer):
