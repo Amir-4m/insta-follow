@@ -71,7 +71,7 @@ class InstaPage(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     instagram_username = models.CharField(_("instagram username"), max_length=50)
-    instagram_user_id = models.BigIntegerField(_("instagram id"), unique=True)
+    instagram_user_id = models.BigIntegerField(_("instagram id"), unique=True, null=True)
     followers = models.IntegerField(_("page followers"), null=True)
     following = models.IntegerField(_("page following"), null=True)
     post_no = models.IntegerField(_("posts number"), null=True)
