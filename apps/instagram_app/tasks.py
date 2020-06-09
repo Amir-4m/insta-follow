@@ -14,6 +14,9 @@ from django.utils import timezone
 from django.conf import settings
 
 from celery import shared_task
+from telegram import Bot
+
+from bot import texts
 
 from .endpoints import LIKES_BY_SHORTCODE, COMMENTS_BY_SHORTCODE
 from .services import InstagramAppService, CustomService
@@ -30,10 +33,9 @@ def collect_page_info(insta_page_id, instagram_id):
     )
     InstaPage.objects.filter(id=insta_page_id).update(
         instagram_user_id=user_id,
-        name=name,
         followers=followers,
         following=following,
-        posts_count=posts_count
+        post_no=posts_count
     )
 
 
@@ -211,20 +213,29 @@ def incomplete_order_notifier(order_id):
     order.is_enable = False
     order.description = "problem in getting information"
     order.save()
-    devices = [device.device_id for device in order.owner.devices.all()]
-    if len(devices) >= 1:
-        data = {
-            "devices": [devices],
-            "data": {
-                "title": _("Error in submitting order"),
-                "alert": _("Please make assurance that your instagram page has not any problem) !")
+    if hasattr(order.owner, 'telegramuser'):
+        bot = Bot(token=settings.TELEGRAM_BOT.get('TOKEN'))
+
+        bot.send_message(
+            chat_id=order.owner.telegramuser.telegram_user_id,
+            text=texts.ORDER_CREATE_FAILED % order.link,
+            disable_web_page_preview=True
+        )
+    else:
+        devices = [device.device_id for device in order.owner.devices.all()]
+        if len(devices) >= 1:
+            data = {
+                "devices": [devices],
+                "data": {
+                    "title": _("Error in submitting order"),
+                    "alert": _("Please make assurance that your instagram page has not any problem) !")
+                }
             }
-        }
-        header = {'Authorization': settings.DEVLYTIC_TOKEN}
-        try:
-            requests.post(settings.PUSH_API_URL, data, headers=header)
-        except Exception as e:
-            logger.error(f"push message for private account failed due : {e}")
+            header = {'Authorization': settings.DEVLYTIC_TOKEN}
+            try:
+                requests.post(settings.PUSH_API_URL, data, headers=header)
+            except Exception as e:
+                logger.error(f"push message for private account failed due : {e}")
 
 
 # PERIODIC TASK
