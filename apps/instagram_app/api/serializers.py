@@ -31,11 +31,10 @@ class ProfileSerializer(serializers.ModelSerializer):
     approved_wallet = serializers.SerializerMethodField(read_only=True)
     unapproved_wallet = serializers.SerializerMethodField(read_only=True)
     instagram_username = serializers.CharField(write_only=True)
-    user_id = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
-        fields = ('id', 'insta_pages', 'approved_wallet', 'unapproved_wallet', 'instagram_username', 'user_id')
+        fields = ('id', 'insta_pages', 'approved_wallet', 'unapproved_wallet', 'instagram_username')
         read_only_fields = ('id',)
 
     def get_approved_wallet(self, obj):
@@ -45,7 +44,6 @@ class ProfileSerializer(serializers.ModelSerializer):
         return UserInquiry.objects.filter(
             user_page__user=obj,
             status=UserInquiry.STATUS_DONE,
-            done_time__isnull=False
         ).aggregate(coins=Coalesce(Sum('order__action__action_value'), 0))['coins']
 
     def get_insta_pages(self, obj):
@@ -54,10 +52,8 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         page_id = validated_data.get('instagram_username')
-        user_id = validated_data.get('user_id')
         user = self.context['user']
         page, created = InstaPage.objects.get_or_create(
-            instagram_user_id=user_id,
             instagram_username=page_id,
         )
         UserPage.objects.update_or_create(

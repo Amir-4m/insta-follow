@@ -1,9 +1,8 @@
 import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from apps.accounts.models import User
-from .models import CoinTransaction, Order
-from .tasks import collect_order_link_info
+from .models import InstaPage, Order
+from .tasks import collect_order_link_info, collect_page_info
 
 logger = logging.getLogger(__name__)
 
@@ -19,3 +18,8 @@ def order_receiver(sender, instance, created, raw=False, **kwargs):
             link=instance.link,
             media_url=media_url,
         )
+
+
+@receiver(post_save, sender=InstaPage)
+def insta_page_receiver(sender, instance, created, raw=False, **kwargs):
+    collect_page_info.delay(insta_page_id=instance.id, instagram_id=instance.instagram_username)

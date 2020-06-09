@@ -17,10 +17,24 @@ from celery import shared_task
 
 from .endpoints import LIKES_BY_SHORTCODE, COMMENTS_BY_SHORTCODE
 from .services import InstagramAppService, CustomService
-from .models import Order, UserInquiry, BaseInstaEntity, InstaAction, CoinTransaction
+from .models import Order, UserInquiry, BaseInstaEntity, InstaAction, CoinTransaction, InstaPage
 from ..telegram_app.models import TelegramUser
 
 logger = logging.getLogger(__name__)
+
+
+@shared_task
+def collect_page_info(insta_page_id, instagram_id):
+    user_id, name, followers, following, posts_count, media_url, is_private = InstagramAppService.get_page_info(
+        instagram_id, full_info=True
+    )
+    InstaPage.objects.filter(id=insta_page_id).update(
+        instagram_user_id=user_id,
+        name=name,
+        followers=followers,
+        following=following,
+        posts_count=posts_count
+    )
 
 
 @shared_task

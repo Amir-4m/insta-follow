@@ -22,7 +22,7 @@ def custom_exception_handler(exc, context):
             if err:
                 break
         response.data['detail'] = err
-    elif isinstance(response.data['detail'], list):
+    elif response is not None and isinstance(response.data['detail'], list):
         response.data['detail'] = response.data['detail'][0]
 
     return response
