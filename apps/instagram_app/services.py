@@ -138,7 +138,7 @@ class InstagramAppService(object):
                 instagram_account.password
             )
             try:
-                instagram.login(force=True, two_step_verificator=True)
+                instagram.login(two_step_verificator=True)
                 return instagram
 
             except Exception as e:
