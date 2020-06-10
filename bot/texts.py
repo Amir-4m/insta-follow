@@ -6,6 +6,8 @@ START_USER_HAS_NO_PAGE = """
 به صورت username@ بنویسید و ارسال کنید.
 """
 
+BACK_TO_MENU = "بازگشت به منوی اصلی ..."
+
 CHOICE_PROFILE = "مشاهده پروفایل"
 CHOICE_ADD_PAGE = "اضافه کردن صفحه اینستاگرام جدید"
 CHOICE_DELETE_PAGE = "حذف صفحه اینستاگرام"
@@ -15,9 +17,20 @@ CHOICE_COLLECT_COIN = "جمع آوری سکه"
 CHOICE_BY_LIKE = "جمع آوری سکه بوسیله لایک"
 CHOICE_BY_COMMENT = "جمع آوری سکه کامنت"
 CHOICE_BY_FOLLOW = "جمع آوری سکه دنبال کردن"
+CHOICE_ACTIVITY = "فعالیت ها"
+
+FILTER_OPEN = "فیلتر وضعیت های باز"
+FILTER_VALIDATED = "فیلتر وضعیت های تایید شده"
+FILTER_EXPIRED = "فیلتر وضعیت های منقضی شده"
+FILTER_REJECTED = "فیلتر وضعیت های رد شده"
+FILTER_DONE = "فیلتر وضعیت های انجام شده"
+FILTER_LIKE = "فیلتر لایک"
+FILTER_FOLLOW = "فیلتر فالو"
+FILTER_COMMENT = "فیلتر کامنت"
+FILTER_BY_PAGE = "فیلتر بر اساس صفحات"
+NO_FILTER = "پاک کردن فیلتر ها"
 
 PAGE_CREATED = """
-
 نام کاربری 💬: {{ page.instagram_username }}
 تعداد پست 🎰: {{ page.post_no }}
 فالو کنندگان ⬅️: {{ page.followers }}
@@ -65,9 +78,10 @@ COLLECT_COIN_PAGE = "با کدام صفحه اینستاگرامی خود ادا
 INQUIRY_LIST = """
 پست های که باید لایک کنید:
 {% for inquiry in inquiries %}
+شماره: {{ inquiry.id }}
+لینک:
+<a href="{{ inquiry.order.link }}">{{ inquiry.order.link }}</a>
 
-{{ inquiry.order.link }} : لینک
-___
 {% endfor %}
 """
 INQUIRY_NOT_FOUND = """
@@ -89,21 +103,19 @@ ORDER_LIST = """
 {% for order in orders %}
 
 نوع سفارش : {{ order.action.action_type }}
-لینک : {{ order.link }}
+لینک : <a href="{{ order.link }}">{{ order.link }}</a>
 هدف : {{ order.target_no }}
-بدست آمده : {{ ()order.achieved_number_approved }}
-وضعیت : {{ order.is_enable }}
-___
+بدست آمده : {{ order.achieved_number_approved }}
+وضعیت :{% if order.is_enable %}فعال{% else %}غیر فعال{% endif %}
+
 {% endfor %}
 """
 
 ORDER_NOT_FOUND = "سفارشی یافت نشد !"
 
 ORDER_CREATE_ACTION = "لطفانوع سفارش خود را انتخاب کنید"
-
 ORDER_CREATE_LINK_LC = "لینک پست مورد نظر خود را وارد کنید"
 ORDER_CREATE_LINK_F = "لینک پیج مورد نظر خود را وارد کنید"
-
 ORDER_CREATE_TARGET = "تعداد هدف سفارش خود را وارد کنید"
 
 NOT_ENOUGH_COIN = "متاسفانه تعداد سکه های شما برای ثبت این سفارش کافی نیست !"
@@ -112,7 +124,7 @@ SUBMIT_ORDER = "ثبت سفارش"
 
 CANCEL = "انصراف"
 
-ORDER_CREATE_FINAL = "سفارش شماثبت شد و پس از تایید نهایی قابل نمایش برای کاربران دیگر خواهد بوذ."
+ORDER_CREATE_FINAL = "سفارش شما ثبت شد و پس از تایید نهایی قابل نمایش برای کاربران دیگر خواهد بوذ."
 
 ORDER_CREATE_CHECK = """
 نوع سفارش : {{ order_action }}
@@ -122,3 +134,31 @@ ORDER_CREATE_CHECK = """
 سکه قابل پرداخت برای ثبت سفارش : {{ price }}
 """
 
+ORDER_CREATE_FAILED = """
+ثبت سفارش شما با لینک:
+%s
+با مشکل مواجه شد.
+ لطفا از خصوصی نبودن صفحه مورد تظر اطمینان حاصل فرمایید.
+"""
+
+ACTIVITY_LIST = """
+{% if inquiries %}
+{% for inquiry in inquiries %}
+شماره: /{{ inquiry.id }}
+نوع : {{ inquiry.order.action.get_action_type_display }}
+لینک :
+<a href="{{ inquiry.order.link }}">{{ inquiry.order.link }}</a>
+وضعیت :{{ inquiry.get_status_display }}
+قابل انجام برای صفحه {{ inquiry.user_page.page.instagram_username }} شما
+
+{% endfor %} 
+{% else %}
+متاسفانه هیچ رکوردی یافت نشد !
+{% endif %}
+"""
+
+SINGLE_INQUIRY_SELECT = """
+شماره: {{ inquiry.id }}
+لینک:
+<a href="{{ inquiry.order.link }}">{{ inquiry.order.link }}</a>
+"""

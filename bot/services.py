@@ -3,8 +3,9 @@ import logging
 from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.template import Template, Context
+from telegram import ParseMode, InlineKeyboardMarkup
 
-from apps.instagram_app.models import InstaPage, UserPage, Order
+from apps.instagram_app.models import InstaPage, UserPage, Order, UserInquiry
 from apps.instagram_app.services import InstagramAppService
 from apps.telegram_app.models import TelegramUser
 from bot import texts, buttons
@@ -95,14 +96,70 @@ class InstaBotService(object):
     def get_order_list(bot, update, user, counter=1):
         try:
             orders = Order.objects.filter(owner=user)
-            p = Paginator(orders, 2)
+            p = Paginator(orders, 1)
             page = p.page(counter)
 
             bot.send_message(
                 text=InstaBotService.render_template(texts.ORDER_LIST, orders=page.object_list),
                 chat_id=update.effective_user.id,
-                reply_markup=buttons.pagination_button(has_next=page.has_next(), has_previous=page.has_previous())
+                reply_markup=buttons.pagination_button(has_next=page.has_next(), has_previous=page.has_previous()),
+                disable_web_page_preview=True,
+                parse_mode=ParseMode.HTML
+
             )
+        except Exception as e:
+            bot.send_message(
+                text=texts.ORDER_NOT_FOUND,
+                chat_id=update.effective_user.id,
+                reply_markup=buttons.start()
+            )
+
+    @staticmethod
+    def get_activity_list(bot, update, user, session, counter=1, filter_params=None):
+
+        try:
+            inquiries = UserInquiry.objects.select_related(
+                'order', 'order__action', 'user_page__page'
+            ).filter(
+                user_page__user=user
+            )
+            if filter_params:
+                status = [param for param in filter_params if isinstance(param, int)]
+                action = [param for param in filter_params if isinstance(param, str)]
+                if status:
+                    inquiries = inquiries.filter(status__in=status)
+                if action:
+                    inquiries = inquiries.filter(order__action__action_type__in=action)
+            session['counter'] += 1
+            counter = session.get('counter')
+            p = Paginator(inquiries, 3)
+            page = p.page(counter)
+            if update.callback_query:
+                bot.edit_message_text(
+                    text=InstaBotService.render_template(texts.ACTIVITY_LIST, inquiries=page.object_list),
+                    chat_id=update.effective_user.id,
+                    reply_markup=InlineKeyboardMarkup(
+                        buttons.activity(page.has_next(), page.has_previous(), filter_params)
+                    ),
+                    disable_web_page_preview=True,
+                    message_id=update.callback_query.message.message_id,
+                    parse_mode=ParseMode.HTML
+
+                )
+                InstaBotService.refresh_session(bot, update, session)
+                return
+
+            bot.send_message(
+                text=InstaBotService.render_template(texts.ACTIVITY_LIST, inquiries=page.object_list),
+                chat_id=update.effective_user.id,
+                reply_markup=InlineKeyboardMarkup(
+                    buttons.activity(page.has_next(), page.has_previous(), filter_params)
+                ),
+                disable_web_page_preview=True,
+                parse_mode=ParseMode.HTML
+            )
+            InstaBotService.refresh_session(bot, update, session)
+
         except Exception:
             bot.send_message(
                 text=texts.ORDER_NOT_FOUND,

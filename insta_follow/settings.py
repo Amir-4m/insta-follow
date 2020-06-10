@@ -178,9 +178,9 @@ MEDIA_URL = '/media/'
 #     BASE_DIR / 'fixtures',
 # ]
 #
-# LOCALE_PATHS = [
-#     BASE_DIR / 'locale',
-# ]
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
 
 LOG_DIR = BASE_DIR / 'logs'
 LOGGING = ({
