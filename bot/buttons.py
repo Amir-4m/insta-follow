@@ -21,48 +21,52 @@ def start():
 
 def collect_coin_type():
     buttons = [
-        [KeyboardButton(texts.CHOICE_BY_LIKE)],
-        [KeyboardButton(texts.CHOICE_BY_COMMENT)],
-        [KeyboardButton(texts.CHOICE_BY_FOLLOW)],
+        [InlineKeyboardButton(texts.CHOICE_BY_LIKE, callback_data='type_like')],
+        [InlineKeyboardButton(texts.CHOICE_BY_COMMENT, callback_data='type_comment')],
+        [InlineKeyboardButton(texts.CHOICE_BY_FOLLOW, callback_data='type_follow')],
 
     ]
 
-    return ReplyKeyboardMarkup(buttons, one_time_keyboard=True)
+    return InlineKeyboardMarkup(buttons)
 
 
 def collect_coin_page(user):
     buttons = [
-        [KeyboardButton(user_page.page.instagram_username)] for user_page in user.user_pages.filter(is_active=True)
+        [InlineKeyboardButton(user_page.page.instagram_username, callback_data=user_page.page.instagram_username)] for
+        user_page in user.user_pages.filter(is_active=True)
     ]
 
-    return ReplyKeyboardMarkup(buttons, one_time_keyboard=True)
+    return InlineKeyboardMarkup(buttons)
 
 
-def inquiry(user_page, chosen=None):
+def inquiry(inquiries, chosen=None):
     if chosen is None:
         chosen = []
-    buttons = []
+    buttons = [
+        [InlineKeyboardButton(text="تایید", callback_data='submit_inquiry')],
+        [InlineKeyboardButton(text="بازگشت", callback_data='back')]
+    ]
     temp = []
-    for _, btn in enumerate(UserInquiry.objects.filter(user_page=user_page, status=UserInquiry.STATUS_OPEN)):
+    for _, btn in enumerate(inquiries):
+        text = f" سفارش {btn.id} را انجام دادم "
         if btn.id in chosen:
-            temp.append(InlineKeyboardButton(text="✅" + str(btn.id), callback_data=btn.id))
+            temp.append(InlineKeyboardButton(text="✅" + text, callback_data=btn.id))
         else:
-            temp.append(InlineKeyboardButton(text=btn.id, callback_data=btn.id))
+            temp.append(InlineKeyboardButton(text=text, callback_data=btn.id))
     if len(temp) != 0:
         buttons.append(temp)
-
     return InlineKeyboardMarkup(buttons)
 
 
 def order_action():
     buttons = [
-        [KeyboardButton(texts.LIKE)],
-        [KeyboardButton(texts.COMMENT)],
-        [KeyboardButton(texts.FOLLOW)]
+        [InlineKeyboardButton(texts.LIKE, callback_data='inquiry_like')],
+        [InlineKeyboardButton(texts.COMMENT, callback_data='inquiry_comment')],
+        [InlineKeyboardButton(texts.FOLLOW, callback_data='inquiry_follow')]
 
     ]
 
-    return ReplyKeyboardMarkup(buttons, one_time_keyboard=True)
+    return InlineKeyboardMarkup(buttons)
 
 
 def order_check():
@@ -86,17 +90,16 @@ def pagination_button(has_next, has_previous):
     }
 
     if has_next and not has_previous:
-        return InlineKeyboardMarkup(pagination['next'])
+        return pagination['next']
     elif has_previous and not has_next:
-        return InlineKeyboardMarkup(pagination['prev'])
+        return pagination['prev']
     elif has_next and has_previous:
-        return InlineKeyboardMarkup(pagination['next'] + pagination['prev'])
+        return pagination['next'] + pagination['prev']
     else:
         return None
 
 
-def activity(chosen=None):
-
+def activity(has_next, has_previous, chosen=None):
     if chosen is None:
         chosen = []
 
@@ -109,7 +112,7 @@ def activity(chosen=None):
         (texts.FILTER_LIKE, InstaAction.ACTION_LIKE),
         (texts.FILTER_FOLLOW, InstaAction.ACTION_FOLLOW),
         (texts.FILTER_COMMENT, InstaAction.ACTION_COMMENT),
-        # (texts.FILTER_BY_PAGE, {'user_page': UserInquiry.STATUS_EXPIRED}),
+        # (texts.FILTER_BY_PAGE, {'user_page': 'a'}),
 
     ]
 
@@ -119,7 +122,10 @@ def activity(chosen=None):
             temp.append([InlineKeyboardButton(text="✅" + choice[0], callback_data=choice[1])])
         else:
             temp.append([InlineKeyboardButton(text=choice[0], callback_data=choice[1])])
-    return InlineKeyboardMarkup(temp)
+    if pagination_button(has_next, has_previous):
+        return pagination_button(has_next, has_previous) + temp
+    else:
+        return temp
 
 
 def done_inquiry():
