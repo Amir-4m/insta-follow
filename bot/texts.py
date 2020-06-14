@@ -6,6 +6,8 @@ START_USER_HAS_NO_PAGE = """
 به صورت username@ بنویسید و ارسال کنید.
 """
 
+ADD_PAGE_LOADING = "در حال گرفتن اطلاعات ..."
+
 BACK_TO_MENU = "بازگشت به منوی اصلی ↪ ..."
 
 CHOICE_PROFILE = "مشاهده پروفایل 👤"
@@ -101,6 +103,7 @@ NEXT_PAGE = "➡ صفحه بعدی"
 PREVIOUS_PAGE = "صفحه قبلی ⬅"
 
 ORDER_LIST = """
+{% if orders %}
 لیست سفارشات شما 📜:
 
 {% for order in orders %}
@@ -112,6 +115,9 @@ ORDER_LIST = """
 وضعیت 🟠 :{% if order.is_enable %}فعال{% else %}غیر فعال{% endif %}
 
 {% endfor %}
+{% else %}
+سفارشی یافت نشد !
+{% endif %}
 """
 
 ORDER_NOT_FOUND = "سفارشی یافت نشد !"
@@ -153,7 +159,7 @@ ACTIVITY_LIST = """
 لینک 📎 :
 <a href="{{ inquiry.order.link }}">{{ inquiry.order.link }}</a>
 وضعیت 🟠 :{{ inquiry.get_status_display }}
-سکه دریافتی: {{ inquiry.order.action.action_value }}
+سکه دریافتی 💰 : {{ inquiry.order.action.action_value }}
 قابل انجام برای صفحه {{ inquiry.user_page.page.instagram_username }} شما
 
 {% endfor %} 

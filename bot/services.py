@@ -59,8 +59,8 @@ class InstaBotService(object):
             page_info = InstagramAppService.get_page_info(instagram_username, full_info=True)
             page, i_created = InstaPage.objects.get_or_create(
                 instagram_user_id=page_info[0],
-                instagram_username=instagram_username,
                 defaults=dict(
+                    instagram_username=instagram_username,
                     followers=page_info[2],
                     following=page_info[3],
                     post_no=page_info[4]
@@ -93,8 +93,25 @@ class InstaBotService(object):
             )
 
     @staticmethod
-    def get_order_list(bot, update, user, counter=1):
+    def get_order_list(bot, update, user, session, counter=1):
         try:
+            data = ''
+            if update.callback_query:
+                data = update.callback_query.data
+            try:
+                if data == 'next':
+                    session['counter'] += 1
+                    counter = session.get('counter')
+                elif data == 'previous':
+                    session['counter'] = session['counter'] - 1
+                    counter = session.get('counter')
+            except KeyError:
+                bot.send_message(
+                    text=texts.ERROR_MESSAGE,
+                    chat_id=update.effective_user.id,
+                    reply_markup=buttons.start()
+                )
+                return
             orders = Order.objects.filter(owner=user)
             p = Paginator(orders, 3)
             page = p.page(counter)
@@ -103,16 +120,17 @@ class InstaBotService(object):
                 button = InlineKeyboardMarkup(temp_button)
             else:
                 button = None
-            if update.callback_query:
-                bot.edit_message_text(
-                    text=InstaBotService.render_template(texts.ORDER_LIST, orders=page.object_list),
-                    chat_id=update.effective_user.id,
-                    reply_markup=button,
-                    disable_web_page_preview=True,
-                    message_id=update.callback_query.message.message_id,
-                    parse_mode=ParseMode.HTML
-                )
-                return
+                if update.callback_query:
+                    bot.edit_message_text(
+                        text=InstaBotService.render_template(texts.ORDER_LIST, orders=page.object_list),
+                        chat_id=update.effective_user.id,
+                        reply_markup=button,
+                        disable_web_page_preview=True,
+                        message_id=update.callback_query.message.message_id,
+                        parse_mode=ParseMode.HTML
+                    )
+                    InstaBotService.refresh_session(bot, update, session)
+                    return
             bot.send_message(
                 text=InstaBotService.render_template(texts.ORDER_LIST, orders=page.object_list),
                 chat_id=update.effective_user.id,
@@ -122,12 +140,14 @@ class InstaBotService(object):
 
             )
         except Exception as e:
+            print(e)
             logger.error(f"getting order list got error {e}")
             bot.send_message(
                 text=texts.ORDER_NOT_FOUND,
                 chat_id=update.effective_user.id,
                 reply_markup=buttons.start()
             )
+        InstaBotService.refresh_session(bot, update, session)
 
     @staticmethod
     def get_activity_list(bot, update, user, session, counter=1, filter_params=None):
@@ -203,35 +223,3 @@ class InstaBotService(object):
                 chat_id=update.effective_user.id,
                 reply_markup=buttons.start()
             )
-
-    @staticmethod
-    def paginate_data(bot, update, session, user, data, list_type):
-        if data == 'next':
-            try:
-                session['counter'] += 1
-                counter = session.get('counter')
-                if list_type == 'order_list':
-                    InstaBotService.get_order_list(bot, update, user, counter=counter)
-                InstaBotService.refresh_session(bot, update, session)
-            except KeyError:
-                bot.send_message(
-                    text=texts.ERROR_MESSAGE,
-                    chat_id=update.effective_user.id,
-                    reply_markup=buttons.start()
-                )
-                return
-
-        elif data == 'previous':
-            try:
-                session['counter'] = session['counter'] - 1
-                counter = session.get('counter')
-                if list_type == 'order_list':
-                    InstaBotService.get_order_list(bot, update, user, counter=counter)
-                InstaBotService.refresh_session(bot, update, session)
-            except KeyError:
-                bot.send_message(
-                    text=texts.ERROR_MESSAGE,
-                    chat_id=update.effective_user.id,
-                    reply_markup=buttons.start()
-                )
-                return

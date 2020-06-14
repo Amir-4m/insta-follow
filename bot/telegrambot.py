@@ -43,6 +43,7 @@ def stop(bot, update, session):
 @run_async
 @add_session()
 def dispatcher(bot, update, session):
+    print(session)
     user = session.get('user')
     text = update.message.text
     if not text.startswith('@') and not UserPage.objects.filter(user=user, is_active=True).exists():
@@ -122,12 +123,11 @@ def dispatcher(bot, update, session):
         """
         Shows a list of user orders
         """
-        session['counter'] = 1
-        session['list_type'] = 'order_list'
+        session.pop('counter', None)
 
-        InstaBotService.get_order_list(bot, update, user)
-        InstaBotService.refresh_session(bot, update, session)
-        return
+        session['state'] = 'get_order_list'
+        session['counter'] = 1
+        InstaBotService.get_order_list(bot, update, user, session)
 
     elif text == texts.CHOICE_CREATE_ORDER:
         session['state'] = 'create_order_action'
@@ -137,10 +137,11 @@ def dispatcher(bot, update, session):
             reply_markup=buttons.order_action()
         )
     elif text == texts.CHOICE_ACTIVITY:
+        session.pop('counter', None)
+
         session['state'] = 'get_activity'
         session['counter'] = 1
         InstaBotService.get_activity_list(bot, update, user, session)
-        InstaBotService.refresh_session(bot, update, session)
 
     else:
         call_state_function(bot, update)
@@ -152,13 +153,7 @@ def dispatcher(bot, update, session):
 @run_async
 @add_session()
 def call_state_function(bot, update, session):
-    user = session.get('user')
-    if update.callback_query:
-        data = update.callback_query.data
-        list_type = session.get('list_type')
-        if list_type:
-            return InstaBotService.paginate_data(bot, update, session, user, data, list_type)
-
+    print(session)
     state = session.get('state')
     try:
         eval(state)(bot, update)
@@ -175,6 +170,9 @@ def call_state_function(bot, update, session):
 def add_page(bot, update, session=None):
     text = update.message.text
     user = session.get('user')
+    bot.send_message(chat_id=update.effective_user.id,
+                     text=texts.ADD_PAGE_LOADING,
+                     )
     InstaBotService.add_insta_page(bot, update, user, text)
     return
 
@@ -296,6 +294,8 @@ def get_inquiry(bot, update, session=None):
                 chat_id=update.effective_user.id,
                 reply_markup=buttons.start(),
             )
+            session.pop('active_page')
+            session.pop('action')
 
     except Exception as e:
         logger.error(f"TLG-error occurred in getting inquiry: {e}")
@@ -304,7 +304,8 @@ def get_inquiry(bot, update, session=None):
             chat_id=update.effective_user.id,
             reply_markup=buttons.start()
         )
-        return
+        session.pop('active_page')
+        session.pop('action')
 
     InstaBotService.refresh_session(bot, update, session)
 
@@ -360,6 +361,11 @@ def check_inquiry(bot, update, session=None):
                     chat_id=update.effective_user.id,
                     reply_markup=buttons.start()
                 )
+                session.pop('active_page')
+                session.pop('action')
+                session.pop('inquiry_ids')
+                session.pop('done_ids')
+
             except Exception as e:
                 logger.error(f"TLG-error occurred in checking inquiry: {e}")
                 bot.send_message(
@@ -367,6 +373,12 @@ def check_inquiry(bot, update, session=None):
                     chat_id=update.effective_user.id,
                     reply_markup=buttons.start()
                 )
+                session.pop('active_page')
+                session.pop('action')
+                session.pop('inquiry_ids')
+                session.pop('done_ids')
+                InstaBotService.refresh_session(bot, update, session)
+
                 return
 
         elif data == 'back':
@@ -379,7 +391,19 @@ def check_inquiry(bot, update, session=None):
                 chat_id=update.effective_user.id,
                 reply_markup=buttons.start()
             )
+            session.pop('active_page')
+            session.pop('action')
+            session.pop('inquiry_ids')
+            session.pop('done_ids')
 
+    InstaBotService.refresh_session(bot, update, session)
+
+
+@run_async
+@add_session()
+def get_order_list(bot, update, session=None):
+    user = session.get('user')
+    InstaBotService.get_order_list(bot, update, user, session)
     InstaBotService.refresh_session(bot, update, session)
 
 
