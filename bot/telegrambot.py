@@ -43,7 +43,6 @@ def stop(bot, update, session):
 @run_async
 @add_session()
 def dispatcher(bot, update, session):
-    print(session)
     user = session.get('user')
     text = update.message.text
     if not text.startswith('@') and not UserPage.objects.filter(user=user, is_active=True).exists():

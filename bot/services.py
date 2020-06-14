@@ -140,7 +140,6 @@ class InstaBotService(object):
 
             )
         except Exception as e:
-            print(e)
             logger.error(f"getting order list got error {e}")
             bot.send_message(
                 text=texts.ORDER_NOT_FOUND,
