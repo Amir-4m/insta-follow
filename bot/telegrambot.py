@@ -1,11 +1,13 @@
 import logging
+import json
+import re
 
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from telegram.ext.dispatcher import run_async
 from telegram.parsemode import ParseMode
-from apps.instagram_app.models import UserPage, InstaAction, Order, CoinTransaction
+from apps.instagram_app.models import UserPage, InstaAction, Order, CoinTransaction, UserInquiry
 from apps.instagram_app.services import CustomService
 from apps.telegram_app.models import TelegramUser
 from .decorators import add_session
@@ -43,12 +45,16 @@ def stop(bot, update, session):
 def dispatcher(bot, update, session):
     user = session.get('user')
     text = update.message.text
+    if not text.startswith('@') and not UserPage.objects.filter(user=user, is_active=True).exists():
+        bot.send_message(
+            chat_id=update.effective_user.id,
+            text=texts.START_USER_HAS_NO_PAGE.format(user.first_name),
+        )
 
-    if text.startswith('@') and not UserPage.objects.filter(user=user, is_active=True).exists():
-
+    elif text.startswith('@'):
         """
-        Creating user page on first login if user has no active page
-        """
+                Creating user page on first login if user has no active page
+                """
 
         page_id = text.lstrip('@')
         InstaBotService.add_insta_page(bot, update, user, page_id)
@@ -116,11 +122,11 @@ def dispatcher(bot, update, session):
         """
         Shows a list of user orders
         """
-        session['counter'] = 1
-        session['list_type'] = 'order_list'
+        session.pop('counter', None)
 
-        InstaBotService.get_order_list(bot, update, user)
-        return
+        session['state'] = 'get_order_list'
+        session['counter'] = 1
+        InstaBotService.get_order_list(bot, update, user, session)
 
     elif text == texts.CHOICE_CREATE_ORDER:
         session['state'] = 'create_order_action'
@@ -129,6 +135,12 @@ def dispatcher(bot, update, session):
             chat_id=update.effective_user.id,
             reply_markup=buttons.order_action()
         )
+    elif text == texts.CHOICE_ACTIVITY:
+        session.pop('counter', None)
+
+        session['state'] = 'get_activity'
+        session['counter'] = 1
+        InstaBotService.get_activity_list(bot, update, user, session)
 
     else:
         call_state_function(bot, update)
@@ -140,19 +152,13 @@ def dispatcher(bot, update, session):
 @run_async
 @add_session()
 def call_state_function(bot, update, session):
-    user = session.get('user')
-
-    if update.callback_query:
-        data = update.callback_query.data
-        list_type = session.get('list_type')
-        if list_type:
-            return InstaBotService.paginate_data(bot, update, session, user, data, list_type)
-
+    print(session)
     state = session.get('state')
     try:
         eval(state)(bot, update)
-    except Exception:
+    except Exception as e:
         session.pop('state', None)
+        logger.error(f'dispatcher got error {e}')
         bot.send_message(chat_id=update.effective_user.id,
                          text=texts.WRONG_COMMAND,
                          reply_markup=buttons.start())
@@ -163,6 +169,9 @@ def call_state_function(bot, update, session):
 def add_page(bot, update, session=None):
     text = update.message.text
     user = session.get('user')
+    bot.send_message(chat_id=update.effective_user.id,
+                     text=texts.ADD_PAGE_LOADING,
+                     )
     InstaBotService.add_insta_page(bot, update, user, text)
     return
 
@@ -206,38 +215,50 @@ def delete_page(bot, update, session=None):
 @run_async
 @add_session()
 def collect_coin(bot, update, session=None):
-    text = update.message.text
+    data = ""
     user = session.get('user')
     session['state'] = 'get_inquiry'
+    try:
+        if update.callback_query:
+            data = update.callback_query.data
+        if data == 'type_like':
+            session['action'] = InstaAction.ACTION_LIKE
 
-    if text == texts.CHOICE_BY_LIKE:
-        session['action'] = InstaAction.ACTION_LIKE
+        elif data == 'type_comment':
+            session['action'] = InstaAction.ACTION_COMMENT
 
-    elif text == texts.CHOICE_BY_COMMENT:
-        session['action'] = InstaAction.ACTION_COMMENT
+        elif data == 'type_follow':
+            session['action'] = InstaAction.ACTION_FOLLOW
 
-    elif text == texts.CHOICE_BY_FOLLOW:
-        session['action'] = InstaAction.ACTION_FOLLOW
+        else:
+            bot.send_message(chat_id=update.effective_user.id,
+                             text=texts.WRONG_COMMAND,
+                             reply_markup=buttons.start())
+            return
 
-    else:
-        bot.send_message(chat_id=update.effective_user.id,
-                         text=texts.WRONG_COMMAND,
-                         reply_markup=buttons.start())
+        bot.edit_message_text(
+            text=texts.COLLECT_COIN_PAGE,
+            chat_id=update.effective_user.id,
+            reply_markup=buttons.collect_coin_page(user),
+            message_id=update.callback_query.message.message_id,
+        )
+        InstaBotService.refresh_session(bot, update, session)
+    except Exception as e:
+        logger.error(f"collect coin got error {e}")
+        bot.send_message(
+            text=texts.ERROR_MESSAGE,
+            chat_id=update.effective_user.id,
+            reply_markup=buttons.start()
+        )
         return
-
-    bot.send_message(
-        text=texts.COLLECT_COIN_PAGE,
-        chat_id=update.effective_user.id,
-        reply_markup=buttons.collect_coin_page(user)
-    )
-
-    InstaBotService.refresh_session(bot, update, session)
 
 
 @run_async
 @add_session()
 def get_inquiry(bot, update, session=None):
-    page_username = update.message.text
+    page_username = ""
+    if update.callback_query:
+        page_username = update.callback_query.data
     action = session.get('action')
     user = session.get('user')
     session['state'] = 'check_inquiry'
@@ -258,10 +279,13 @@ def get_inquiry(bot, update, session=None):
         inquiries = CustomService.get_or_create_inquiries(user_page, action, limit=10)
         if len(inquiries) >= 1:
             session['inquiry_ids'] = [inquiry.id for inquiry in inquiries]
-            bot.send_message(
+            bot.edit_message_text(
                 text=InstaBotService.render_template(texts.INQUIRY_LIST, inquiries=inquiries),
                 chat_id=update.effective_user.id,
-                reply_markup=buttons.inquiry(),
+                reply_markup=buttons.inquiry(inquiries=inquiries),
+                disable_web_page_preview=True,
+                message_id=update.callback_query.message.message_id,
+                parse_mode=ParseMode.HTML
             )
         else:
             bot.send_message(
@@ -269,6 +293,8 @@ def get_inquiry(bot, update, session=None):
                 chat_id=update.effective_user.id,
                 reply_markup=buttons.start(),
             )
+            session.pop('active_page')
+            session.pop('action')
 
     except Exception as e:
         logger.error(f"TLG-error occurred in getting inquiry: {e}")
@@ -277,7 +303,8 @@ def get_inquiry(bot, update, session=None):
             chat_id=update.effective_user.id,
             reply_markup=buttons.start()
         )
-        return
+        session.pop('active_page')
+        session.pop('action')
 
     InstaBotService.refresh_session(bot, update, session)
 
@@ -285,49 +312,109 @@ def get_inquiry(bot, update, session=None):
 @run_async
 @add_session()
 def check_inquiry(bot, update, session=None):
-    text = update.message.text
-    if text == texts.BACK:
-        session['state'] = 'collect_coin'
-        bot.send_message(
-            text=texts.COLLECT_COIN_TYPES,
-            chat_id=update.effective_user.id,
-            reply_markup=buttons.collect_coin_type()
-        )
-    elif text == texts.DONE_INQUIRY:
-        try:
-            done_ids = session.get('inquiry_ids')
-            page_id = session.get('active_page')
-            CustomService.check_user_action(done_ids, page_id)
-            bot.send_message(
-                text=texts.CHECK_INQUIRY,
-                chat_id=update.effective_user.id,
-                reply_markup=buttons.start()
-            )
-        except Exception as e:
-            logger.error(f"TLG-error occurred in checking inquiry: {e}")
-            bot.send_message(
-                text=texts.ERROR_MESSAGE,
-                chat_id=update.effective_user.id,
-                reply_markup=buttons.start()
-            )
-            return
+    inquiry_ids = session.get('inquiry_ids')
+    if "done_ids" not in session:
+        session['done_ids'] = []
+    page_id = session.get('active_page')
+    if update.callback_query:
+        data = update.callback_query.data
+        if data != 'submit_inquiry' and data != 'back':
+            data = int(data)
+            if data not in session['done_ids']:
+                session['done_ids'].append(data)
 
-    session.pop('inquiry_ids')
-    session.pop('active_page')
-    session.pop('action')
+            else:
+                session['done_ids'].remove(data)
+            inquiries = UserInquiry.objects.filter(id__in=inquiry_ids, status=UserInquiry.STATUS_OPEN)
+
+            bot.edit_message_text(
+                text=InstaBotService.render_template(texts.INQUIRY_LIST, inquiries=inquiries),
+                chat_id=update.effective_user.id,
+                reply_markup=buttons.inquiry(inquiries=inquiries, chosen=session['done_ids']),
+                disable_web_page_preview=True,
+                message_id=update.callback_query.message.message_id,
+                parse_mode=ParseMode.HTML
+
+            )
+            InstaBotService.refresh_session(bot, update, session)
+
+        elif data == 'submit_inquiry':
+            try:
+                if not session['done_ids']:
+                    bot.send_message(
+                        text=texts.INQUIRY_SUBMIT_ERROR,
+                        chat_id=update.effective_user.id,
+                    )
+                    return
+                UserInquiry.objects.filter(
+                    id__in=session['done_ids'], user_page=page_id, status=UserInquiry.STATUS_OPEN
+                ).update(status=UserInquiry.STATUS_DONE)
+
+                bot.edit_message_text(
+                    text=texts.CHECK_INQUIRY,
+                    chat_id=update.effective_user.id,
+                    message_id=update.callback_query.message.message_id,
+                )
+                bot.send_message(
+                    text=texts.BACK_TO_MENU,
+                    chat_id=update.effective_user.id,
+                    reply_markup=buttons.start()
+                )
+                session.pop('active_page')
+                session.pop('action')
+                session.pop('inquiry_ids')
+                session.pop('done_ids')
+
+            except Exception as e:
+                logger.error(f"TLG-error occurred in checking inquiry: {e}")
+                bot.send_message(
+                    text=texts.ERROR_MESSAGE,
+                    chat_id=update.effective_user.id,
+                    reply_markup=buttons.start()
+                )
+                session.pop('active_page')
+                session.pop('action')
+                session.pop('inquiry_ids')
+                session.pop('done_ids')
+                InstaBotService.refresh_session(bot, update, session)
+
+                return
+
+        elif data == 'back':
+            bot.delete_message(
+                chat_id=update.effective_user.id,
+                message_id=update.callback_query.message.message_id,
+            )
+            bot.send_message(
+                text=texts.BACK_TO_MENU,
+                chat_id=update.effective_user.id,
+                reply_markup=buttons.start()
+            )
+            session.pop('active_page')
+            session.pop('action')
+            session.pop('inquiry_ids')
+            session.pop('done_ids')
 
     InstaBotService.refresh_session(bot, update, session)
 
 
 @run_async
 @add_session()
+def get_order_list(bot, update, session=None):
+    user = session.get('user')
+    InstaBotService.get_order_list(bot, update, user, session)
+    InstaBotService.refresh_session(bot, update, session)
+
+
+@run_async
+@add_session()
 def create_order_action(bot, update, session=None):
-    text = update.message.text
-    if text == texts.LIKE:
+    data = update.callback_query.data
+    if data == 'inquiry_like':
         session['order_action'] = InstaAction.ACTION_LIKE
-    elif text == texts.COMMENT:
+    elif data == 'inquiry_comment':
         session['order_action'] = InstaAction.ACTION_COMMENT
-    elif text == texts.FOLLOW:
+    elif data == 'inquiry_follow':
         session['order_action'] = InstaAction.ACTION_FOLLOW
 
     if session['order_action'] in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
@@ -336,10 +423,11 @@ def create_order_action(bot, update, session=None):
         bot_text = texts.ORDER_CREATE_LINK_F
 
     session['state'] = 'create_order_link'
-
-    bot.send_message(
+    bot.edit_message_text(
         text=bot_text,
         chat_id=update.effective_user.id,
+        message_id=update.callback_query.message.message_id,
+
     )
 
     InstaBotService.refresh_session(bot, update, session)
@@ -412,15 +500,16 @@ def order_create_final(bot, update, session=None):
                 if user.coin_transactions.all().aggregate(
                         wallet=Coalesce(Sum('amount'), 0)
                 )['wallet'] < insta_action.buy_value * target:
-                    bot.send_message(
+                    bot.edit_message_text(
                         text=texts.NOT_ENOUGH_COIN,
                         chat_id=update.effective_user.id,
+                        message_id=update.callback_query.message.message_id,
                         reply_markup=buttons.start()
 
                     )
                     session.pop('order_link')
                     session.pop('order_action')
-                    session.pop('target')
+                    session.pop('order_target')
                     InstaBotService.refresh_session(bot, update, session)
                     return
                 ct = CoinTransaction.objects.create(user=user, amount=-(insta_action.buy_value * target))
@@ -434,31 +523,151 @@ def order_create_final(bot, update, session=None):
                 ct.description = f"create order {order.id}"
                 ct.save()
 
-            bot.send_message(
+            bot.edit_message_text(
                 text=texts.ORDER_CREATE_FINAL,
                 chat_id=update.effective_user.id,
-                reply_markup=buttons.start()
+                message_id=update.callback_query.message.message_id,
 
             )
 
-            session.pop('order_link')
-            session.pop('order_action')
-            session.pop('target')
-
-        elif data == 'cancel':
             bot.send_message(
-                text=texts.ORDER_CANCEL,
+                text=texts.BACK_TO_MENU,
                 chat_id=update.effective_user.id,
                 reply_markup=buttons.start()
             )
 
+        elif data == 'cancel':
+            bot.edit_message_text(
+                text=texts.ORDER_CANCEL,
+                chat_id=update.effective_user.id,
+                message_id=update.callback_query.message.message_id,
+            )
+            bot.send_message(
+                text=texts.BACK_TO_MENU,
+                chat_id=update.effective_user.id,
+                reply_markup=buttons.start()
+            )
+
+        session.pop('order_link')
+        session.pop('order_action')
+        session.pop('order_target')
+
+        InstaBotService.refresh_session(bot, update, session)
     except Exception as e:
 
         logger.error(f"TLG-error occurred in final section of create order: {e}")
+        bot.edit_message_text(
+            text=texts.ERROR_MESSAGE,
+            chat_id=update.effective_user.id,
+            message_id=update.callback_query.message.message_id,
+        )
+        bot.send_message(
+            text=texts.BACK_TO_MENU,
+            chat_id=update.effective_user.id,
+            reply_markup=buttons.start()
+        )
+        return
+
+
+@run_async
+@add_session()
+def get_activity(bot, update, session=None):
+    user = session.get('user')
+    statuses = []
+    types = []
+    if "chosen_filters" not in session:
+        session['chosen_filters'] = []
+    try:
+        if update.callback_query:
+            data = update.callback_query.data
+            if data is not None and data.isdigit():
+                data = int(data)
+                statuses.append(data)
+
+            elif data is not None and data.isalpha() and data not in ['next', 'previous']:
+                types.append(data)
+            if data not in session['chosen_filters'] and data not in ['next', 'previous']:
+                session['chosen_filters'].append(data)
+            elif data in session['chosen_filters'] and data not in ['next', 'previous']:
+                session['chosen_filters'].remove(data)
+            InstaBotService.get_activity_list(
+                bot, update,
+                user,
+                session=session,
+                filter_params=session['chosen_filters']
+            )
+            InstaBotService.refresh_session(bot, update, session)
+
+        elif update.message.text and re.search(r'[0-9]+', update.message.text):
+            inquiry_id = re.findall(r'\d+', update.message.text).pop()
+            session['state'] = 'check_single_inquiry'
+            session['inquiry'] = inquiry_id
+            inq = UserInquiry.objects.get(id=inquiry_id)
+
+            if inq.status != UserInquiry.STATUS_OPEN:
+                bot.send_message(
+                    text=texts.INQUIRY_NOT_FOUND,
+                    chat_id=update.effective_user.id,
+                    reply_markup=buttons.start()
+                )
+                return
+
+            bot.send_message(
+                text=InstaBotService.render_template(texts.SINGLE_INQUIRY_SELECT, inquiry=inq),
+                chat_id=update.effective_user.id,
+                parse_mode=ParseMode.HTML,
+                reply_markup=buttons.done_inquiry()
+            )
+
+            InstaBotService.refresh_session(bot, update, session)
+
+    except Exception as e:
+        logger.error(f"get activity got error {e}")
         bot.send_message(
             text=texts.ERROR_MESSAGE,
             chat_id=update.effective_user.id,
             reply_markup=buttons.start()
         )
-        return
-    InstaBotService.refresh_session(bot, update, session, clear=True)
+
+
+@run_async
+@add_session()
+def check_single_inquiry(bot, update, session=None):
+    data = update.callback_query.data
+
+    try:
+        if data == "done_inquiry":
+            inquiry = UserInquiry.objects.get(id=session['inquiry'])
+            inquiry.status = UserInquiry.STATUS_DONE
+            inquiry.save()
+            bot.edit_message_text(
+                text=texts.CHECK_INQUIRY,
+                chat_id=update.effective_user.id,
+                message_id=update.callback_query.message.message_id,
+            )
+            bot.send_message(
+                text=texts.BACK_TO_MENU,
+                chat_id=update.effective_user.id,
+                reply_markup=buttons.start()
+            )
+        elif data == 'cancel':
+            bot.delete_message(
+                chat_id=update.effective_user.id,
+                message_id=update.callback_query.message.message_id,
+            )
+            bot.send_message(
+                text=texts.BACK_TO_MENU,
+                chat_id=update.effective_user.id,
+                reply_markup=buttons.start()
+            )
+    except UserInquiry.DoesNotExist:
+        bot.send_message(
+            text=texts.INQUIRY_NOT_FOUND,
+            chat_id=update.effective_user.id,
+            reply_markup=buttons.start()
+        )
+    except Exception as e:
+        logger.error(f"check single inquiry gor error {e}")
+        bot.send_message(chat_id=update.effective_user.id,
+                         text=texts.WRONG_COMMAND,
+                         reply_markup=buttons.start())

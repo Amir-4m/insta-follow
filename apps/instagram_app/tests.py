@@ -3,15 +3,14 @@ import logging
 from django.db.models import Sum
 from django.test import override_settings
 from django.urls import reverse
-from mock import patch
+from django.test.client import RequestFactory
 
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APITestCase, APIClient
 
 from apps.accounts.models import User
-from apps.instagram_app.services import InstagramAppService
-from apps.instagram_app.models import UserPage, CoinTransaction, InstaAction, Order
+from apps.instagram_app.models import UserPage, CoinTransaction, InstaAction, Order, UserInquiry
 from apps.instagram_app.api.serializers import ProfileSerializer, OrderSerializer, UserInquirySerializer, \
     DeviceSerializer
 
@@ -40,17 +39,15 @@ class InstagramAPITestCase(APITestCase):
         url = reverse('profile-list')
         data = {
             'instagram_username': 'hello_world',
-            'user_id': 123456
         }
         response = self.client.post(url, data=data, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(UserPage.objects.get(
+        self.assertTrue(UserPage.objects.filter(
             page__instagram_username=data['instagram_username'],
-            page__instagram_user_id=data['user_id'],
             user=self.user
-        )
-        )
+        ).exists()
+                        )
 
     def test_delete_profile(self):
         url = reverse('profile-detail', kwargs={'pk': 1})
@@ -74,6 +71,9 @@ class InstagramAPITestCase(APITestCase):
         }
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(
+            Order.objects.filter(action=data['action'], link=data['link'], target_no=data['target_no']).exists()
+        )
 
     def test_recheck_order_not_enable(self):
         url = reverse('order-recheck', kwargs={'pk': 5})
@@ -119,16 +119,14 @@ class InstagramAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertRaisesMessage(ValidationError, {'Error': 'user and page does not match!'})
 
-    @patch.object(InstagramAppService, 'check_user_action')
-    def test_post_user_inquiry(self, mock_method):
-        url = reverse('userinquiry-post')
+    def test_post_user_inquiry(self):
+        url = reverse('userinquiry-done')
         data = {
             'done_ids': [1],
-            'page_id': 1
         }
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_method.assert_called_once_with(data['done_ids'], data['page_id'])
+        self.assertTrue(UserInquiry.objects.filter(id=1, status=UserInquiry.STATUS_DONE))
 
     def test_get_coin_transaction(self):
         url = reverse('cointransaction-list')
@@ -140,7 +138,7 @@ class InstagramAPITestCase(APITestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data['amount'],
+            response.data['wallet'],
             self.user.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet') or 0
         )
 
@@ -158,6 +156,8 @@ class InstagramSerializerTestCase(APITestCase):
 
     def setUp(self):
         self.user = User.objects.get(id=1)
+        self.request = RequestFactory()
+        self.request.user = self.user
         logging.disable(logging.CRITICAL)
 
     def tearDown(self):
@@ -225,22 +225,6 @@ class InstagramSerializerTestCase(APITestCase):
             data
         )
 
-    def test_order_serializer_invalid_target_no_data(self):
-        data = {
-            "action": InstaAction(pk=InstaAction.ACTION_FOLLOW),
-            "target_no": 0,
-            "instagram_username": "test"
-        }
-        serializer = OrderSerializer(data=data)
-
-        self.assertFalse(serializer.is_valid())
-        self.assertRaisesMessage(
-            ValidationError,
-            'target number could not be 0!',
-            serializer.validate,
-            data
-        )
-
     def test_order_serializer_create_follow_invalid_coin(self):
         data = {
             "action": InstaAction(pk=InstaAction.ACTION_FOLLOW),
@@ -274,52 +258,22 @@ class InstagramSerializerTestCase(APITestCase):
     def test_user_inquiry_valid_data(self):
         data = {
             'done_ids': [1],
-            'page_id': 1
         }
-        serializer = UserInquirySerializer(data=data, context={'user': self.user})
+        serializer = UserInquirySerializer(data=data, context={'request': self.request})
         self.assertTrue(serializer.is_valid())
 
-    def test_user_inquiry_invalid_user_page_data(self):
-        data = {
-            'done_ids': [1],
-            'page_id': 10000
-        }
-        serializer = UserInquirySerializer(data=data, context={'user': self.user})
-        self.assertFalse(serializer.is_valid())
-        self.assertRaisesMessage(
-            ValidationError,
-            'user and page does not match together !',
-            serializer.validate,
-            data
-        )
-
-    def test_user_inquiry_invalid_inquiry_data(self):
-        data = {
-            'done_ids': [1, 5, 7],
-            'page_id': 1
-        }
-        serializer = UserInquirySerializer(data=data, context={'user': self.user})
-        self.assertFalse(serializer.is_valid())
-        self.assertRaisesMessage(
-            ValidationError,
-            'invalid id for user inquiries',
-            serializer.validate,
-            data
-        )
-
-    def test_user_inquiry_invalid_data(self):
-        data = {
-            'done_ids': None,
-            'page_id': 1
-        }
-        serializer = UserInquirySerializer(data=data, context={'user': self.user})
-        self.assertFalse(serializer.is_valid())
-        self.assertRaisesMessage(
-            ValidationError,
-            '\'NoneType\' object is not iterable',
-            serializer.validate,
-            data
-        )
+    # def test_user_inquiry_invalid_inquiry_data(self):
+    #     data = {
+    #         'done_ids': [8],
+    #     }
+    #     serializer = UserInquirySerializer(data=data, context={'request': self.request})
+    #     self.assertFalse(serializer.is_valid())
+    #     self.assertRaisesMessage(
+    #         ParseError,
+    #         'list is not valid!',
+    #         serializer.validate,
+    #         data
+    #     )
 
     def test_device_id_create(self):
         data = {
