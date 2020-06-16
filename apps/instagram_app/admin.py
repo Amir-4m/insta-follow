@@ -29,6 +29,7 @@ class UserPageModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'page', 'updated_time', 'created_time')
     list_select_related = ['user', 'page']
     sortable_by = ('-created_time',)
+    search_fields = ('user__username', 'user__email')
 
 
 @admin.register(Order)
@@ -37,6 +38,7 @@ class OrderModelAdmin(admin.ModelAdmin):
     list_filter = ('action',)
     readonly_fields = ('media_url', 'instagram_username', 'entity_id')
     sortable_by = ('-created_time',)
+    search_fields = ('owner__username', 'owner__email')
 
 
 @admin.register(UserInquiry)
@@ -45,6 +47,7 @@ class UserInquiryModelAdmin(admin.ModelAdmin):
     list_select_related = ['order', 'user_page']
     list_filter = ('status',)
     sortable_by = ('-created_time',)
+    search_fields = ('user_page__user__username', 'user_page__user__email')
 
 
 @admin.register(InstaAction)
@@ -63,3 +66,4 @@ class InstagramAccountModelAdmin(admin.ModelAdmin):
     form = InstagramAccountForm
     list_display = ('id', 'username', 'updated_time', 'created_time')
     readonly_fields = ('login_attempt',)
+    search_fields = ('username',)
