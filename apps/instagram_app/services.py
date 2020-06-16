@@ -142,8 +142,8 @@ class InstagramAppService(object):
                 return instagram
 
             except Exception as e:
-                if InstagramAccount.objects.filter(is_enable=True).count() == 1:
-                    break
+                instagram_account.is_enable = False
+                instagram_account.save()
                 logger.error(f"logging in to instagram with account {instagram_account.username} got error: {e}")
         raise Exception("instagram login reached max retries !")
 
