@@ -267,7 +267,7 @@ if DEVEL is False:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
     from sentry_sdk.integrations.celery import CeleryIntegration
-
+    from sentry_sdk.integrations.logging import LoggingIntegration
     SENTRY_KEY = config('SENTRY_KEY')
     SENTRY_HOST = config('SENTRY_HOST')
     SENTRY_PROJECT_ID = config('SENTRY_PROJECT_ID')
@@ -275,7 +275,7 @@ if DEVEL is False:
 
     sentry_sdk.init(
         dsn=f"https://{SENTRY_KEY}@{SENTRY_HOST}/{SENTRY_PROJECT_ID}",
-        integrations=[DjangoIntegration(), CeleryIntegration()],
+        integrations=[DjangoIntegration(), CeleryIntegration(), LoggingIntegration()],
         default_integrations=False,
 
         # If you wish to associate users to errors (assuming you are using
