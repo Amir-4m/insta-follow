@@ -170,9 +170,8 @@ class CoinTransaction(models.Model):
     user = models.ForeignKey('accounts.User', related_name='coin_transactions', on_delete=models.CASCADE)
     amount = models.IntegerField(_('amount'))
     description = models.TextField(_("action"), blank=True)
-    # Todo :delete protect
-    inquiry = models.ForeignKey(UserInquiry, on_delete=models.CASCADE, null=True, blank=True)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True)
+    inquiry = models.ForeignKey(UserInquiry, on_delete=models.PROTECT, null=True, blank=True)
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, null=True, blank=True)
 
     class Meta:
         db_table = "insta_transactions"
