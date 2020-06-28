@@ -61,7 +61,7 @@ def collect_like(order_id, order_link, order_entity):
     has_next_page = True
     while limit < 2000 and has_next_page:
         try:
-            time.sleep(60)
+            time.sleep(5)
             response = InstagramAppService.req(LIKES_BY_SHORTCODE % urllib.parse.quote_plus(
                 json.dumps(variables, separators=(',', ':'))
             ))
@@ -119,7 +119,7 @@ def collect_comment(order_id, order_link, order_entity):
     has_next_page = True
     while limit < 2000 and has_next_page:
         try:
-            time.sleep(60)
+            time.sleep(5)
             response = InstagramAppService.req(COMMENTS_BY_SHORTCODE % urllib.parse.quote_plus(
                 json.dumps(variables, separators=(',', ':'))
             ))
