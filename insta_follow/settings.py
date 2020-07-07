@@ -258,7 +258,8 @@ INSTAGRAM_CREDENTIALS = {
 
 DEVLYTIC_TOKEN = config('DEVLYTIC_TOKEN', default='')
 PUSH_API_URL = config('PUSH_API_URL', default='')
-
+BASE_API_URL = config('BASE_API_URL', default='')
+MONITOR_TOKEN = config('MONITOR_TOKEN', default='')
 USER_PENALTY_AMOUNT = config('USER_PENALTY_AMOUNT', default=1.5, cast=float)
 
 FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=20000, cast=int)

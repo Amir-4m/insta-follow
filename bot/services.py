@@ -56,14 +56,21 @@ class InstaBotService(object):
     @staticmethod
     def add_insta_page(bot, update, user, instagram_username):
         try:
-            page_info = InstagramAppService.get_page_info(instagram_username, full_info=True)
+            instapage_url = "https://www.instagram.com/{}/".format(instagram_username)
+            response = InstagramAppService.api_call('monitor/insights/', method='post', data={'link': instapage_url})
+            response.raise_for_status()
+            response_data = response.json()
+            user_id = response_data.get('entity_id')
+            followers = response_data.get('followers')
+            followings = response_data.get('followings')
+            posts_count = response_data.get('posts_count')
             page, i_created = InstaPage.objects.get_or_create(
-                instagram_user_id=page_info[0],
+                instagram_user_id=user_id,
                 defaults=dict(
                     instagram_username=instagram_username,
-                    followers=page_info[2],
-                    following=page_info[3],
-                    post_no=page_info[4]
+                    followers=followers,
+                    following=followings,
+                    post_no=posts_count
                 )
 
             )

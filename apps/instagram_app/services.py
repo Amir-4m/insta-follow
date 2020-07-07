@@ -1,62 +1,32 @@
 import logging
 import re
-import time
 import requests
 from django.conf import settings
 from django.db.models.functions import Coalesce
 from django.db.models import F, Sum, Case, When, IntegerField
 from igramscraper.instagram import Instagram
 
-from .models import BaseInstaEntity, UserInquiry, Order, InstagramAccount
+from .models import InstaAction, UserInquiry, Order, InstagramAccount
 
 logger = logging.getLogger(__name__)
 
 
 class InstagramAppService(object):
     @staticmethod
-    def get_page_info(instagram_id, full_info=False):
-        user_id = None
-        name = ''
-        media_url = ''
-        is_private = False
-        followers, following, posts_count = 0, 0, 0
-
+    def api_call(endpoint, method='', data=None, params=None):
+        base_url = settings.BASE_API_URL
+        url = "%s%s" % (base_url, endpoint)
         try:
-            instagram = InstagramAppService.instagram_login()
-            r = requests.get(
-                url=f"https://www.instagram.com/{instagram_id}/?__a=1",
-                headers=instagram.generate_headers(instagram.user_session)
-            )
-            r.raise_for_status()
-            r_json = r.json()
-
-            temp = r_json['graphql']['user']
-            user_id = temp['id']
-            name = temp['full_name']
-            followers = temp['edge_followed_by']['count']
-            following = temp['edge_follow']['count']
-            posts_count = temp['edge_owner_to_timeline_media']['count']
-            media_url = temp['profile_pic_url_hd']
-            is_private = temp['is_private']
+            header = {'Authorization': settings.MONITOR_TOKEN}
+            if method.lower() == 'get':
+                response = requests.get(url=url, headers=header, params=params)
+            elif method.lower() == 'post':
+                response = requests.post(url=url, headers=header, data=data)
+            else:
+                return None
+            return response
         except Exception as e:
-            logger.error(f"error while getting page: {instagram_id} information {e}")
-
-        if full_info:
-            v = user_id, name, followers, following, posts_count, media_url, is_private
-        else:
-            v = user_id, media_url, is_private
-
-        return v
-
-    @staticmethod
-    def get_shortcode(url):
-        pattern = "^https:\/\/www\.instagram\.com\/(p|tv)\/([\d\w\-_]+)(?:\/)?(\?.*)?$"
-        try:
-            result = re.match(pattern, url)
-            shortcode = result.groups()[1]
-            return shortcode[:11]
-        except Exception as e:
-            logger.error(f"extract shortcode for url got exception: {url} error: {e}")
+            logger.error(f'{method} api call {endpoint} got error: {e}')
             return
 
     @staticmethod
@@ -69,54 +39,6 @@ class InstagramAppService(object):
         except Exception as e:
             logger.error(f"extract page id for url got exception: {url} error: {e}")
             return
-
-    @staticmethod
-    def req(url):
-        try:
-            # response = requests.get(url, proxies=get_proxy(), timeout=(3, 27))
-            response = requests.get(url, timeout=(3, 27))
-            time.sleep(4)
-            response.raise_for_status()
-            return response.json()
-
-        except requests.HTTPError as e:
-            logger.error(f"sending request to instagram for url: {url} got HTTPError: {e}")
-            return
-
-        except Exception as e:
-            logger.error(f"sending request to instagram for url: {url} got error: {e}")
-            return
-
-    @staticmethod
-    def get_post_info(link):
-        media_id = None
-        author = ''
-        thumbnail_url = ''
-        is_private = False
-        try:
-            instagram = InstagramAppService.instagram_login()
-            short_code = InstagramAppService.get_shortcode(link)
-            r = requests.get(
-                f"https://www.instagram.com/p/{short_code}/?__a=1",
-                headers=instagram.generate_headers(instagram.user_session)
-            )
-            r.raise_for_status()
-            r_json = r.json()
-
-            temp = r_json['graphql']['shortcode_media']
-            media_id = temp['id']
-            author = temp['owner']['username']
-            thumbnail_url = temp['display_url']
-        except requests.HTTPError as e:
-            logger.error(f"error while getting post: {link} information HTTPError: {e}")
-            # Should be set only on http 404
-            is_private = True
-        except Exception as e:
-            logger.error(f"error while getting post: {link} information {e}")
-            # Should not be called
-            is_private = True
-
-        return media_id, author, thumbnail_url, is_private
 
     @staticmethod
     def instagram_login():
@@ -138,7 +60,7 @@ class InstagramAppService(object):
                 instagram_account.password
             )
             try:
-                instagram.login(two_step_verificator=True)
+                instagram.login()
                 return instagram
 
             except Exception as e:
@@ -158,18 +80,21 @@ class InstagramAppService(object):
 
 class CustomService(object):
     @staticmethod
-    def check_activity_from_db(inquiry_user_id, order_entity_id, check_type):
-        try:
-            model = BaseInstaEntity.get_model(check_type, order_entity_id)
-        except Exception as e:
-            logger.warning(f"can't get model for username: {order_entity_id} to check activity : {e}")
-            return
-
-        return CustomService.mongo_exists(
-            model,
-            user_id=str(inquiry_user_id),
-            action=check_type,
-        )
+    def check_activity_from_db(inquiry_user_id, order_track_id, check_type):
+        endpoint = "monitor/orders/%s/user_action/" % order_track_id
+        params = {"user_id": inquiry_user_id}
+        response = InstagramAppService.api_call(endpoint, method='get', params=params)
+        response.raise_for_status()
+        response_json = response.json()
+        if check_type == InstaAction.ACTION_COMMENT and response_json.get('commented') is not None:
+            is_done = response_json.get('commented')
+        elif check_type == InstaAction.ACTION_FOLLOW and response_json.get('followed') is not None:
+            is_done = response_json.get('followed')
+        elif check_type == InstaAction.ACTION_LIKE and response_json.get('liked') is not None:
+            is_done = response_json.get('liked')
+        else:
+            return False
+        return is_done
 
     @staticmethod
     def get_or_create_inquiries(user_page, action_type, limit=100):

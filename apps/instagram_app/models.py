@@ -114,6 +114,7 @@ class Order(models.Model):
     description = models.TextField(_("description"), blank=True, default='')
     is_enable = models.BooleanField(_("is enable"), default=True)
     owner = models.ForeignKey('accounts.User', related_name='user_orders', on_delete=models.CASCADE)
+    track_id = models.CharField(max_length=40, null=True, blank=True)
 
     class Meta:
         db_table = "insta_orders"
