@@ -5,7 +5,8 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, ParseError
 
-from apps.instagram_app.models import InstaPage, UserPage, UserInquiry, CoinTransaction, Order, InstaAction, Device
+from apps.instagram_app.models import InstaPage, UserPage, UserInquiry, CoinTransaction, Order, InstaAction, Device, \
+    CoinPackage
 from apps.accounts.models import User
 
 
@@ -152,3 +153,9 @@ class InstaActionSerializer(serializers.ModelSerializer):
     class Meta:
         model = InstaAction
         fields = ('action_type', 'action_value', 'buy_value')
+
+
+class CoinPackageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CoinPackage
+        fields = ('name', 'product_id', 'amount', 'price', 'is_enable')

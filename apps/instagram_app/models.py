@@ -166,26 +166,14 @@ class UserInquiry(models.Model):
         unique_together = ('order', 'user_page')
 
 
-class CoinTransaction(models.Model):
-    created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    user = models.ForeignKey('accounts.User', related_name='coin_transactions', on_delete=models.CASCADE)
-    amount = models.IntegerField(_('amount'))
-    description = models.TextField(_("action"), blank=True)
-    inquiry = models.ForeignKey(UserInquiry, on_delete=models.PROTECT, null=True, blank=True)
-    order = models.ForeignKey(Order, on_delete=models.PROTECT, null=True, blank=True)
-
-    class Meta:
-        db_table = "insta_transactions"
-
-    def __str__(self):
-        return f"{self.user} - {self.amount}"
-
-
 class CoinPackage(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     amount = models.IntegerField(_('amount'))
     price = models.PositiveIntegerField(_('price'))
+    name = models.CharField(max_length=100, null=True, blank=True)
+    product_id = models.CharField(max_length=32, null=True, blank=True, unique=True)
+    is_enable = models.BooleanField(default=True)
 
     class Meta:
         db_table = "insta_coin_packages"
@@ -194,69 +182,23 @@ class CoinPackage(models.Model):
         return f"{self.amount} - {self.price}"
 
 
+class CoinTransaction(models.Model):
+    created_time = models.DateTimeField(_("created time"), auto_now_add=True)
+    user = models.ForeignKey('accounts.User', related_name='coin_transactions', on_delete=models.CASCADE)
+    amount = models.IntegerField(_('amount'))
+    description = models.TextField(_("action"), blank=True)
+    inquiry = models.ForeignKey(UserInquiry, on_delete=models.PROTECT, null=True, blank=True)
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, null=True, blank=True)
+    package = models.ForeignKey(CoinPackage, on_delete=models.PROTECT, null=True, blank=True)
+
+    class Meta:
+        db_table = "insta_transactions"
+
+    def __str__(self):
+        return f"{self.user} - {self.amount}"
+
+
 class RoutedDjongoManager(djongo_models.DjongoManager):
     def __init__(self):
         super().__init__()
         self._db = 'mongo'
-
-
-class BaseInstaEntity(djongo_models.Model):
-    created_time = djongo_models.DateTimeField(auto_now_add=True)
-    action = djongo_models.CharField(max_length=10, choices=InstaAction.ACTION_CHOICES)
-    username = djongo_models.CharField(max_length=100)
-    user_id = djongo_models.BigIntegerField()
-    comment = djongo_models.TextField(null=True)
-    comment_id = djongo_models.BigIntegerField(null=True)
-    comment_time = djongo_models.DateTimeField(null=True)
-    follow_time = djongo_models.DateTimeField(null=True)
-
-    objects = RoutedDjongoManager()
-
-    class Meta:
-        managed = False
-        unique_together = ('user_id', 'action')
-
-    @classmethod
-    def get_model(cls, action, entity_id):
-        class Meta:
-            # Using type('Meta', ...) gives a dictproxy error during model creation
-            pass
-
-        table_name = ""
-        model_name = ""
-        if action == InstaAction.ACTION_LIKE or action == InstaAction.ACTION_COMMENT:
-            table_name = f"post_{entity_id}"
-            model_name = f"Post{entity_id}"
-        elif action == InstaAction.ACTION_FOLLOW:
-            table_name = f"page_{entity_id}"
-            model_name = f"Page{entity_id}"
-
-        setattr(Meta, 'app_label', 'instagram_app')
-        setattr(Meta, 'unique_together', ('media_id', 'user_id', 'action'))
-        setattr(Meta, 'db_table', table_name)
-        attrs = {'__module__': cls.__module__, 'Meta': Meta}
-        _f = {'objects': RoutedDjongoManager()}
-        for f in cls._meta.fields:
-            _f[f.attname] = f
-        attrs.update(_f)
-        model = type(model_name, (djongo_models.Model,), attrs)
-        return model
-
-    # @classmethod
-    # def drop_model(cls, action, page_id):
-    #     try:
-    #         model = cls._get_table_model(action, page_id)
-    #         all_tables = connection.introspection.table_names()
-    #     except Exception as e:
-    #         logger.error(f"hash table got exception: {e}")
-    #         return False
-    #
-    #     with connection.schema_editor() as schema:
-    #         try:
-    #             if model._meta.db_table in all_tables:
-    #                 schema.delete_model(model)
-    #         except Exception as e:
-    #             logger.error(f"create table got exception: {e}")
-    #             return False
-    #
-    #     return True

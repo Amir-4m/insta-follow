@@ -1,8 +1,10 @@
+import requests
+from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
-from django.db.models import Sum, Case, When, IntegerField, F
+from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils.decorators import method_decorator
-from rest_framework import status, viewsets, generics, mixins
+from rest_framework import status, viewsets, generics, mixins, views
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
@@ -19,15 +21,15 @@ from .serializers import (
     UserInquirySerializer,
     CoinTransactionSerializer,
     InstaActionSerializer,
-    DeviceSerializer
-)
+    DeviceSerializer,
+    CoinPackageSerializer)
 from ..services import CustomService
 from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination
 from ..tasks import collect_order_link_info
 from apps.instagram_app.models import (
     InstaAction, UserPage, Order,
-    UserInquiry, CoinTransaction, Device
-)
+    UserInquiry, CoinTransaction, Device,
+    CoinPackage)
 
 
 class DeviceViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
@@ -216,3 +218,54 @@ class InstaActionAPIView(generics.ListAPIView):
     """Get a list of action types and their values"""
     queryset = InstaAction.objects.all()
     serializer_class = InstaActionSerializer
+
+
+class CoinPackageAPIView(generics.ListAPIView):
+    """Get a list of coin packages"""
+    queryset = CoinPackage.objects.filter(is_enable=True)
+    serializer_class = CoinPackageSerializer
+
+
+class CoinPackagePurchaseAPIView(views.APIView):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        package_name = request.data.get('package_name')
+        product_id = request.data.get('product_id')
+        purchase_token = request.data.get('purchase_token')
+        access_token = request.data.get('access_token')
+        if package_name is None:
+            raise ValidationError(detail={'detail': _('package name is required!')})
+        if product_id is None:
+            raise ValidationError(detail={'detail': _('product_id name is required!')})
+        if purchase_token is None:
+            raise ValidationError(detail={'detail': _('purchase_token name is required!')})
+        if access_token is None:
+            raise ValidationError(detail={'detail': _('access_token name is required!')})
+        iab_base_api = "https://pardakht.cafebazaar.ir/devapi/v2/api"
+        iab_api_path = "validate/{}/inapp/{}/purchases/{}/".format(
+            package_name,
+            product_id,
+            purchase_token
+        )
+        iab_url = "{}/{}".format(iab_base_api, iab_api_path)
+
+        response = requests.get(url=iab_url, params={"access_token": access_token})
+        res_json = response.json()
+        if response.status_code == 404 and res_json.get("error") == "not_found":
+            raise ValidationError(detail={'detail': _('purchase has not been found !')})
+        elif response.status_code == 200:
+            try:
+                package = CoinPackage.objects.get(name=package_name, product_id=product_id)
+            except CoinPackage.DoesNotExist:
+                raise ValidationError(detail={'detail': _('package does not exists!')})
+            with transaction.atomic():
+                CoinTransaction.objects.create(
+                    user=user,
+                    amount=package.amount,
+                    package=package,
+                    description=_("coin package has been purchased.")
+                )
+            return Response({'user': user, 'package': package, 'is_valid': True}, status=status.HTTP_200_OK)
