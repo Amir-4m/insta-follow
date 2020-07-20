@@ -261,11 +261,10 @@ class CoinPackagePurchaseAPIView(views.APIView):
                 package = CoinPackage.objects.get(name=package_name, product_id=product_id)
             except CoinPackage.DoesNotExist:
                 raise ValidationError(detail={'detail': _('package does not exists!')})
-            with transaction.atomic():
-                CoinTransaction.objects.create(
-                    user=user,
-                    amount=package.amount,
-                    package=package,
-                    description=_("coin package has been purchased.")
-                )
+            CoinTransaction.objects.create(
+                user=user,
+                amount=package.amount,
+                package=package,
+                description=_("coin package has been purchased.")
+            )
             return Response({'user': user, 'package': package, 'is_valid': True}, status=status.HTTP_200_OK)
