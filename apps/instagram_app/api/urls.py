@@ -4,12 +4,12 @@ from rest_framework import routers
 from .views import (
     ProfileViewSet, UserInquiryViewSet,
     OrderViewSet, CoinTransactionAPIView,
-    InstaActionAPIView, DeviceViewSet, CoinPackagePurchaseAPIView
+    InstaActionAPIView, DeviceViewSet, PurchaseVerificationAPIView
 )
 
 urlpatterns = [
     path('insta-action/', InstaActionAPIView.as_view(), name='insta-action'),
-    path('coin-purchase/', CoinPackagePurchaseAPIView.as_view(), name='coin-purchase')
+    path('purchase-verification/', PurchaseVerificationAPIView.as_view(), name='purchase-verification')
 
 ]
 

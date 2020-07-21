@@ -226,7 +226,7 @@ class CoinPackageAPIView(generics.ListAPIView):
     serializer_class = CoinPackageSerializer
 
 
-class CoinPackagePurchaseAPIView(views.APIView):
+class PurchaseVerificationAPIView(views.APIView):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
 
