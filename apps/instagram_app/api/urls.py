@@ -4,7 +4,8 @@ from rest_framework import routers
 from .views import (
     ProfileViewSet, UserInquiryViewSet,
     OrderViewSet, CoinTransactionAPIView,
-    InstaActionAPIView, DeviceViewSet, PurchaseVerificationAPIView
+    InstaActionAPIView, DeviceViewSet,
+    PurchaseVerificationAPIView, CoinPackageOrderViewSet
 )
 
 urlpatterns = [
@@ -19,5 +20,6 @@ router.register('inquiries', UserInquiryViewSet)
 router.register('orders', OrderViewSet)
 router.register('coin-transaction', CoinTransactionAPIView)
 router.register('device', DeviceViewSet)
+router.register('package-order', CoinPackageOrderViewSet)
 
 urlpatterns += router.urls

@@ -33,6 +33,7 @@ SECRET_KEY = config("SECRET_KEY")
 INSTALLED_APPS = [
     'apps.accounts',
     'apps.instagram_app',
+    'apps.payments',
     'apps.telegram_app',
     'bot',
     'rest_framework',
@@ -150,6 +151,11 @@ CACHES = {
         'LOCATION': config('CACHE_HOST', default=''),
         'KEY_PREFIX': 'INSTA_FOLLOW',
     },
+    'payments': {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': 'apps/payments/access_token',
+        'TIMEOUT': 3600
+    }
 }
 
 CELERY_BROKER_URL = 'amqp://%(USER)s:%(PASS)s@%(HOST)s' % {
@@ -264,11 +270,16 @@ USER_PENALTY_AMOUNT = config('USER_PENALTY_AMOUNT', default=1.5, cast=float)
 
 FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=20000, cast=int)
 
+BAZAAR_CLIENT_ID = config('BAZAAR_CLIENT_ID', default='')
+BAZAAR_CLIENT_SECRET = config('BAZAAR_CLIENT_SECRET', default='')
+BAZAAR_REDIRECT_URI = config('BAZAAR_REDIRECT_URI', default='')
+BAZAAR_AUTH_CODE = config('BAZAAR_AUTH_CODE', default='')
 if DEVEL is False:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
     from sentry_sdk.integrations.celery import CeleryIntegration
     from sentry_sdk.integrations.logging import LoggingIntegration
+
     SENTRY_KEY = config('SENTRY_KEY')
     SENTRY_HOST = config('SENTRY_HOST')
     SENTRY_PROJECT_ID = config('SENTRY_PROJECT_ID')

@@ -1,11 +1,10 @@
 import logging
 
+import uuid as uuid
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-
-from djongo import models as djongo_models
 
 logger = logging.getLogger(__name__)
 
@@ -28,17 +27,6 @@ class Device(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.device_id}"
-
-
-class Category(models.Model):
-    created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    name = models.CharField(_("category name"), max_length=100, unique=True)
-
-    class Meta:
-        db_table = "categories"
-
-    def __str__(self):
-        return f"{self.name}"
 
 
 class InstaAction(models.Model):
@@ -76,8 +64,6 @@ class InstaPage(models.Model):
     following = models.IntegerField(_("page following"), null=True)
     post_no = models.IntegerField(_("posts number"), null=True)
     is_banned = models.BooleanField(_("is banned"), default=False)
-
-    category = models.ManyToManyField(Category)
     owner = models.ManyToManyField("accounts.User", through='UserPage', related_name='insta_pages')
 
     class Meta:
@@ -167,12 +153,12 @@ class UserInquiry(models.Model):
 
 
 class CoinPackage(models.Model):
-    created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
+    created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     amount = models.IntegerField(_('amount'))
     price = models.PositiveIntegerField(_('price'))
-    name = models.CharField(max_length=100, null=True, blank=True)
-    product_id = models.CharField(max_length=32, null=True, blank=True, unique=True)
+    name = models.CharField(max_length=100, blank=True)
+    sku = models.CharField(max_length=40, unique=True, null=True)
     is_enable = models.BooleanField(default=True)
 
     class Meta:
@@ -180,6 +166,17 @@ class CoinPackage(models.Model):
 
     def __str__(self):
         return f"{self.amount} - {self.price}"
+
+
+class CoinPackageOrder(models.Model):
+    created_time = models.DateTimeField(_("created time"), auto_now_add=True)
+    updated_time = models.DateTimeField(_("updated time"), auto_now=True)
+    invoice_number = models.UUIDField(_('uuid'), unique=True, default=uuid.uuid4, editable=False)
+    coin_package = models.ForeignKey(CoinPackage, on_delete=models.PROTECT)
+    page = models.ForeignKey(InstaPage, on_delete=models.PROTECT)
+    purchase_token = models.CharField(_("purchase token"), max_length=120, null=True, unique=True)
+    is_paid = models.BooleanField(_("is paid"), null=True)
+    price = models.PositiveIntegerField(_('price'))
 
 
 class CoinTransaction(models.Model):
@@ -196,9 +193,3 @@ class CoinTransaction(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.amount}"
-
-
-class RoutedDjongoManager(djongo_models.DjongoManager):
-    def __init__(self):
-        super().__init__()
-        self._db = 'mongo'

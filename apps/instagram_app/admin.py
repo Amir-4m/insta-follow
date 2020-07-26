@@ -2,24 +2,15 @@ from django.contrib import admin
 
 from .forms import InstagramAccountForm
 from .models import (
-    Category, InstaPage, UserPage,
+    InstaPage, UserPage,
     Order, UserInquiry, InstaAction,
-    CoinPackage, InstagramAccount
+    CoinPackage, InstagramAccount, CoinPackageOrder
 )
-
-
-@admin.register(Category)
-class CategoryModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'created_time')
-    list_filter = ('name',)
-    search_fields = ('name',)
-    sortable_by = ('-created_time',)
 
 
 @admin.register(InstaPage)
 class InstaPageModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'instagram_username', 'instagram_user_id', 'updated_time', 'created_time')
-    list_filter = ('category',)
     search_fields = ('instagram_username', 'instagram_user_id')
     sortable_by = ('-created_time',)
 
@@ -67,3 +58,8 @@ class InstagramAccountModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'username', 'updated_time', 'created_time')
     readonly_fields = ('login_attempt',)
     search_fields = ('username',)
+
+
+@admin.register(CoinPackageOrder)
+class CoinPackageOrderModelAdmin(admin.ModelAdmin):
+    pass

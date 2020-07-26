@@ -6,7 +6,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, ParseError
 
 from apps.instagram_app.models import InstaPage, UserPage, UserInquiry, CoinTransaction, Order, InstaAction, Device, \
-    CoinPackage
+    CoinPackage, CoinPackageOrder
 from apps.accounts.models import User
 
 
@@ -159,3 +159,9 @@ class CoinPackageSerializer(serializers.ModelSerializer):
     class Meta:
         model = CoinPackage
         fields = ('name', 'product_id', 'amount', 'price', 'is_enable')
+
+
+class CoinPackageOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CoinPackageOrder
+        fields = ('invoice_number', 'coin_package', 'page', 'purchase_token', 'is_paid', 'price')

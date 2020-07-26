@@ -1,4 +1,3 @@
-import requests
 from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import Sum
@@ -14,6 +13,8 @@ from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 from django_filters.rest_framework import DjangoFilterBackend
 
+from apps.payments.services import BazaarService
+
 from ..swagger_schemas import ORDER_POST_DOCS, INQUIRY_POST_DOC, PROFILE_POST_DOC
 from .serializers import (
     ProfileSerializer,
@@ -22,14 +23,14 @@ from .serializers import (
     CoinTransactionSerializer,
     InstaActionSerializer,
     DeviceSerializer,
-    CoinPackageSerializer)
+    CoinPackageSerializer, CoinPackageOrderSerializer)
 from ..services import CustomService
 from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination
 from ..tasks import collect_order_link_info
 from apps.instagram_app.models import (
     InstaAction, UserPage, Order,
     UserInquiry, CoinTransaction, Device,
-    CoinPackage)
+    CoinPackage, CoinPackageOrder)
 
 
 class DeviceViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
@@ -226,45 +227,56 @@ class CoinPackageAPIView(generics.ListAPIView):
     serializer_class = CoinPackageSerializer
 
 
+class CoinPackageOrderViewSet(viewsets.GenericViewSet, generics.ListAPIView, generics.CreateAPIView):
+    queryset = CoinPackageOrder.objects.all()
+    serializer_class = CoinPackageOrderSerializer
+
+
 class PurchaseVerificationAPIView(views.APIView):
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         user = request.user
-        package_name = request.data.get('package_name')
-        product_id = request.data.get('product_id')
         purchase_token = request.data.get('purchase_token')
-        access_token = request.data.get('access_token')
-        if package_name is None:
-            raise ValidationError(detail={'detail': _('package name is required!')})
-        if product_id is None:
-            raise ValidationError(detail={'detail': _('product_id name is required!')})
+        invoice_number = request.data.get('invoice_number')
+
+        if invoice_number is None:
+            raise ValidationError(detail={'detail': _('package_name is required!')})
         if purchase_token is None:
             raise ValidationError(detail={'detail': _('purchase_token name is required!')})
-        if access_token is None:
-            raise ValidationError(detail={'detail': _('access_token name is required!')})
-        iab_base_api = "https://pardakht.cafebazaar.ir/devapi/v2/api"
-        iab_api_path = "validate/{}/inapp/{}/purchases/{}/".format(
-            package_name,
-            product_id,
-            purchase_token
-        )
-        iab_url = "{}/{}".format(iab_base_api, iab_api_path)
 
-        response = requests.get(url=iab_url, params={"access_token": access_token})
-        res_json = response.json()
-        if response.status_code == 404 and res_json.get("error") == "not_found":
-            raise ValidationError(detail={'detail': _('purchase has not been found !')})
-        elif response.status_code == 200:
-            try:
-                package = CoinPackage.objects.get(name=package_name, product_id=product_id)
-            except CoinPackage.DoesNotExist:
-                raise ValidationError(detail={'detail': _('package does not exists!')})
-            CoinTransaction.objects.create(
-                user=user,
-                amount=package.amount,
-                package=package,
-                description=_("coin package has been purchased.")
+        with transaction.atomic():
+            orders = CoinPackageOrder.objects.select_related('coin_package').select_for_update().filter(
+                invoice_number=invoice_number
             )
-            return Response({'user': user, 'package': package, 'is_valid': True}, status=status.HTTP_200_OK)
+            order = orders.first()
+            if order.is_paid is False:
+                raise ValidationError(detail={'detail': _('purchase has not been done! submit a new order.')})
+            elif order.is_paid is True:
+                raise ValidationError(detail={'detail': _('purchase has been done already!')})
+
+            if order.price != order.coin_package.price:
+                raise ValidationError(detail={'detail': _('purchase is invalid!')})
+
+            purchase_verified = BazaarService.verify_purchase(
+                order.coin_package.name,
+                order.coin_package.sku,
+                purchase_token
+            )
+            if not purchase_verified:
+                orders.update(is_paid=False, purchase_token=purchase_token)
+                raise ValidationError(detail={'detail': _('purchase has not been found !')})
+            else:
+                orders.update(is_paid=True, purchase_token=purchase_token)
+                CoinTransaction.objects.create(
+                    user=user,
+                    amount=order.coin_package.amount,
+                    package=order,
+                    description=_("coin package has been purchased.")
+                )
+
+                return Response(
+                    {'user': user, 'order': order, 'verified': purchase_verified},
+                    status=status.HTTP_200_OK
+                )
