@@ -245,10 +245,12 @@ class PurchaseVerificationAPIView(views.APIView):
     def post(self, request, *args, **kwargs):
         user = request.user
         invoice_number = request.data.get('invoice_number')
+        purchase_token = request.data.get('purchase_token')
 
         if invoice_number is None:
             raise ValidationError(detail={'detail': _('package_name is required!')})
-
+        if purchase_token is None:
+            raise ValidationError(detail={'detail': _('purchase_token is required!')})
         with transaction.atomic():
             orders = CoinPackageOrder.objects.select_related('coin_package').select_for_update().filter(
                 invoice_number=invoice_number
@@ -263,10 +265,6 @@ class PurchaseVerificationAPIView(views.APIView):
                 raise ValidationError(detail={'detail': _('purchase is invalid!')})
 
             if order.gateway.code == Gateway.FUNCTION_BAZAAR:
-                purchase_token = request.data.get('purchase_token')
-                if purchase_token is None:
-                    raise ValidationError(detail={'detail': _('purchase_token name is required!')})
-
                 purchase_verified = BazaarService.verify_purchase(
                     order.coin_package.name,
                     order.coin_package.sku,
