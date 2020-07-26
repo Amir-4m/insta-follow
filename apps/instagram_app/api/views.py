@@ -31,6 +31,7 @@ from apps.instagram_app.models import (
     InstaAction, UserPage, Order,
     UserInquiry, CoinTransaction, Device,
     CoinPackage, CoinPackageOrder)
+from ...payments.models import Gateway
 
 
 class DeviceViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
@@ -227,7 +228,12 @@ class CoinPackageAPIView(generics.ListAPIView):
     serializer_class = CoinPackageSerializer
 
 
-class CoinPackageOrderViewSet(viewsets.GenericViewSet, generics.ListAPIView, generics.CreateAPIView):
+class CoinPackageOrderViewSet(
+    viewsets.GenericViewSet,
+    generics.ListAPIView,
+    generics.CreateAPIView,
+    generics.UpdateAPIView
+):
     queryset = CoinPackageOrder.objects.all()
     serializer_class = CoinPackageOrderSerializer
 
@@ -238,13 +244,10 @@ class PurchaseVerificationAPIView(views.APIView):
 
     def post(self, request, *args, **kwargs):
         user = request.user
-        purchase_token = request.data.get('purchase_token')
         invoice_number = request.data.get('invoice_number')
 
         if invoice_number is None:
             raise ValidationError(detail={'detail': _('package_name is required!')})
-        if purchase_token is None:
-            raise ValidationError(detail={'detail': _('purchase_token name is required!')})
 
         with transaction.atomic():
             orders = CoinPackageOrder.objects.select_related('coin_package').select_for_update().filter(
@@ -259,11 +262,17 @@ class PurchaseVerificationAPIView(views.APIView):
             if order.price != order.coin_package.price:
                 raise ValidationError(detail={'detail': _('purchase is invalid!')})
 
-            purchase_verified = BazaarService.verify_purchase(
-                order.coin_package.name,
-                order.coin_package.sku,
-                purchase_token
-            )
+            if order.gateway.code == Gateway.FUNCTION_BAZAAR:
+                purchase_token = request.data.get('purchase_token')
+                if purchase_token is None:
+                    raise ValidationError(detail={'detail': _('purchase_token name is required!')})
+
+                purchase_verified = BazaarService.verify_purchase(
+                    order.coin_package.name,
+                    order.coin_package.sku,
+                    purchase_token
+                )
+
             if not purchase_verified:
                 orders.update(is_paid=False, purchase_token=purchase_token)
                 raise ValidationError(detail={'detail': _('purchase has not been found !')})

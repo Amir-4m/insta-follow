@@ -177,6 +177,7 @@ class CoinPackageOrder(models.Model):
     purchase_token = models.CharField(_("purchase token"), max_length=120, null=True, unique=True)
     is_paid = models.BooleanField(_("is paid"), null=True)
     price = models.PositiveIntegerField(_('price'))
+    gateway = models.ForeignKey('payments.Gateway', on_delete=models.PROTECT, related_name='orders', null=True)
 
 
 class CoinTransaction(models.Model):
