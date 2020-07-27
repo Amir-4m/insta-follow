@@ -20,12 +20,13 @@ class Gateway(models.Model):
 
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
-    name = models.CharField(_('name'), max_length=120)
-    type = models.PositiveSmallIntegerField(verbose_name=_("type"), choices=GATEWAY_TYPES)
-    code = models.PositiveSmallIntegerField(verbose_name=_("code"), choices=GATEWAY_FUNCTIONS)
+    display_name = models.CharField(_('display name'), max_length=120)
+    title = models.CharField(_('title'), max_length=120)
+    gw_type = models.PositiveSmallIntegerField(verbose_name=_("type"), choices=GATEWAY_TYPES, default=TYPE_BANK)
+    code = models.PositiveSmallIntegerField(verbose_name=_("code"), choices=GATEWAY_FUNCTIONS, default=FUNCTION_SAMAN)
     merchant_id = models.CharField(max_length=50, verbose_name=_("merchant id"), blank=True)
     merchant_pass = models.CharField(max_length=50, verbose_name=_("merchant pass"), blank=True)
 
     def clean(self):
-        if self.type == self.TYPE_BANK and None in [self.merchant_pass, self.merchant_id]:
+        if self.gw_type == self.TYPE_BANK and None in [self.merchant_pass, self.merchant_id]:
             raise ValidationError(_("merchant pass and merchant id could not be none in type bank!"))

@@ -23,7 +23,7 @@ from .serializers import (
     CoinTransactionSerializer,
     InstaActionSerializer,
     DeviceSerializer,
-    CoinPackageSerializer, CoinPackageOrderSerializer)
+    CoinPackageSerializer, CoinPackageOrderSerializer, PurchaseSerializer)
 from ..services import CustomService
 from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination
 from ..tasks import collect_order_link_info
@@ -244,46 +244,38 @@ class PurchaseVerificationAPIView(views.APIView):
 
     def post(self, request, *args, **kwargs):
         user = request.user
-        invoice_number = request.data.get('invoice_number')
-        purchase_token = request.data.get('purchase_token')
-
-        if invoice_number is None:
-            raise ValidationError(detail={'detail': _('package_name is required!')})
-        if purchase_token is None:
-            raise ValidationError(detail={'detail': _('purchase_token is required!')})
-        with transaction.atomic():
-            orders = CoinPackageOrder.objects.select_related('coin_package').select_for_update().filter(
-                invoice_number=invoice_number
-            )
-            order = orders.first()
-            if order.is_paid is False:
-                raise ValidationError(detail={'detail': _('purchase has not been done! submit a new order.')})
-            elif order.is_paid is True:
-                raise ValidationError(detail={'detail': _('purchase has been done already!')})
-
-            if order.price != order.coin_package.price:
-                raise ValidationError(detail={'detail': _('purchase is invalid!')})
-
-            if order.gateway.code == Gateway.FUNCTION_BAZAAR:
-                purchase_verified = BazaarService.verify_purchase(
-                    order.coin_package.name,
-                    order.coin_package.sku,
-                    purchase_token
+        serializer = PurchaseSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            invoice_number = serializer.validated_data['invoice_number']
+            transaction_id = serializer.validated_data['transaction_id']
+            with transaction.atomic():
+                order = CoinPackageOrder.objects.select_related('coin_package').select_for_update().get(
+                    invoice_number=invoice_number
                 )
+                if order.is_paid is False:
+                    raise ValidationError(detail={'detail': _('purchase has not been done! submit a new order.')})
+                elif order.is_paid is True:
+                    raise ValidationError(detail={'detail': _('purchase has been done already!')})
 
-            if not purchase_verified:
-                orders.update(is_paid=False, purchase_token=purchase_token)
-                raise ValidationError(detail={'detail': _('purchase has not been found !')})
-            else:
-                orders.update(is_paid=True, purchase_token=purchase_token)
-                CoinTransaction.objects.create(
-                    user=user,
-                    amount=order.coin_package.amount,
-                    package=order,
-                    description=_("coin package has been purchased.")
-                )
+                if order.price != order.coin_package.price:
+                    raise ValidationError(detail={'detail': _('purchase is invalid!')})
 
-                return Response(
-                    {'user': user, 'order': order, 'verified': purchase_verified},
-                    status=status.HTTP_200_OK
-                )
+                if order.gateway.code == Gateway.FUNCTION_BAZAAR:
+                    purchase_verified = BazaarService.verify_purchase(
+                        order.coin_package.name,
+                        order.coin_package.sku,
+                        transaction_id
+                    )
+
+                order.is_paid = purchase_verified
+                order.transaction_id = transaction_id
+                order.save()
+
+                if order.is_paid is True:
+                    CoinTransaction.objects.create(
+                        user=user,
+                        amount=order.coin_package.amount,
+                        package=order.coin_package,
+                        description=_("coin package has been purchased.")
+                    )
+            return Response({"invoice_number": invoice_number, "is_verified": order.is_paid})

@@ -6,7 +6,7 @@ from .serializers import GatewaySerializer
 from ..models import Gateway
 
 
-class GatewayViewSet(viewsets.generics, generics.ListAPIView):
+class GatewayViewSet(viewsets.GenericViewSet, generics.ListAPIView):
     queryset = Gateway.objects.all()
     serializer_class = GatewaySerializer
     authentication_classes = (JWTAuthentication,)

@@ -165,3 +165,19 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = CoinPackageOrder
         fields = ('invoice_number', 'coin_package', 'page', 'purchase_token', 'is_paid', 'price')
+
+
+class PurchaseSerializer(serializers.Serializer):
+    invoice_number = serializers.UUIDField(required=True)
+    transaction_id = serializers.CharField(required=True, max_length=120)
+
+    def validate_invoice_number(self, value):
+        if CoinPackageOrder.objects.filter(invoice_number=value).exists():
+            return value
+        raise ValidationError(_("invoice number is invalid!"))
+
+    def create(self, validated_data):
+        raise NotImplementedError('`create()` must be implemented.')
+
+    def update(self, instance, validated_data):
+        raise NotImplementedError('`update()` must be implemented.')
