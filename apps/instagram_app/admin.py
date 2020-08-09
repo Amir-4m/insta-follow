@@ -2,10 +2,10 @@ from django.contrib import admin
 
 from .forms import InstagramAccountForm
 from .models import (
-    InstaPage, UserPage,
+    InstaPage,
     Order, UserInquiry, InstaAction,
-    CoinPackage, InstagramAccount, CoinPackageOrder
-)
+    CoinPackage, CoinPackageOrder,
+    Comment, InstagramAccount)
 
 
 @admin.register(InstaPage)
@@ -13,14 +13,6 @@ class InstaPageModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'instagram_username', 'instagram_user_id', 'updated_time', 'created_time')
     search_fields = ('instagram_username', 'instagram_user_id')
     sortable_by = ('-created_time',)
-
-
-@admin.register(UserPage)
-class UserPageModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'page', 'updated_time', 'created_time')
-    list_select_related = ['user', 'page']
-    sortable_by = ('-created_time',)
-    search_fields = ('user__username', 'user__email')
 
 
 @admin.register(Order)
@@ -34,11 +26,11 @@ class OrderModelAdmin(admin.ModelAdmin):
 
 @admin.register(UserInquiry)
 class UserInquiryModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'order', 'user_page', 'status', 'validated_time', 'updated_time', 'created_time')
-    list_select_related = ['order', 'user_page']
+    list_display = ('id', 'order', 'page', 'status', 'validated_time', 'updated_time', 'created_time')
+    list_select_related = ['order', 'page']
     list_filter = ('status',)
     sortable_by = ('-created_time',)
-    search_fields = ('user_page__user__username', 'user_page__user__email')
+    search_fields = ('page__instagram_username',)
 
 
 @admin.register(InstaAction)
@@ -63,3 +55,8 @@ class InstagramAccountModelAdmin(admin.ModelAdmin):
 @admin.register(CoinPackageOrder)
 class CoinPackageOrderModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'invoice_number', "transaction_id", 'updated_time', 'created_time')
+
+
+@admin.register(Comment)
+class CommentModelAdmin(admin.ModelAdmin):
+    list_display = ('id', 'text', 'updated_time', 'created_time')

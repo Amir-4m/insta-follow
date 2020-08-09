@@ -21,65 +21,65 @@ from .models import Order, UserInquiry, InstaAction, CoinTransaction, InstaPage
 logger = logging.getLogger(__name__)
 
 
-@shared_task()
-def collect_page_info(insta_page_id, instagram_id):
-    try:
-        instapage_url = "https://www.instagram.com/{}/".format(instagram_id)
-        response = InstagramAppService.api_call('monitor/insights/', method='post', data={'link': instapage_url})
-        response.raise_for_status()
-        response_data = response.json()
-        user_id = response_data.get('entity_id')
-        followers = response_data.get('followers')
-        followings = response_data.get('followings')
-        posts_count = response_data.get('posts_count')
-
-        InstaPage.objects.filter(id=insta_page_id).update(
-            instagram_user_id=user_id,
-            followers=followers,
-            following=followings,
-            post_no=posts_count
-        )
-    except Exception as e:
-        logger.error(f'collecting page info got error: {e}')
-
-
-@shared_task()
-def collect_order_link_info(order_id, action, link, media_url):
-    response = InstagramAppService.api_call('monitor/insights/', method='post', data={'link': link})
-    response.raise_for_status()
-    response_data = response.json()
-
-    entity_id = response_data.get('entity_id')
-    media_url = response_data.get('media_url')
-    is_private = response_data.get('is_private')
-    if action == InstaAction.ACTION_FOLLOW:
-        author = InstagramAppService.get_page_id(link)
-    else:
-        author = response_data.get('author')
-    if is_private:
-        incomplete_order_notifier.delay(order_id)
-
-    elif media_url and author and entity_id:
-        data = {
-            'link': link,
-            'expire_time': timezone.now().date() + timedelta(days=365)
-        }
-        res = InstagramAppService.api_call('monitor/orders/', method='post', data=data)
-        res.raise_for_status()
-        if res.status_code == 201:
-            track_id = res.json().get('_id')
-            Order.objects.filter(id=order_id).update(
-                entity_id=entity_id,
-                media_url=media_url,
-                instagram_username=author,
-                is_enable=True,
-                track_id=track_id,
-                description=_("order enabled properly")
-            )
-        else:
-            logger.error(f'collect order link info got error :{res.text}')
+# @shared_task()
+# def collect_page_info(insta_page_id, instagram_id):
+#     try:
+#         instapage_url = "https://www.instagram.com/{}/".format(instagram_id)
+#         response = InstagramAppService.api_call('monitor/insights/', method='post', data={'link': instapage_url})
+#         response.raise_for_status()
+#         response_data = response.json()
+#         user_id = response_data.get('entity_id')
+#         followers = response_data.get('followers')
+#         followings = response_data.get('followings')
+#         posts_count = response_data.get('posts_count')
+#
+#         InstaPage.objects.filter(id=insta_page_id).update(
+#             instagram_user_id=user_id,
+#             followers=followers,
+#             following=followings,
+#             post_no=posts_count
+#         )
+#     except Exception as e:
+#         logger.error(f'collecting page info got error: {e}')
 
 
+# @shared_task()
+# def collect_order_link_info(order_id, action, link, media_url):
+#     response = InstagramAppService.api_call('monitor/insights/', method='post', data={'link': link})
+#     response.raise_for_status()
+#     response_data = response.json()
+#
+#     entity_id = response_data.get('entity_id')
+#     media_url = response_data.get('media_url')
+#     is_private = response_data.get('is_private')
+#     if action == InstaAction.ACTION_FOLLOW:
+#         author = InstagramAppService.get_page_id(link)
+#     else:
+#         author = response_data.get('author')
+#     if is_private:
+#         incomplete_order_notifier.delay(order_id)
+#
+#     elif media_url and author and entity_id:
+#         data = {
+#             'link': link,
+#             'expire_time': timezone.now().date() + timedelta(days=365)
+#         }
+#         res = InstagramAppService.api_call('monitor/orders/', method='post', data=data)
+#         res.raise_for_status()
+#         if res.status_code == 201:
+#             track_id = res.json().get('_id')
+#             Order.objects.filter(id=order_id).update(
+#                 entity_id=entity_id,
+#                 media_url=media_url,
+#                 instagram_username=author,
+#                 is_enable=True,
+#                 track_id=track_id,
+#                 description=_("order enabled properly")
+#             )
+#         else:
+#             logger.error(f'collect order link info got error :{res.text}')
+#
+#
 @shared_task
 def incomplete_order_notifier(order_id):
     order = Order.objects.get(id=order_id)
@@ -101,7 +101,7 @@ def incomplete_order_notifier(order_id):
                 "devices": [devices],
                 "data": {
                     "title": _("Error in submitting order"),
-                    "alert": _("Please make assurance that your instagram page has not any problem) !")
+                    "alert": _("Please make assurance that your instagram page has not any problem !")
                 }
             }
             header = {'Authorization': settings.DEVLYTIC_TOKEN}
@@ -126,13 +126,13 @@ def validate_user_inquiries():
         order__action__in=[InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]
     ).update(status=UserInquiry.STATUS_REJECTED)
 
-    done_inquiries = UserInquiry.objects.select_related('user_page', 'user_page__page').filter(
+    done_inquiries = UserInquiry.objects.select_related('page').filter(
         status=UserInquiry.STATUS_DONE
     )
     # validating inquiries and create coin for validated like and comment inquiries
     for user_inquiry in done_inquiries:
         if CustomService.check_activity_from_db(
-                user_inquiry.user_page.page.instagram_user_id,
+                user_inquiry.page.instagram_user_id,
                 user_inquiry.order.track_id,
                 user_inquiry.order.action.action_type
         ):
@@ -140,7 +140,7 @@ def validate_user_inquiries():
             if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
                 user_inquiry.validated_time = timezone.now()
                 CoinTransaction.objects.create(
-                    user=user_inquiry.user_page.user,
+                    page=user_inquiry.page,
                     inquiry=user_inquiry,
                     amount=user_inquiry.order.action.action_value,
                     description=f"validated inquiry {user_inquiry.id}"
@@ -171,7 +171,7 @@ def final_validate_user_inquiries():
         followers_username = [follower.username for follower in followers['accounts']]
 
         for inquiry in order_inquiries:
-            if inquiry.user_page.page.instagram_username in followers_username:
+            if inquiry.page.instagram_username in followers_username:
                 inquiry.validated_time = timezone.now()
                 amount = inquiry.order.action.action_value
                 description = f"validated inquiry {inquiry.id}"
@@ -182,7 +182,7 @@ def final_validate_user_inquiries():
 
             inquiry.save()
             CoinTransaction.objects.create(
-                user=inquiry.user_page.user,
+                page=inquiry.page,
                 inquiry=inquiry,
                 amount=amount,
                 description=description

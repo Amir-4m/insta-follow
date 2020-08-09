@@ -1,6 +1,7 @@
 import logging
+import uuid
 
-import uuid as uuid
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
@@ -16,17 +17,6 @@ class InstagramAccount(models.Model):
     password = models.CharField(_("password"), max_length=250)
     login_attempt = models.IntegerField(_('login attempt'), default=0)
     is_enable = models.BooleanField(_("is enable"), default=True)
-
-
-class Device(models.Model):
-    user = models.ForeignKey('accounts.User', on_delete=models.CASCADE, related_name='devices')
-    device_id = models.CharField(_('device id'), max_length=40, db_index=True)
-
-    class Meta:
-        db_table = "insta_devices"
-
-    def __str__(self):
-        return f"{self.user} - {self.device_id}"
 
 
 class InstaAction(models.Model):
@@ -58,19 +48,31 @@ class InstaAction(models.Model):
 class InstaPage(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
     instagram_username = models.CharField(_("instagram username"), max_length=50)
-    instagram_user_id = models.BigIntegerField(_("instagram id"), unique=True, null=True)
-    followers = models.IntegerField(_("page followers"), null=True)
-    following = models.IntegerField(_("page following"), null=True)
-    post_no = models.IntegerField(_("posts number"), null=True)
-    is_banned = models.BooleanField(_("is banned"), default=False)
-    owner = models.ManyToManyField("accounts.User", through='UserPage', related_name='insta_pages')
+    instagram_user_id = models.BigIntegerField(_("instagram id"), unique=True)
+    session_id = models.CharField(_('session id'), max_length=50)
 
     class Meta:
         db_table = "insta_pages"
 
     def __str__(self):
         return self.instagram_username
+
+    @property
+    def is_authenticated(self):
+        return InstaPage.objects.filter(uuid=self.uuid).exists()
+
+
+class Device(models.Model):
+    page = models.ForeignKey(InstaPage, on_delete=models.CASCADE, related_name='devices')
+    device_id = models.CharField(_('device id'), max_length=40, db_index=True)
+
+    class Meta:
+        db_table = "insta_devices"
+
+    def __str__(self):
+        return f"{self.page.instagram_username} - {self.device_id}"
 
 
 class UserPage(models.Model):
@@ -88,6 +90,12 @@ class UserPage(models.Model):
         return f"{self.user.username} with instagram page {self.page.instagram_username}"
 
 
+class Comment(models.Model):
+    created_time = models.DateTimeField(_("created time"), auto_now_add=True)
+    updated_time = models.DateTimeField(_("updated time"), auto_now=True)
+    text = models.TextField(_("comment text"), max_length=1024)
+
+
 # Inventory
 class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
@@ -97,9 +105,10 @@ class Order(models.Model):
     entity_id = models.BigIntegerField(_('entity ID'), null=True, db_index=True)
     media_url = models.TextField(_("media url"), blank=True)
     instagram_username = models.CharField(_("instagram username"), max_length=120, blank=True)
+    comments = ArrayField(models.TextField(max_length=1024), null=True, blank=True)
     description = models.TextField(_("description"), blank=True, default='')
     is_enable = models.BooleanField(_("is enable"), default=True)
-    owner = models.ForeignKey('accounts.User', related_name='user_orders', on_delete=models.CASCADE)
+    owner = models.ForeignKey(InstaPage, related_name='orders', on_delete=models.CASCADE)
     track_id = models.CharField(max_length=40, null=True, blank=True)
 
     class Meta:
@@ -121,6 +130,10 @@ class Order(models.Model):
             status=UserInquiry.STATUS_VALIDATED,
             validated_time__isnull=False,
         ).count()
+
+    def clean(self):
+        if self.action in [InstaAction.ACTION_FOLLOW, InstaAction.ACTION_LIKE] and self.comments is not None:
+            raise ValidationError(_("Comment is not allowed in like and follow method!"))
 
 
 class UserInquiry(models.Model):
@@ -144,12 +157,12 @@ class UserInquiry(models.Model):
     validated_time = models.DateTimeField(_("validated time"), null=True, blank=True, db_index=True)
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='user_inquiries')
-    user_page = models.ForeignKey(UserPage, on_delete=models.CASCADE)
+    page = models.ForeignKey(InstaPage, on_delete=models.CASCADE)
 
     class Meta:
         db_table = "insta_inquiries"
         verbose_name_plural = _('user inquiries')
-        unique_together = ('order', 'user_page')
+        unique_together = ('order', 'page')
 
 
 class CoinPackage(models.Model):
@@ -173,7 +186,7 @@ class CoinPackageOrder(models.Model):
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     invoice_number = models.UUIDField(_('uuid'), unique=True, default=uuid.uuid4, editable=False)
     coin_package = models.ForeignKey(CoinPackage, on_delete=models.PROTECT)
-    user = models.ForeignKey('accounts.User', on_delete=models.PROTECT, related_name='package_orders')
+    page = models.ForeignKey(InstaPage, on_delete=models.PROTECT, related_name='package_orders')
     transaction_id = models.CharField(_("transaction id"), max_length=120, null=True, unique=True)
     is_paid = models.BooleanField(_("is paid"), null=True)
     price = models.PositiveIntegerField(_('price'))
@@ -182,7 +195,7 @@ class CoinPackageOrder(models.Model):
 
 class CoinTransaction(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    user = models.ForeignKey('accounts.User', related_name='coin_transactions', on_delete=models.CASCADE)
+    page = models.ForeignKey(InstaPage, related_name='coin_transactions', on_delete=models.CASCADE)
     amount = models.IntegerField(_('amount'))
     description = models.TextField(_("action"), blank=True)
     inquiry = models.ForeignKey(UserInquiry, on_delete=models.PROTECT, null=True, blank=True)
@@ -193,4 +206,4 @@ class CoinTransaction(models.Model):
         db_table = "insta_transactions"
 
     def __str__(self):
-        return f"{self.user} - {self.amount}"
+        return f"{self.page.instagram_username} - {self.amount}"

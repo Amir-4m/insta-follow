@@ -1,10 +1,16 @@
+import hashlib
 import logging
 import re
 import requests
+
 from django.conf import settings
 from django.db.models.functions import Coalesce
 from django.db.models import F, Sum, Case, When, IntegerField
+
 from igramscraper.instagram import Instagram
+from Crypto.Cipher import AES
+from Crypto import Random
+from base64 import b64decode, b64encode
 
 from .models import InstaAction, UserInquiry, Order, InstagramAccount
 
@@ -97,7 +103,7 @@ class CustomService(object):
         return is_done
 
     @staticmethod
-    def get_or_create_inquiries(user_page, action_type, limit=100):
+    def get_or_create_inquiries(page, action_type, limit=100):
         valid_orders = Order.objects.filter(is_enable=True, action=action_type).annotate(
             remaining=F('target_no') - Coalesce(Sum(
                 Case(
@@ -128,8 +134,8 @@ class CustomService(object):
 
             user_inquiry, _c = UserInquiry.objects.get_or_create(
                 order=order,
-                user_page=user_page,
-                defaults=dict(user_page=user_page)
+                page=page,
+                defaults=dict(page=page)
             )
             if user_inquiry and _c:
                 valid_inquiries.append(user_inquiry)
@@ -139,13 +145,6 @@ class CustomService(object):
                 break
 
         return valid_inquiries
-
-    @staticmethod
-    def mongo_exists(collection, **kwargs):
-        try:
-            return bool(collection.objects.mongo_find_one(dict(kwargs)))
-        except Exception as e:
-            logger.error(f"error in mongo filter occurred :{e}")
 
 
 class MongoServices(object):
@@ -186,3 +185,46 @@ class MongoServices(object):
         ).sort([("$natural", -1)]).limit(limit)
 
         return top_neighbors, bottom_neighbors
+
+    @staticmethod
+    def mongo_exists(collection, **kwargs):
+        try:
+            return bool(collection.objects.mongo_find_one(dict(kwargs)))
+        except Exception as e:
+            logger.error(f"error in mongo filter occurred :{e}")
+
+
+class CryptoService:
+
+    def __init__(self, key):
+        """
+        Requires string param as a key
+        """
+        self.key = hashlib.sha256(key.encode()).digest()
+        self.BS = AES.block_size
+
+    def __pad(self, s):
+        return s + (self.BS - len(s) % self.BS) * chr(self.BS - len(s) % self.BS)
+
+    @staticmethod
+    def __unpad(s):
+        return s[0:-ord(s[-1])]
+
+    def encrypt(self, raw):
+        """
+        Returns b64encode encoded encrypted value!
+        """
+        raw = self.__pad(raw)
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return b64encode(iv + cipher.encrypt(raw))
+
+    def decrypt(self, enc):
+        """
+        Requires b64encode encoded param to decrypt
+        """
+        enc = b64decode(enc)
+        iv = enc[:16]
+        enc = enc[16:]
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return self.__unpad(cipher.decrypt(enc).decode())
