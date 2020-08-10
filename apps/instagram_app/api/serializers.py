@@ -12,7 +12,8 @@ from rest_framework.exceptions import ValidationError, ParseError
 from apps.instagram_app.models import (
     UserInquiry, CoinTransaction, Order,
     InstaAction, Device, CoinPackage,
-    CoinPackageOrder, InstaPage, Comment
+    CoinPackageOrder, InstaPage, Comment,
+    ReportAbuse
 )
 
 logger = logging.getLogger(__name__)
@@ -298,3 +299,21 @@ class CoinTransferSerializer(serializers.ModelSerializer):
                 from_page=sender_page
             )
             return sender_transaction
+
+
+class ReportAbuseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReportAbuse
+        fields = ('text', 'abuser')
+
+    def validate_abuser(self, value):
+        if Order.objects.filter(id=value.id).exists():
+            return value
+        raise ValidationError(detail={'detail': _("order does not exists!")})
+
+    def create(self, validated_data):
+        text = validated_data['text']
+        reporter = validated_data.get('reporter')
+        abuser = validated_data['abuser']
+        report = ReportAbuse.objects.create(text=text, reporter=reporter, abuser=abuser)
+        return report

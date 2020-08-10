@@ -5,12 +5,13 @@ from .models import (
     InstaPage,
     Order, UserInquiry, InstaAction,
     CoinPackage, CoinPackageOrder,
-    Comment, InstagramAccount)
+    Comment, InstagramAccount, ReportAbuse)
 
 
 @admin.register(InstaPage)
 class InstaPageModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'instagram_username', 'instagram_user_id', 'updated_time', 'created_time')
+    readonly_fields = ('uuid',)
     search_fields = ('instagram_username', 'instagram_user_id')
     sortable_by = ('-created_time',)
 
@@ -60,3 +61,14 @@ class CoinPackageOrderModelAdmin(admin.ModelAdmin):
 @admin.register(Comment)
 class CommentModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'text', 'updated_time', 'created_time')
+
+
+@admin.register(ReportAbuse)
+class ReportAbuseModelAdmin(admin.ModelAdmin):
+    list_display = ('id', 'reporter', 'text', 'abuser', 'status', 'created_time')
+    list_filter = ('status',)
+
+    def save_model(self, request, obj, form, change):
+        if obj.status == ReportAbuse.STATUS_APPROVED:
+            Order.objects.filter(id=obj.abuser.id).update(is_enable=False)
+        return super(ReportAbuseModelAdmin, self).save_model(request, obj, form, change)

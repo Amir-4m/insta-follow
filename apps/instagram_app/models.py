@@ -201,7 +201,8 @@ class CoinTransaction(models.Model):
     inquiry = models.ForeignKey(UserInquiry, on_delete=models.PROTECT, null=True, blank=True)
     order = models.ForeignKey(Order, on_delete=models.PROTECT, null=True, blank=True)
     package = models.ForeignKey(CoinPackage, on_delete=models.PROTECT, null=True, blank=True)
-    from_page = models.ForeignKey(InstaPage, related_name='transfers_from', on_delete=models.PROTECT, null=True, blank=True)
+    from_page = models.ForeignKey(InstaPage, related_name='transfers_from', on_delete=models.PROTECT, null=True,
+                                  blank=True)
     to_page = models.ForeignKey(InstaPage, related_name='transfers_to', on_delete=models.PROTECT, null=True, blank=True)
 
     class Meta:
@@ -209,3 +210,20 @@ class CoinTransaction(models.Model):
 
     def __str__(self):
         return f"{self.page.instagram_username} - {self.amount}"
+
+
+class ReportAbuse(models.Model):
+    STATUS_OPEN = 'OPEN'
+    STATUS_APPROVED = 'APPROVED'
+    STATUS_REJECTED = 'REJECTED'
+
+    STATUS_CHOICES = [
+        (STATUS_OPEN, _('Open')),
+        (STATUS_APPROVED, _('Approved')),
+        (STATUS_REJECTED, _('Rejected')),
+    ]
+    created_time = models.DateTimeField(_("created time"), auto_now_add=True)
+    reporter = models.ForeignKey(InstaPage, related_name='reports', on_delete=models.CASCADE)
+    text = models.TextField(_("report text"), max_length=1024)
+    abuser = models.ForeignKey(Order, related_name='reports', on_delete=models.PROTECT)
+    status = models.CharField(max_length=8, null=False, blank=False, choices=STATUS_CHOICES, default=STATUS_OPEN)

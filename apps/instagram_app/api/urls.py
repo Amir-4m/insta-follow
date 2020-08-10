@@ -6,7 +6,8 @@ from .views import (
     OrderViewSet, CoinTransactionAPIView,
     InstaActionAPIView, DeviceViewSet,
     PurchaseVerificationAPIView, CoinPackageOrderViewSet,
-    LoginVerification, CommentViewSet, CoinTransferAPIView
+    LoginVerification, CommentViewSet, CoinTransferAPIView,
+    ReportAbuseViewSet
 )
 
 urlpatterns = [
@@ -24,5 +25,6 @@ router.register('coin-transaction', CoinTransactionAPIView)
 router.register('device', DeviceViewSet)
 router.register('package-order', CoinPackageOrderViewSet)
 router.register('comments', CommentViewSet)
+router.register('report-abuse', ReportAbuseViewSet)
 
 urlpatterns += router.urls

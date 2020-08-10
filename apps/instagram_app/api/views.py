@@ -28,14 +28,15 @@ from .serializers import (
     LoginVerificationSerializer,
     PurchaseSerializer,
     CommentSerializer,
-    CoinTransferSerializer
-)
+    CoinTransferSerializer,
+    ReportAbuseSerializer)
 from ..services import CustomService
 from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination
 from apps.instagram_app.models import (
     InstaAction, Order, UserInquiry,
     CoinTransaction, Device, CoinPackage,
-    CoinPackageOrder, InstaPage, Comment
+    CoinPackageOrder, InstaPage, Comment,
+    ReportAbuse
 )
 from ...payments.models import Gateway
 
@@ -298,3 +299,12 @@ class CoinTransferAPIView(views.APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save(sender=page)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class ReportAbuseViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
+    queryset = ReportAbuse.objects.all()
+    serializer_class = ReportAbuseSerializer
+    authentication_classes = (PageAuthentication,)
+
+    def perform_create(self, serializer):
+        serializer.save(reporter=self.request.auth['page'])
