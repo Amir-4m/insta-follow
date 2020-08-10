@@ -201,6 +201,8 @@ class CoinTransaction(models.Model):
     inquiry = models.ForeignKey(UserInquiry, on_delete=models.PROTECT, null=True, blank=True)
     order = models.ForeignKey(Order, on_delete=models.PROTECT, null=True, blank=True)
     package = models.ForeignKey(CoinPackage, on_delete=models.PROTECT, null=True, blank=True)
+    from_page = models.ForeignKey(InstaPage, related_name='transfers_from', on_delete=models.PROTECT, null=True, blank=True)
+    to_page = models.ForeignKey(InstaPage, related_name='transfers_to', on_delete=models.PROTECT, null=True, blank=True)
 
     class Meta:
         db_table = "insta_transactions"

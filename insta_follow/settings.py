@@ -274,6 +274,10 @@ BAZAAR_CLIENT_ID = config('BAZAAR_CLIENT_ID', default='')
 BAZAAR_CLIENT_SECRET = config('BAZAAR_CLIENT_SECRET', default='')
 BAZAAR_REDIRECT_URI = config('BAZAAR_REDIRECT_URI', default='')
 BAZAAR_AUTH_CODE = config('BAZAAR_AUTH_CODE', default='')
+
+MAXIMUM_COIN_TRANSFER = config('MAXIMUM_COIN_TRANSFER', default=1000, cast=int)
+COIN_TRANSFER_FEE = config('COIN_TRANSFER_FEE', default=5, cast=int)
+
 if DEVEL is False:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration

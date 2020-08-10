@@ -1,6 +1,7 @@
 import logging
 import random
 import requests
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
@@ -255,3 +256,45 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ('id', 'text')
+
+
+class CoinTransferSerializer(serializers.ModelSerializer):
+    to_page = serializers.CharField(required=True, allow_blank=False)
+
+    class Meta:
+        model = CoinTransaction
+        fields = ('amount', 'to_page')
+
+    def validate_amount(self, value):
+        if value > settings.MAXIMUM_COIN_TRANSFER or value <= 0:
+            raise ValidationError(detail={'detail': _("Transfer amount is invalid!")})
+        return value
+
+    def validate_to_page(self, value):
+        if InstaPage.objects.filter(instagram_username=value).exists():
+            return value
+        raise ValidationError(detail={'detail': _('Target page does not exists')})
+
+    def create(self, validated_data):
+        sender = validated_data.get('sender')
+        amount = validated_data['amount']
+        target = validated_data['to_page']
+        if sender.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet'] < amount:
+            raise ValidationError(detail={'detail': _("Transfer amount is higher than your coin balance!")})
+        with transaction.atomic():
+            qs = InstaPage.objects.select_for_update()
+            sender_page = qs.get(id=sender.id)
+            target_page = qs.get(instagram_username=target)
+            sender_transaction = CoinTransaction.objects.create(
+                page=sender_page,
+                amount=-amount,
+                description=_("transfer to page %s") % target_page,
+                to_page=target_page
+            )
+            CoinTransaction.objects.create(
+                page=target_page,
+                amount=amount,
+                description=_("transfer from page %s") % sender_page,
+                from_page=sender_page
+            )
+            return sender_transaction

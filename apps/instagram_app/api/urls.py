@@ -6,13 +6,14 @@ from .views import (
     OrderViewSet, CoinTransactionAPIView,
     InstaActionAPIView, DeviceViewSet,
     PurchaseVerificationAPIView, CoinPackageOrderViewSet,
-    LoginVerification, CommentViewSet
+    LoginVerification, CommentViewSet, CoinTransferAPIView
 )
 
 urlpatterns = [
     path('insta-action/', InstaActionAPIView.as_view(), name='insta-action'),
     path('purchase-verification/', PurchaseVerificationAPIView.as_view(), name='purchase-verification'),
-    path('login-verification/', LoginVerification.as_view(), name='login-verification')
+    path('login-verification/', LoginVerification.as_view(), name='login-verification'),
+    path('coin-transfer/', CoinTransferAPIView.as_view(), name='coin-transfer')
 
 ]
 

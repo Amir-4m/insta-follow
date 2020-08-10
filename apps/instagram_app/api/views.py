@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import Sum
@@ -26,7 +27,9 @@ from .serializers import (
     CoinPackageOrderSerializer,
     LoginVerificationSerializer,
     PurchaseSerializer,
-    CommentSerializer)
+    CommentSerializer,
+    CoinTransferSerializer
+)
 from ..services import CustomService
 from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination
 from apps.instagram_app.models import (
@@ -279,3 +282,19 @@ class PurchaseVerificationAPIView(views.APIView):
 class CommentViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
+
+
+class CoinTransferAPIView(views.APIView):
+    authentication_classes = (PageAuthentication,)
+
+    def get(self, request, *args, **kwargs):
+        page = request.auth['page']
+        wallet = page.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet']
+        return Response({'wallet': wallet, 'maximum_amount': settings.MAXIMUM_COIN_TRANSFER})
+
+    def post(self, request, *args, **kwargs):
+        page = request.auth['page']
+        serializer = CoinTransferSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(sender=page)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
