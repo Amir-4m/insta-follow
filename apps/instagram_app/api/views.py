@@ -117,19 +117,12 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
     filterset_fields = ['status', 'order__action']
 
     def get_inquiry(self, request, action_type):
-        page_uuid = request.query_params.get('page_uuid')
-        if not page_uuid:
-            return Response({'Error': _('page_uuid is required')}, status=status.HTTP_400_BAD_REQUEST)
-
+        page = request.auth['page']
         try:
             limit = abs(min(int(request.query_params.get('limit', 0)), 100))
         except ValueError:
             raise ValidationError(detail={'detail': _('make sure the limit value is a positive number!')})
 
-        try:
-            page = InstaPage.objects.get(uuid=page_uuid)
-        except InstaPage.DoesNotExist:
-            raise ValidationError(detail={'detail': _('page does not exist!')})
         inquiries = CustomService.get_or_create_inquiries(page, action_type, limit)
 
         serializer = self.serializer_class(inquiries, many=True)
