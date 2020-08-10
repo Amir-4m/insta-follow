@@ -148,7 +148,9 @@ class OrderSerializer(serializers.ModelSerializer):
             raise ValidationError(
                 detail={'detail': _('instagram_username field is required for follow!')})
         if action_value.pk in [InstaAction.ACTION_LIKE, InstaAction.ACTION_FOLLOW] and comments is not None:
-            raise ValidationError(detail={'detail': _('comment is not allowed in like and follow methods!')})
+            attrs.update({"comments": None})
+        elif action_value.pk == InstaAction.ACTION_COMMENT and not comments:
+            attrs.update({"comments": list(Comment.objects.all().values_list('text', flat=True))})
         return attrs
 
     def create(self, validated_data):
