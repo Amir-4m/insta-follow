@@ -55,7 +55,7 @@ class InstagramAccountModelAdmin(admin.ModelAdmin):
 
 @admin.register(CoinPackageOrder)
 class CoinPackageOrderModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'invoice_number', "transaction_id", 'updated_time', 'created_time')
+    list_display = ('id', 'invoice_number', "reference_id", 'updated_time', 'created_time')
 
 
 @admin.register(Comment)

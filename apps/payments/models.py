@@ -22,10 +22,13 @@ class Gateway(models.Model):
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     display_name = models.CharField(_('display name'), max_length=120)
     title = models.CharField(_('title'), max_length=120)
+    url = models.CharField(max_length=150, verbose_name=_("request url"), null=True, blank=True)
+    check_url = models.CharField(max_length=150, verbose_name=_("pay check url"), null=True, blank=True)
     gw_type = models.PositiveSmallIntegerField(verbose_name=_("type"), choices=GATEWAY_TYPES, default=TYPE_BANK)
     code = models.PositiveSmallIntegerField(verbose_name=_("code"), choices=GATEWAY_FUNCTIONS, default=FUNCTION_SAMAN)
     merchant_id = models.CharField(max_length=50, verbose_name=_("merchant id"), blank=True)
     merchant_pass = models.CharField(max_length=50, verbose_name=_("merchant pass"), blank=True)
+    is_enable = models.BooleanField(default=True)
 
     def clean(self):
         if self.gw_type == self.TYPE_BANK and None in [self.merchant_pass, self.merchant_id]:

@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 class LoginVerificationSerializer(serializers.ModelSerializer):
+    instagram_user_id = serializers.IntegerField()
+
     class Meta:
         model = InstaPage
         fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid')
@@ -31,32 +33,30 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
         session_id = attrs['session_id']
         user_agent = "Instagram 10.15.0 Android (28/9; 411dpi; 1080x2220; samsung; SM-A650G; SM-A650G; Snapdragon 450; en_US)"
         try:
-
             response = requests.get(
                 url=f'https://i.instagram.com/api/v1/users/{user_id}/info/',
                 cookies={'sessionid': session_id},
                 headers={'User-Agent': user_agent}
             )
             temp = response.json()['user']
-
-            if (temp['pk'] != str(user_id) or temp['username'] != username) or temp.get('account_type') is None:
-                raise ValidationError(
-                    detail={'detail': _('invalid credentials provided!')}
-                )
-
         except Exception as e:
             logger.error(f"error in login verification for user id {user_id}: {e}")
             raise ValidationError(
                 detail={'detail': _('error occurred while logging in!')}
             )
+
+        if (temp['pk'] != user_id or temp['username'] != username) or temp.get('account_type') is None:
+            raise ValidationError(
+                detail={'detail': _('invalid credentials provided!')}
+            )
+
         return attrs
 
     def create(self, validated_data):
         username = validated_data['instagram_username']
         user_id = validated_data['instagram_user_id']
         session_id = validated_data['session_id']
-
-        page, created = InstaPage.objects.get_or_create(
+        page, _created = InstaPage.objects.get_or_create(
             instagram_user_id=user_id,
             defaults={
                 "instagram_username": username,
@@ -236,12 +236,12 @@ class CoinPackageSerializer(serializers.ModelSerializer):
 class CoinPackageOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = CoinPackageOrder
-        fields = ('invoice_number', 'coin_package', 'page', 'purchase_token', 'is_paid', 'price')
+        fields = ('invoice_number', 'coin_package', 'page', 'reference_id', 'is_paid', 'price')
 
 
 class PurchaseSerializer(serializers.Serializer):
     invoice_number = serializers.UUIDField(required=True)
-    transaction_id = serializers.CharField(required=True, max_length=120)
+    RefNum = serializers.CharField(required=True, max_length=120, source='reference_id')
 
     def validate_invoice_number(self, value):
         if CoinPackageOrder.objects.filter(invoice_number=value).exists():

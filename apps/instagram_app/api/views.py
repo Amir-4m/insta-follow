@@ -5,7 +5,6 @@ from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils.decorators import method_decorator
 from rest_framework import status, viewsets, generics, mixins, views
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -13,7 +12,7 @@ from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 from django_filters.rest_framework import DjangoFilterBackend
 
-from apps.payments.services import BazaarService
+from apps.payments.services import BazaarService, SamanService
 
 from ..authentications import PageAuthentication
 from ..swagger_schemas import ORDER_POST_DOCS, INQUIRY_POST_DOC, PROFILE_POST_DOC
@@ -219,7 +218,6 @@ class CoinPackageOrderViewSet(
     viewsets.GenericViewSet,
     generics.ListAPIView,
     generics.CreateAPIView,
-    generics.UpdateAPIView
 ):
     queryset = CoinPackageOrder.objects.all()
     serializer_class = CoinPackageOrderSerializer
@@ -239,7 +237,7 @@ class PurchaseVerificationAPIView(views.APIView):
         serializer = PurchaseSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             invoice_number = serializer.validated_data['invoice_number']
-            transaction_id = serializer.validated_data['transaction_id']
+            reference_id = serializer.validated_data['reference_id']
             with transaction.atomic():
                 order = CoinPackageOrder.objects.select_related('coin_package').select_for_update().get(
                     invoice_number=invoice_number
@@ -256,11 +254,26 @@ class PurchaseVerificationAPIView(views.APIView):
                     purchase_verified = BazaarService.verify_purchase(
                         order.coin_package.name,
                         order.coin_package.sku,
-                        transaction_id
+                        reference_id
                     )
+                elif order.gateway.code == Gateway.FUNCTION_SAMAN:
+                    order.log = request.data
+                    if request.data.get("State", "") != "OK":
+                        order.result_code = request.data.get("State", "")
+                        order.save(update_fields=['updated_time', 'log', 'result_code'])
+                        purchase_verified = False
+                    else:
+                        order.result_code = request.data.get("State", "")
+                        order.user_reference = request.data.get("TRACENO", "")
 
+                        purchase_verified = SamanService().verify_saman(
+                            order.gateway.url,
+                            reference_id,
+                            settings.SAMAN_MERCHANT_ID,
+                            order.coin_package.amount
+                        )
                 order.is_paid = purchase_verified
-                order.transaction_id = transaction_id
+                order.reference_id = reference_id
                 order.save()
 
                 if order.is_paid is True:

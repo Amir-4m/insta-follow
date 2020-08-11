@@ -1,10 +1,16 @@
 import json
+import logging
 import os
+import requests
+import zeep
 
 from django.core.cache import caches
 from django.conf import settings
 
-import requests
+from zeep.cache import InMemoryCache
+from zeep.transports import Transport
+
+errors = logging.getLogger('errors')
 
 
 class BazaarService(object):
@@ -62,3 +68,19 @@ class BazaarService(object):
         if response.status_code == 200:
             return True
         return False
+
+
+class SamanService:
+    transport = Transport(cache=InMemoryCache())
+
+    def verify_saman(self, wsdl, ref_number, mid, real_amount):
+        result = False
+        try:
+            client = zeep.Client(wsdl=wsdl, transport=self.transport)
+            res = client.service.verifyTransaction(str(ref_number), str(mid))
+            if int(res) == real_amount:
+                result = True
+        except Exception as e:
+            errors.error(str(e))
+
+        return result
