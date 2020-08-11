@@ -51,7 +51,6 @@ class DeviceViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     """
     serializer_class = DeviceSerializer
     authentication_classes = (PageAuthentication,)
-    # permission_classes = (IsAuthenticated,)
     queryset = Device.objects.all()
 
     def perform_create(self, serializer):
@@ -78,7 +77,6 @@ class OrderViewSet(viewsets.GenericViewSet,
                    mixins.CreateModelMixin,
                    mixins.ListModelMixin):
     authentication_classes = (PageAuthentication,)
-    # permission_classes = (IsAuthenticated,)
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
     pagination_class = OrderPagination
@@ -90,26 +88,9 @@ class OrderViewSet(viewsets.GenericViewSet,
     def perform_create(self, serializer):
         serializer.save(page=self.request.auth['page'])
 
-    # @action(methods=["get"], detail=True)
-    # def recheck(self, request, pk=None, *args, **kwargs):
-    #     """
-    #     Check whether or not the account is private or not
-    #     """
-    #     instance = self.get_object()
-    #     if instance.is_enable is False:
-    #         collect_order_link_info.delay(
-    #             order_id=instance.id,
-    #             action=instance.action.action_type,
-    #             link=instance.link,
-    #             media_url=instance.media_url,
-    #         )
-    #     serializer = self.get_serializer(instance)
-    #     return Response(serializer.data)
-
 
 class UserInquiryViewSet(viewsets.GenericViewSet):
     authentication_classes = (PageAuthentication,)
-    # permission_classes = (IsAuthenticated,)
     queryset = UserInquiry.objects.all()
     serializer_class = UserInquirySerializer
     pagination_class = InquiryPagination
@@ -178,11 +159,9 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
         return Response(serializer.data)
 
 
-#
 class CoinTransactionAPIView(viewsets.GenericViewSet, mixins.ListModelMixin):
     """Shows a list of user transactions"""
     authentication_classes = (PageAuthentication,)
-    # permission_classes = (IsAuthenticated,)
     queryset = CoinTransaction.objects.all()
     serializer_class = CoinTransactionSerializer
     pagination_class = CoinTransactionPagination
@@ -213,7 +192,6 @@ class CoinPackageAPIView(generics.ListAPIView):
     serializer_class = CoinPackageSerializer
 
 
-#
 class CoinPackageOrderViewSet(
     viewsets.GenericViewSet,
     generics.ListAPIView,
@@ -235,7 +213,6 @@ class CoinPackageOrderViewSet(
 class PurchaseVerificationAPIView(views.APIView):
     authentication_classes = (PageAuthentication,)
 
-    # permission_classes = (IsAuthenticated,)
     def post(self, request, *args, **kwargs):
         page = request.auth['page']
         serializer = PurchaseSerializer(data=request.data)
