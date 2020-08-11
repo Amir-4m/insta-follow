@@ -111,7 +111,7 @@ class Order(models.Model):
     description = models.TextField(_("description"), blank=True, default='')
     is_enable = models.BooleanField(_("is enable"), default=True)
     owner = models.ForeignKey(InstaPage, related_name='orders', on_delete=models.CASCADE)
-    track_id = models.CharField(max_length=40, null=True, blank=True)
+    track_id = models.CharField(max_length=40, blank=True)
 
     class Meta:
         db_table = "insta_orders"
@@ -189,13 +189,13 @@ class CoinPackageOrder(models.Model):
     invoice_number = models.UUIDField(_('uuid'), unique=True, default=uuid.uuid4, editable=False)
     coin_package = models.ForeignKey(CoinPackage, on_delete=models.PROTECT)
     page = models.ForeignKey(InstaPage, on_delete=models.PROTECT, related_name='package_orders')
-    reference_id = models.CharField(max_length=100, verbose_name=_("reference id"), db_index=True, blank=True)
-    user_reference = models.CharField(max_length=100, verbose_name=_("customer reference"), blank=True)
-    result_code = models.CharField(max_length=100, verbose_name=_("result code"), blank=True)
+    reference_id = models.CharField(_("reference id"), max_length=100, db_index=True, blank=True)
+    user_reference = models.CharField(_("customer reference"), max_length=100, blank=True)
+    result_code = models.CharField(_("result code"), max_length=100, blank=True)
     is_paid = models.BooleanField(_("is paid"), null=True)
     price = models.PositiveIntegerField(_('price'))
     gateway = models.ForeignKey(Gateway, on_delete=models.PROTECT, related_name='orders', null=True, blank=True)
-    log = models.TextField(verbose_name=_("payment log"), blank=True)
+    log = models.TextField(_("payment log"), blank=True)
 
 
 class CoinTransaction(models.Model):
@@ -231,7 +231,7 @@ class ReportAbuse(models.Model):
     reporter = models.ForeignKey(InstaPage, related_name='reports', on_delete=models.CASCADE)
     text = models.TextField(_("report text"), max_length=1024)
     abuser = models.ForeignKey(Order, related_name='reports', on_delete=models.PROTECT)
-    status = models.CharField(max_length=8, null=False, blank=False, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    status = models.CharField(max_length=8, blank=False, choices=STATUS_CHOICES, default=STATUS_OPEN)
 
 
 class BlockWordRegex(models.Model):

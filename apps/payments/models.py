@@ -22,15 +22,15 @@ class Gateway(models.Model):
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     display_name = models.CharField(_('display name'), max_length=120)
     title = models.CharField(_('title'), max_length=120)
-    image = models.ImageField(upload_to='gateways/images', null=True)
-    url = models.CharField(max_length=150, verbose_name=_("request url"), null=True, blank=True)
-    check_url = models.CharField(max_length=150, verbose_name=_("pay check url"), null=True, blank=True)
-    gw_type = models.PositiveSmallIntegerField(verbose_name=_("type"), choices=GATEWAY_TYPES, default=TYPE_BANK)
-    code = models.PositiveSmallIntegerField(verbose_name=_("code"), choices=GATEWAY_FUNCTIONS, default=FUNCTION_SAMAN)
-    merchant_id = models.CharField(max_length=50, verbose_name=_("merchant id"), blank=True)
-    merchant_pass = models.CharField(max_length=50, verbose_name=_("merchant pass"), blank=True)
+    image = models.ImageField(upload_to='gateways/images', blank=True)
+    url = models.CharField(_("request url"), max_length=150, null=True, blank=True)
+    check_url = models.CharField(_("pay check url"), max_length=150, null=True, blank=True)
+    gw_type = models.PositiveSmallIntegerField(_("type"), choices=GATEWAY_TYPES, default=TYPE_BANK)
+    code = models.PositiveSmallIntegerField(_("code"), choices=GATEWAY_FUNCTIONS, default=FUNCTION_SAMAN)
+    merchant_id = models.CharField(_("merchant id"), max_length=50, blank=True)
+    merchant_pass = models.CharField(_("merchant pass"), max_length=50, blank=True)
     is_enable = models.BooleanField(default=True)
 
     def clean(self):
-        if self.gw_type == self.TYPE_BANK and None in [self.merchant_pass, self.merchant_id]:
+        if self.gw_type == self.TYPE_BANK and (not self.merchant_pass or not self.merchant_id):
             raise ValidationError(_("merchant pass and merchant id could not be none in type bank!"))

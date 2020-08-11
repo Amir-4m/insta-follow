@@ -79,52 +79,6 @@ class DeviceSerializer(serializers.ModelSerializer):
         return Device.objects.create(page=page, device_id=device_id)
 
 
-# class InstaPagesSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = InstaPage
-#         fields = ('id', 'instagram_username', 'instagram_user_id')
-
-
-# class ProfileSerializer(serializers.ModelSerializer):
-#     insta_pages = serializers.SerializerMethodField(read_only=True)
-#     approved_wallet = serializers.SerializerMethodField(read_only=True)
-#     unapproved_wallet = serializers.SerializerMethodField(read_only=True)
-#     instagram_username = serializers.CharField(write_only=True)
-#
-#     class Meta:
-#         model = User
-#         fields = ('id', 'insta_pages', 'approved_wallet', 'unapproved_wallet', 'instagram_username')
-#         read_only_fields = ('id',)
-#
-#     def get_approved_wallet(self, obj):
-#         return obj.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet']
-#
-#     def get_unapproved_wallet(self, obj):
-#         return UserInquiry.objects.filter(
-#             user_page__user=obj,
-#             status=UserInquiry.STATUS_DONE,
-#         ).aggregate(coins=Coalesce(Sum('order__action__action_value'), 0))['coins']
-#
-#     def get_insta_pages(self, obj):
-#         qs = obj.insta_pages.filter(user_pages__is_active=True)
-#         return InstaPagesSerializer(qs, many=True).data
-#
-#     def create(self, validated_data):
-#         page_id = validated_data.get('instagram_username')
-#         user = self.context['user']
-#         page, created = InstaPage.objects.get_or_create(
-#             instagram_username=page_id,
-#         )
-#         UserPage.objects.update_or_create(
-#             user=user,
-#             page=page,
-#             defaults={
-#                 'is_active': True
-#             }
-#         )
-#         return user
-
-
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
@@ -240,7 +194,11 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CoinPackageOrder
-        fields = ('id', 'invoice_number', 'coin_package', 'page', 'reference_id', 'is_paid', 'price', 'gateways')
+        fields = (
+            'id', 'invoice_number', 'coin_package',
+            'page', 'reference_id', 'is_paid',
+            'price', 'gateways', 'app_name', 'app_version'
+        )
         read_only_fields = ('page',)
 
     def get_gateways(self, obj):
