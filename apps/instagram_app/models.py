@@ -238,3 +238,9 @@ class BlockWordPattern(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     pattern = models.CharField(_("pattern"), max_length=120)
+
+
+class BlockedText(models.Model):
+    created_time = models.DateTimeField(_("created time"), auto_now_add=True)
+    text = models.TextField(_('blocked text'))
+    pattern = models.ForeignKey(BlockWordPattern, on_delete=models.PROTECT, related_name='blocked_texts')
