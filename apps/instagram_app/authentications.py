@@ -1,6 +1,7 @@
 from functools import lru_cache
+from datetime import datetime
+
 from django.contrib.auth.models import AnonymousUser
-from django.utils import timezone
 from django.utils.encoding import smart_text
 from django.utils.translation import ugettext_lazy as _
 
@@ -45,7 +46,7 @@ class PageAuthentication(authentication.BaseAuthentication):
         if not token:  # no id passed in request headers
             raise exceptions.AuthenticationFailed('No such page')  # authentication did not succeed
         try:
-            uuid = CryptoService(timezone.now().strftime("%d%m%y%H")).decrypt(token)
+            uuid = CryptoService(datetime.utcnow().strftime("%d%m%y%H")).decrypt(token)
         except UnicodeDecodeError:
             raise exceptions.AuthenticationFailed('Token is expired!')
         try:
