@@ -240,7 +240,7 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CoinPackageOrder
-        fields = ('invoice_number', 'coin_package', 'page', 'reference_id', 'is_paid', 'price', 'gateways')
+        fields = ('id', 'invoice_number', 'coin_package', 'page', 'reference_id', 'is_paid', 'price', 'gateways')
         read_only_fields = ('page',)
 
     def get_gateways(self, obj):
@@ -248,10 +248,10 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
 
 
 class PurchaseSerializer(serializers.Serializer):
-    invoice_number = serializers.UUIDField(required=True)
+    ResNum = serializers.UUIDField(required=True, source='invoice_number')
     RefNum = serializers.CharField(required=True, max_length=120, source='reference_id')
 
-    def validate_invoice_number(self, value):
+    def validate_ResNum(self, value):
         if CoinPackageOrder.objects.filter(invoice_number=value).exists():
             return value
         raise ValidationError(_("invoice number is invalid!"))

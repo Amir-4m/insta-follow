@@ -59,7 +59,7 @@ def render_bank_page(request, invoice_id, request_url, merchant_id, amount, phon
         "invoice_id": invoice_id,
         "request_url": request_url,
         "merchant_id": merchant_id,
-        "redirect_url": request.build_absolute_uri(reverse('payment-gateway')),
+        "redirect_url": request.build_absolute_uri(reverse('purchase-verification')),
         "amount": amount * 10,
         "extra_data": kwargs,
     }

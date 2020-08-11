@@ -217,6 +217,7 @@ class CoinPackageAPIView(generics.ListAPIView):
 class CoinPackageOrderViewSet(
     viewsets.GenericViewSet,
     generics.ListAPIView,
+    generics.RetrieveAPIView,
     generics.CreateAPIView,
 ):
     authentication_classes = (PageAuthentication,)
@@ -235,7 +236,6 @@ class PurchaseVerificationAPIView(views.APIView):
     authentication_classes = (PageAuthentication,)
 
     # permission_classes = (IsAuthenticated,)
-
     def post(self, request, *args, **kwargs):
         page = request.auth['page']
         serializer = PurchaseSerializer(data=request.data)
