@@ -15,6 +15,8 @@ from apps.instagram_app.models import (
     CoinPackageOrder, InstaPage, Comment,
     ReportAbuse
 )
+from apps.payments.api.serializers import GatewaySerializer
+from apps.payments.models import Gateway
 
 logger = logging.getLogger(__name__)
 
@@ -234,9 +236,15 @@ class CoinPackageSerializer(serializers.ModelSerializer):
 
 
 class CoinPackageOrderSerializer(serializers.ModelSerializer):
+    gateways = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = CoinPackageOrder
-        fields = ('invoice_number', 'coin_package', 'page', 'reference_id', 'is_paid', 'price')
+        fields = ('invoice_number', 'coin_package', 'page', 'reference_id', 'is_paid', 'price', 'gateways')
+        read_only_fields = ('page',)
+
+    def get_gateways(self, obj):
+        return GatewaySerializer(Gateway.objects.filter(is_enable=True), many=True).data
 
 
 class PurchaseSerializer(serializers.Serializer):

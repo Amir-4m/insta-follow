@@ -12,7 +12,7 @@ class Gateway(models.Model):
     )
 
     FUNCTION_SAMAN = 1
-    FUNCTION_BAZAAR = 4
+    FUNCTION_BAZAAR = 2
     GATEWAY_FUNCTIONS = (
         (FUNCTION_SAMAN, _('Saman')),
         (FUNCTION_BAZAAR, _('Bazaar')),
@@ -22,6 +22,7 @@ class Gateway(models.Model):
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     display_name = models.CharField(_('display name'), max_length=120)
     title = models.CharField(_('title'), max_length=120)
+    image = models.ImageField(upload_to='gateways/images', null=True)
     url = models.CharField(max_length=150, verbose_name=_("request url"), null=True, blank=True)
     check_url = models.CharField(max_length=150, verbose_name=_("pay check url"), null=True, blank=True)
     gw_type = models.PositiveSmallIntegerField(verbose_name=_("type"), choices=GATEWAY_TYPES, default=TYPE_BANK)

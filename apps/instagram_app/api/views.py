@@ -219,12 +219,16 @@ class CoinPackageOrderViewSet(
     generics.ListAPIView,
     generics.CreateAPIView,
 ):
+    authentication_classes = (PageAuthentication,)
     queryset = CoinPackageOrder.objects.all()
     serializer_class = CoinPackageOrderSerializer
 
     def get_queryset(self):
         qs = super(CoinPackageOrderViewSet, self).get_queryset()
         return qs.filter(page=self.request.auth['page'])
+
+    def perform_create(self, serializer):
+        serializer.save(page=self.request.auth['page'])
 
 
 class PurchaseVerificationAPIView(views.APIView):
