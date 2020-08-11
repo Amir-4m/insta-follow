@@ -1,3 +1,5 @@
+import re
+
 from django.conf import settings
 from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
@@ -28,14 +30,15 @@ from .serializers import (
     PurchaseSerializer,
     CommentSerializer,
     CoinTransferSerializer,
-    ReportAbuseSerializer)
+    ReportAbuseSerializer
+)
 from ..services import CustomService
 from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination
 from apps.instagram_app.models import (
     InstaAction, Order, UserInquiry,
     CoinTransaction, Device, CoinPackage,
     CoinPackageOrder, InstaPage, Comment,
-    ReportAbuse
+    ReportAbuse, BlockedText, BlockWordRegex
 )
 from ...payments.models import Gateway
 
@@ -295,3 +298,21 @@ class ReportAbuseViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
 
     def perform_create(self, serializer):
         serializer.save(reporter=self.request.auth['page'])
+
+
+class ValidateTextAPIView(views.APIView):
+    authentication_classes = (PageAuthentication,)
+
+    def post(self, request, *args, **kwargs):
+        page = request.auth['page']
+        text = request.data.get('text', '')
+        blocked = False
+        regex = BlockWordRegex.objects.all()
+
+        for reg in regex:
+            if re.match(fr"{reg.pattern}", text):
+                BlockedText.objects.create(text=text, pattern=reg, author=page)
+                blocked = True
+                break
+
+        return Response({'text': text, 'blocked': blocked})

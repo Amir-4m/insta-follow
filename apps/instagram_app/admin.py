@@ -5,7 +5,10 @@ from .models import (
     InstaPage,
     Order, UserInquiry, InstaAction,
     CoinPackage, CoinPackageOrder,
-    Comment, InstagramAccount, ReportAbuse)
+    Comment, InstagramAccount,
+    ReportAbuse, BlockWordRegex,
+    BlockedText
+)
 
 
 @admin.register(InstaPage)
@@ -72,3 +75,13 @@ class ReportAbuseModelAdmin(admin.ModelAdmin):
         if obj.status == ReportAbuse.STATUS_APPROVED:
             Order.objects.filter(id=obj.abuser.id).update(is_enable=False)
         return super(ReportAbuseModelAdmin, self).save_model(request, obj, form, change)
+
+
+@admin.register(BlockWordRegex)
+class BlockWordRegexModelAdmin(admin.ModelAdmin):
+    list_display = ('pattern', 'updated_time', 'created_time')
+
+
+@admin.register(BlockedText)
+class BlockedTextModelAdmin(admin.ModelAdmin):
+    list_display = ('text', 'pattern', 'author', 'created_time')

@@ -234,7 +234,7 @@ class ReportAbuse(models.Model):
     status = models.CharField(max_length=8, null=False, blank=False, choices=STATUS_CHOICES, default=STATUS_OPEN)
 
 
-class BlockWordPattern(models.Model):
+class BlockWordRegex(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     pattern = models.CharField(_("pattern"), max_length=120)
@@ -243,4 +243,5 @@ class BlockWordPattern(models.Model):
 class BlockedText(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     text = models.TextField(_('blocked text'))
-    pattern = models.ForeignKey(BlockWordPattern, on_delete=models.PROTECT, related_name='blocked_texts')
+    pattern = models.ForeignKey(BlockWordRegex, on_delete=models.PROTECT, related_name='blocked_texts')
+    author = models.ForeignKey(InstaPage, related_name='blocked_texts', on_delete=models.PROTECT)
