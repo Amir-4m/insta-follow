@@ -43,7 +43,7 @@ class PayView(View):
         return render_bank_page(
             request,
             payment.invoice_number,
-            gateway.url,
+            gateway.gateway_url,
             gateway.merchant_id,
             payment.coin_package.amount,
             ResNum1='fastcharge'

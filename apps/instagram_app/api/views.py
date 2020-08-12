@@ -251,7 +251,7 @@ class PurchaseVerificationAPIView(views.APIView):
                         order.user_reference = request.data.get("TRACENO", "")
 
                         purchase_verified = SamanService().verify_saman(
-                            order.gateway.url,
+                            order.gateway.verify_url,
                             reference_id,
                             settings.SAMAN_MERCHANT_ID,
                             order.coin_package.amount
