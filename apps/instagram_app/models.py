@@ -170,10 +170,13 @@ class UserInquiry(models.Model):
 class CoinPackage(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
-    amount = models.IntegerField(_('amount'))
+    amount = models.PositiveIntegerField(_('amount'))
+    amount_offer = models.PositiveIntegerField(_('amount offer'), null=True, blank=True)
     price = models.PositiveIntegerField(_('price'))
-    name = models.CharField(max_length=100, blank=True)
-    sku = models.CharField(max_length=40, unique=True, null=True)
+    price_offer = models.PositiveIntegerField(_('price offer'), null=True, blank=True)
+    name = models.CharField(_('package name'), max_length=100, blank=True)
+    sku = models.CharField(_('package sku'), max_length=40, unique=True, null=True)
+    featured = models.DateTimeField(null=True, blank=True)
     is_enable = models.BooleanField(default=True)
 
     class Meta:
@@ -181,6 +184,22 @@ class CoinPackage(models.Model):
 
     def __str__(self):
         return f"{self.amount} - {self.price}"
+
+    @property
+    def package_price(self):
+        return self.price_offer or self.price
+
+    @property
+    def package_amount(self):
+        return self.amount_offer or self.price
+
+    def clean(self):
+        if self.amount_offer is not None and self.price_offer is not None:
+            raise ValidationError(_("You could not set both price offer and amount offer!"))
+        if self.amount_offer is not None and self.amount_offer <= self.amount:
+            raise ValidationError(_("Amount offer should not be lower than real amount!"))
+        if self.price_offer is not None and self.price_offer >= self.price:
+            raise ValidationError(_("Price offer should not be higher than real price!"))
 
 
 class CoinPackageOrder(models.Model):
