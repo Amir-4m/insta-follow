@@ -32,6 +32,7 @@ SECRET_KEY = config("SECRET_KEY")
 SITE_ID = 1
 # Application definition
 INSTALLED_APPS = [
+    'apps.config',
     'apps.accounts',
     'apps.instagram_app',
     'apps.payments',
