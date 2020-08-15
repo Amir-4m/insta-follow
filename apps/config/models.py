@@ -11,7 +11,6 @@ class Config(models.Model):
     TYPE_LIST = 'list'
     TYPE_DICT = 'dict'
     TYPE_BOOL = 'bool'
-    TYPE_TUPLE = 'tuple'
     TYPE_CHOICES = [
         (TYPE_STR, 'STR'),
         (TYPE_INT, 'INT'),
@@ -19,9 +18,12 @@ class Config(models.Model):
         (TYPE_LIST, 'LIST'),
         (TYPE_DICT, 'DICT'),
         (TYPE_BOOL, 'BOOL'),
-        (TYPE_TUPLE, 'TUPLE'),
 
     ]
     name = models.CharField(verbose_name=_('name'), max_length=100, unique=True)
     value = PickledObjectField(verbose_name=_('value'))
     data_type = models.CharField(verbose_name=_('value data type'), choices=TYPE_CHOICES, max_length=10)
+
+    @property
+    def data_value(self):
+        return self.value
