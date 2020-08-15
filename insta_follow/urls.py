@@ -39,5 +39,6 @@ urlpatterns = [
     path('bot/', include('bot.urls')),
     path('payments/', include('apps.payments.urls')),
     path('pages/', include('django.contrib.flatpages.urls')),
+    path('tinymce/', include('tinymce.urls')),
 
 ]

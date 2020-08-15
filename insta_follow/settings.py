@@ -32,6 +32,7 @@ SECRET_KEY = config("SECRET_KEY")
 SITE_ID = 1
 # Application definition
 INSTALLED_APPS = [
+    'apps.contents',
     'apps.config',
     'apps.accounts',
     'apps.instagram_app',
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'django_celery_beat',
+    'tinymce',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -94,7 +96,7 @@ REST_FRAMEWORK = {
 }
 SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('ACCESS_TOKEN_LIFETIME', default=30, cast=int)),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('ACCESS_TOKEN_LIFETIME', default=56000, cast=int)),
     'REFRESH_TOKEN_LIFETIME': timedelta(minutes=config('REFRESH_TOKEN_LIFETIME', default=90, cast=int)),
 }
 
@@ -284,6 +286,9 @@ MAXIMUM_COIN_TRANSFER = config('MAXIMUM_COIN_TRANSFER', default=1000, cast=int)
 COIN_TRANSFER_FEE = config('COIN_TRANSFER_FEE', default=5, cast=int)
 
 SAMAN_MERCHANT_ID = config('SAMAN_MERCHANT_ID', default='')
+
+TINYMCE_JS_URL = config('TINYMCE_JS_URL', default='')
+TINYMCE_COMPRESSOR = config('TINYMCE_COMPRESSOR', default=False, cast=bool)
 
 if DEVEL is False:
     import sentry_sdk
