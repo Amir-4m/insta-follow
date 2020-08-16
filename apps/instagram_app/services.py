@@ -200,7 +200,7 @@ class CryptoService:
         """
         Requires string param as a key
         """
-        self.key = hashlib.sha256(key.encode()).digest()
+        self.key = key
         self.BS = AES.block_size
 
     def __pad(self, s):

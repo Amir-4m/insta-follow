@@ -46,7 +46,8 @@ class PageAuthentication(authentication.BaseAuthentication):
         if not token:  # no id passed in request headers
             raise exceptions.AuthenticationFailed('No such page')  # authentication did not succeed
         try:
-            uuid = CryptoService(datetime.utcnow().strftime("%d%m%y%H")).decrypt(token)
+            dt = datetime.utcnow().strftime("%d%m%y%H")
+            uuid = CryptoService(dt + dt).decrypt(token)
         except UnicodeDecodeError:
             raise exceptions.AuthenticationFailed('Token is expired!')
         try:

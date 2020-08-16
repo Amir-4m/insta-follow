@@ -61,14 +61,6 @@ class DeviceViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
 
 
 @method_decorator(name='list', decorator=swagger_auto_schema(
-    operation_description="Get a list of user instagram pages and his/her coin balance",
-    responses={"200": 'Successful'}
-))
-@method_decorator(name='create', decorator=swagger_auto_schema(
-    request_body=PROFILE_POST_DOC
-
-))
-@method_decorator(name='list', decorator=swagger_auto_schema(
     operation_description="Get a list of user submitted orders",
     responses={"200": 'Successful'}
 ))
@@ -171,7 +163,7 @@ class CoinTransactionAPIView(viewsets.GenericViewSet, mixins.ListModelMixin):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.filter(user=self.request.auth['page']).order_by('-created_time')
+        return queryset.filter(page=self.request.auth['page']).order_by('-created_time')
 
     @method_decorator(name='total', decorator=swagger_auto_schema(
         operation_description="Get user total coin balance",
