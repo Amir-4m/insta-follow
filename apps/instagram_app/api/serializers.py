@@ -1,5 +1,7 @@
 import logging
 import random
+import re
+
 import requests
 from django.conf import settings
 from django.db import transaction
@@ -13,7 +15,7 @@ from apps.instagram_app.models import (
     UserInquiry, CoinTransaction, Order,
     InstaAction, Device, CoinPackage,
     CoinPackageOrder, InstaPage, Comment,
-    ReportAbuse
+    ReportAbuse, BlockWordRegex, BlockedText
 )
 from apps.payments.api.serializers import GatewaySerializer
 from apps.payments.models import Gateway
@@ -97,15 +99,33 @@ class OrderSerializer(serializers.ModelSerializer):
         shortcode = attrs.get('shortcode')
         instagram_username = attrs.get('instagram_username')
         comments = attrs.get('comments')
+
         if action_value.pk in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT] and not shortcode:
             raise ValidationError(detail={'detail': _('shortcode field is required for like and comment !')})
+
         if action_value.pk == InstaAction.ACTION_FOLLOW and not instagram_username:
             raise ValidationError(
-                detail={'detail': _('instagram_username field is required for follow!')})
+                detail={'detail': _('instagram_username field is required for follow!')}
+            )
+
         if action_value.pk in [InstaAction.ACTION_LIKE, InstaAction.ACTION_FOLLOW] and comments is not None:
             attrs.update({"comments": None})
-        elif action_value.pk == InstaAction.ACTION_COMMENT and not comments:
-            attrs.update({"comments": list(Comment.objects.all().values_list('text', flat=True))})
+
+        elif action_value.pk == InstaAction.ACTION_COMMENT:
+            if not comments:
+                attrs.update({"comments": list(Comment.objects.all().values_list('text', flat=True))})
+            else:
+                regex = BlockWordRegex.objects.all()
+                for reg in regex:
+                    r = re.compile(reg.pattern)
+                    results = list(filter(r.match, comments))
+                    if results:
+                        BlockedText.objects.create(
+                            text=results[0],
+                            pattern=reg,
+                            author=self.context['request'].auth['page']
+                        )
+                        raise ValidationError(detail={'detail': _('inappropriate word has been found in the text!')})
         return attrs
 
     def create(self, validated_data):

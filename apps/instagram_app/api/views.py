@@ -290,21 +290,3 @@ class ReportAbuseViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
 
     def perform_create(self, serializer):
         serializer.save(reporter=self.request.auth['page'])
-
-
-class ValidateTextAPIView(views.APIView):
-    authentication_classes = (PageAuthentication,)
-
-    def post(self, request, *args, **kwargs):
-        page = request.auth['page']
-        text = request.data.get('text', '')
-        blocked = False
-        regex = BlockWordRegex.objects.all()
-
-        for reg in regex:
-            if re.match(fr"{reg.pattern}", text):
-                BlockedText.objects.create(text=text, pattern=reg, author=page)
-                blocked = True
-                break
-
-        return Response({'text': text, 'blocked': blocked})
