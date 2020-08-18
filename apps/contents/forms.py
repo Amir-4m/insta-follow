@@ -9,3 +9,6 @@ class FlatPageForm(forms.ModelForm):
     class Meta:
         model = FlatPage
         fields = '__all__'
+
+    class Media:
+        js = ('tinymce/tinymce.min.js',)

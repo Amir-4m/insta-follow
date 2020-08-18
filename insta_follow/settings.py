@@ -287,7 +287,6 @@ COIN_TRANSFER_FEE = config('COIN_TRANSFER_FEE', default=5, cast=int)
 
 SAMAN_MERCHANT_ID = config('SAMAN_MERCHANT_ID', default='')
 
-TINYMCE_JS_URL = config('TINYMCE_JS_URL', default='')
 TINYMCE_COMPRESSOR = config('TINYMCE_COMPRESSOR', default=False, cast=bool)
 
 if DEVEL is False:
