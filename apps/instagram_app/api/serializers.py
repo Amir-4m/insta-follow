@@ -80,26 +80,25 @@ class DeviceSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    shortcode = serializers.CharField(required=False)
+
     class Meta:
         model = Order
         fields = (
             'id', 'entity_id', 'action',
             'target_no', 'achieved_number_approved', 'link',
             'instagram_username', 'is_enable', 'description',
-            'media_url', 'comments'
+            'media_url', 'comments', 'shortcode'
         )
-        read_only_fields = ('is_enable', 'achieved_number_approved', 'description')
-        extra_kwargs = {
-            'link': {'allow_null': True, 'required': False, 'allow_blank': True}
-        }
+        read_only_fields = ('is_enable', 'achieved_number_approved', 'description', 'link')
 
     def validate(self, attrs):
         action_value = attrs.get('action')
-        link = attrs.get('link')
+        shortcode = attrs.get('shortcode')
         instagram_username = attrs.get('instagram_username')
         comments = attrs.get('comments')
-        if action_value.pk in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT] and not link:
-            raise ValidationError(detail={'detail': _('link field is required for like and comment !')})
+        if action_value.pk in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT] and not shortcode:
+            raise ValidationError(detail={'detail': _('shortcode field is required for like and comment !')})
         if action_value.pk == InstaAction.ACTION_FOLLOW and not instagram_username:
             raise ValidationError(
                 detail={'detail': _('instagram_username field is required for follow!')})
@@ -114,11 +113,13 @@ class OrderSerializer(serializers.ModelSerializer):
         page = validated_data.get('page')
         insta_action = validated_data.get('action')
         target_no = validated_data.get('target_no')
-        link = validated_data.get('link')
         comments = validated_data.get('comments')
         if insta_action.pk == InstaAction.ACTION_FOLLOW:
             instagram_username = validated_data.get('instagram_username')
             link = f"https://www.instagram.com/{instagram_username}/"
+        else:
+            shortcode = validated_data.get('shortcode')
+            link = f"https://www.instagram.com/p/{shortcode}/"
 
         with transaction.atomic():
             page = InstaPage.objects.select_for_update().get(id=page.id)
