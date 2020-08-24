@@ -7,7 +7,7 @@ from .models import (
     CoinPackage, CoinPackageOrder,
     Comment, InstagramAccount,
     ReportAbuse, BlockWordRegex,
-    BlockedText
+    BlockedText, CoinTransaction
 )
 
 
@@ -58,7 +58,7 @@ class InstagramAccountModelAdmin(admin.ModelAdmin):
 
 @admin.register(CoinPackageOrder)
 class CoinPackageOrderModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'invoice_number', "reference_id", 'updated_time', 'created_time')
+    list_display = ('id', 'invoice_number', 'is_paid', 'updated_time', 'created_time')
 
 
 @admin.register(Comment)

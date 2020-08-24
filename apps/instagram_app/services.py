@@ -87,6 +87,20 @@ class InstagramAppService(object):
 class CustomService(object):
 
     @staticmethod
+    def payment_request(endpoint, method, data=None):
+        headers = {
+            "Authorization": f"TOKEN {settings.PAYMENT_SERVICE_SECRET}"
+        }
+        methods = {
+            'get': requests.get,
+            'post': requests.post
+        }
+
+        response = methods[method](f"{settings.PAYMENT_API_URL}{endpoint}/", headers=headers, data=data)
+        response.raise_for_status()
+        return response
+
+    @staticmethod
     def get_or_create_inquiries(page, action_type, limit=100):
         valid_orders = Order.objects.filter(is_enable=True, action=action_type).annotate(
             remaining=F('target_no') - Coalesce(Sum(

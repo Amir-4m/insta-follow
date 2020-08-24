@@ -208,13 +208,8 @@ class CoinPackageOrder(models.Model):
     invoice_number = models.UUIDField(_('uuid'), unique=True, default=uuid.uuid4, editable=False)
     coin_package = models.ForeignKey(CoinPackage, on_delete=models.PROTECT)
     page = models.ForeignKey(InstaPage, on_delete=models.PROTECT, related_name='package_orders')
-    reference_id = models.CharField(_("reference id"), max_length=100, db_index=True, blank=True)
-    user_reference = models.CharField(_("customer reference"), max_length=100, blank=True)
-    result_code = models.CharField(_("result code"), max_length=100, blank=True)
     is_paid = models.BooleanField(_("is paid"), null=True)
     price = models.PositiveIntegerField(_('price'))
-    gateway = models.ForeignKey(Gateway, on_delete=models.PROTECT, related_name='orders', null=True, blank=True)
-    log = models.TextField(_("payment log"), blank=True)
 
 
 class CoinTransaction(models.Model):
@@ -224,7 +219,7 @@ class CoinTransaction(models.Model):
     description = models.TextField(_("action"), blank=True)
     inquiry = models.ForeignKey(UserInquiry, on_delete=models.PROTECT, null=True, blank=True)
     order = models.ForeignKey(Order, on_delete=models.PROTECT, null=True, blank=True)
-    package = models.ForeignKey(CoinPackage, on_delete=models.PROTECT, null=True, blank=True)
+    package = models.ForeignKey(CoinPackageOrder, on_delete=models.PROTECT, null=True, blank=True)
     from_page = models.ForeignKey(InstaPage, related_name='senders', on_delete=models.PROTECT, null=True, blank=True)
     to_page = models.ForeignKey(InstaPage, related_name='receivers', on_delete=models.PROTECT, null=True, blank=True)
 

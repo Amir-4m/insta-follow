@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
@@ -13,10 +15,8 @@ from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 from django_filters.rest_framework import DjangoFilterBackend
 
-from apps.payments.services import BazaarService, SamanService
-
 from ..authentications import PageAuthentication
-from ..swagger_schemas import ORDER_POST_DOCS, INQUIRY_POST_DOC, PROFILE_POST_DOC
+from ..swagger_schemas import ORDER_POST_DOCS, INQUIRY_POST_DOC
 from .serializers import (
     OrderSerializer,
     UserInquirySerializer,
@@ -29,7 +29,8 @@ from .serializers import (
     PurchaseSerializer,
     CommentSerializer,
     CoinTransferSerializer,
-    ReportAbuseSerializer
+    ReportAbuseSerializer,
+    PackageOrderGateWaySerializer,
 )
 from ..services import CustomService
 from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination
@@ -37,9 +38,10 @@ from apps.instagram_app.models import (
     InstaAction, Order, UserInquiry,
     CoinTransaction, Device, CoinPackage,
     CoinPackageOrder, InstaPage, Comment,
-    ReportAbuse, BlockedText, BlockWordRegex
+    ReportAbuse,
 )
-from ...payments.models import Gateway
+
+logger = logging.getLogger(__name__)
 
 
 class LoginVerification(generics.CreateAPIView):
@@ -220,56 +222,49 @@ class PurchaseVerificationAPIView(views.APIView):
 
     def post(self, request, *args, **kwargs):
         page = request.auth['page']
+        purchase_verified = False
         serializer = PurchaseSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            invoice_number = serializer.validated_data['invoice_number']
-            reference_id = serializer.validated_data['reference_id']
-            with transaction.atomic():
-                order = CoinPackageOrder.objects.select_related('coin_package').select_for_update().get(
-                    invoice_number=invoice_number
-                )
-                if order.is_paid is False:
-                    raise ValidationError(detail={'detail': _('purchase has not been done! submit a new order.')})
-                elif order.is_paid is True:
-                    raise ValidationError(detail={'detail': _('purchase has been done already!')})
-
-                if order.price != order.coin_package.price:
-                    raise ValidationError(detail={'detail': _('purchase is invalid!')})
-
-                if order.gateway.code == Gateway.FUNCTION_BAZAAR:
-                    purchase_verified = BazaarService.verify_purchase(
-                        order.coin_package.name,
-                        order.coin_package.sku,
-                        reference_id
+        serializer.is_valid(raise_exception=True)
+        gateway_code = serializer.validated_data['gateway_code']
+        purchase_token = serializer.validated_data.get('purchase_token')
+        package_order = serializer.validated_data['package_order']
+        with transaction.atomic():
+            order = CoinPackageOrder.objects.select_related().get(id=package_order.id)
+            if gateway_code == "BAZAAR":
+                try:
+                    response = CustomService.payment_request(
+                        'purchase/verify',
+                        'post',
+                        data={
+                            'order_reference': order.invoice_number,
+                            'purchase_token': purchase_token
+                        }
                     )
-                elif order.gateway.code == Gateway.FUNCTION_SAMAN:
-                    order.log = request.data
-                    if request.data.get("State", "") != "OK":
-                        order.result_code = request.data.get("State", "")
-                        order.save(update_fields=['updated_time', 'log', 'result_code'])
-                        purchase_verified = False
-                    else:
-                        order.result_code = request.data.get("State", "")
-                        order.user_reference = request.data.get("TRACENO", "")
-
-                        purchase_verified = SamanService().verify_saman(
-                            order.gateway.verify_url,
-                            reference_id,
-                            settings.SAMAN_MERCHANT_ID,
-                            order.coin_package.amount
-                        )
-                order.is_paid = purchase_verified
-                order.reference_id = reference_id
-                order.save()
-
-                if order.is_paid is True:
-                    CoinTransaction.objects.create(
-                        page=page,
-                        amount=order.coin_package.amount,
-                        package=order.coin_package,
-                        description=_("coin package has been purchased.")
+                    purchase_verified = response.json()['purchase_verified']
+                except Exception as e:
+                    logger.error(f"error calling payment with endpoint purchase/verify and action post: {e}")
+                    raise ValidationError(detail={'detail': _('error in verifying purchase')})
+            elif gateway_code == "SAMAN":
+                try:
+                    response = CustomService.payment_request(f'orders/{order.invoice_number}', 'get')
+                    purchase_verified = response.json()['is_paid']
+                except Exception as e:
+                    logger.error(
+                        f"error calling payment with endpoint orders/{order.invoice_number} and action get: {e}"
                     )
-            return Response({"invoice_number": invoice_number, "is_verified": order.is_paid})
+                    raise ValidationError(detail={'detail': _('error in verifying purchase')})
+
+            order.is_paid = purchase_verified
+            order.save()
+
+        if order.is_paid is True:
+            CoinTransaction.objects.create(
+                page=page,
+                amount=order.coin_package.amount,
+                package=order,
+                description=_("coin package has been purchased.")
+            )
+        return Response({'purchase_verified': purchase_verified})
 
 
 class CommentViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
@@ -300,3 +295,40 @@ class ReportAbuseViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
 
     def perform_create(self, serializer):
         serializer.save(reporter=self.request.auth['page'])
+
+
+class OrderGateWayAPIView(views.APIView):
+    authentication_classes = (PageAuthentication,)
+
+    def post(self, request, *args, **kwargs):
+        serializer = PackageOrderGateWaySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        package_order = serializer.validated_data['package_order']
+        gateway = serializer.validated_data['gateway']
+        try:
+            # TODO redirect_url
+            CustomService.payment_request(
+                'orders',
+                'post',
+                data={
+                    'gateway': gateway,
+                    'price': package_order.price,
+                    'service_reference': package_order.invoice_number,
+                    'is_paid': package_order.is_paid
+                }
+            )
+        except Exception as e:
+            logger.error(f"error calling payment with endpoint orders and action post: {e}")
+            raise ValidationError(detail={'detail': _('error in submitting order gateway')})
+
+        try:
+            response = CustomService.payment_request(
+                'purchase/gateway',
+                'post',
+                data={'order': package_order.invoice_number, 'gateway': gateway}
+            )
+        except Exception as e:
+            logger.error(f"error calling payment with endpoint orders and action post: {e}")
+            raise ValidationError(detail={'detail': _('error in getting order gateway')})
+
+        return Response(data={'gateway_url': response.json().get('gateway_url')})

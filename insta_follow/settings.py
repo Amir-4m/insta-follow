@@ -271,21 +271,15 @@ INSTAGRAM_CREDENTIALS = {
 
 DEVLYTIC_TOKEN = config('DEVLYTIC_TOKEN', default='')
 PUSH_API_URL = config('PUSH_API_URL', default='')
-BASE_API_URL = config('BASE_API_URL', default='')
+PAYMENT_API_URL = config('PAYMENT_API_URL', default='')
+PAYMENT_SERVICE_SECRET = config('PAYMENT_SERVICE_SECRET', default='')
 MONITOR_TOKEN = config('MONITOR_TOKEN', default='')
 USER_PENALTY_AMOUNT = config('USER_PENALTY_AMOUNT', default=1.5, cast=float)
 
 FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=20000, cast=int)
 
-BAZAAR_CLIENT_ID = config('BAZAAR_CLIENT_ID', default='')
-BAZAAR_CLIENT_SECRET = config('BAZAAR_CLIENT_SECRET', default='')
-BAZAAR_REDIRECT_URI = config('BAZAAR_REDIRECT_URI', default='')
-BAZAAR_AUTH_CODE = config('BAZAAR_AUTH_CODE', default='')
-
 MAXIMUM_COIN_TRANSFER = config('MAXIMUM_COIN_TRANSFER', default=1000, cast=int)
 COIN_TRANSFER_FEE = config('COIN_TRANSFER_FEE', default=5, cast=int)
-
-SAMAN_MERCHANT_ID = config('SAMAN_MERCHANT_ID', default='')
 
 TINYMCE_COMPRESSOR = config('TINYMCE_COMPRESSOR', default=False, cast=bool)
 

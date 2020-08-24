@@ -1,14 +1,12 @@
 import logging
 import random
 import re
-from datetime import timedelta
 
 import requests
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
-from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, ParseError
@@ -19,9 +17,7 @@ from apps.instagram_app.models import (
     CoinPackageOrder, InstaPage, Comment,
     ReportAbuse, BlockWordRegex, BlockedText
 )
-from apps.instagram_app.services import InstagramAppService
-from apps.payments.api.serializers import GatewaySerializer
-from apps.payments.models import Gateway
+from apps.instagram_app.services import CustomService
 
 logger = logging.getLogger(__name__)
 
@@ -227,17 +223,26 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
         read_only_fields = ('page',)
 
     def get_gateways(self, obj):
-        return GatewaySerializer(Gateway.objects.filter(is_enable=True), many=True).data
+        try:
+            response = CustomService.payment_request('gateways', 'get')
+            data = response.json()
+        except Exception as e:
+            logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
+            data = {}
+        return data
 
 
 class PurchaseSerializer(serializers.Serializer):
-    ResNum = serializers.UUIDField(required=True, source='invoice_number')
-    RefNum = serializers.CharField(required=True, max_length=120, source='reference_id')
+    purchase_token = serializers.CharField(max_length=50, allow_null=True)
+    gateway_code = serializers.CharField(max_length=10)
+    package_order = serializers.PrimaryKeyRelatedField(queryset=CoinPackageOrder.objects.filter(is_paid=None))
 
-    def validate_ResNum(self, value):
-        if CoinPackageOrder.objects.filter(invoice_number=value).exists():
-            return value
-        raise ValidationError(_("invoice number is invalid!"))
+    def validate(self, attrs):
+        gateway_code = attrs['gateway_code']
+        purchase_token = attrs.get('purchase_token')
+        if gateway_code == 'BAZAAR' and purchase_token is None:
+            raise ValidationError(detail={'detail': _('purchase_token is required for gateway bazaar!')})
+        return attrs
 
     def create(self, validated_data):
         raise NotImplementedError('`create()` must be implemented.')
@@ -310,3 +315,14 @@ class ReportAbuseSerializer(serializers.ModelSerializer):
         abuser = validated_data['abuser']
         report = ReportAbuse.objects.create(text=text, reporter=reporter, abuser=abuser)
         return report
+
+
+class PackageOrderGateWaySerializer(serializers.Serializer):
+    gateway = serializers.IntegerField()
+    package_order = serializers.PrimaryKeyRelatedField(queryset=CoinPackageOrder.objects.filter(is_paid=None))
+
+    def create(self, validated_data):
+        raise NotImplementedError('`create()` must be implemented.')
+
+    def update(self, instance, validated_data):
+        raise NotImplementedError('`update()` must be implemented.')

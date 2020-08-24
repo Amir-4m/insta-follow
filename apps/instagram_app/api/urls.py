@@ -7,7 +7,7 @@ from .views import (
     InstaActionAPIView, DeviceViewSet,
     PurchaseVerificationAPIView, CoinPackageOrderViewSet,
     LoginVerification, CommentViewSet, CoinTransferAPIView,
-    ReportAbuseViewSet, CoinPackageViewSet
+    ReportAbuseViewSet, CoinPackageViewSet, OrderGateWayAPIView
 )
 
 urlpatterns = [
@@ -15,6 +15,7 @@ urlpatterns = [
     path('purchase-verification/', PurchaseVerificationAPIView.as_view(), name='purchase-verification'),
     path('login-verification/', LoginVerification.as_view(), name='login-verification'),
     path('coin-transfer/', CoinTransferAPIView.as_view(), name='coin-transfer'),
+    path('order-gateway/', OrderGateWayAPIView.as_view(), name='order-gateway')
 ]
 
 router = routers.DefaultRouter()
