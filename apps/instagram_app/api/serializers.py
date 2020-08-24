@@ -1,12 +1,14 @@
 import logging
 import random
 import re
+from datetime import timedelta
 
 import requests
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, ParseError
@@ -17,6 +19,7 @@ from apps.instagram_app.models import (
     CoinPackageOrder, InstaPage, Comment,
     ReportAbuse, BlockWordRegex, BlockedText
 )
+from apps.instagram_app.services import InstagramAppService
 from apps.payments.api.serializers import GatewaySerializer
 from apps.payments.models import Gateway
 
@@ -160,6 +163,16 @@ class OrderSerializer(serializers.ModelSerializer):
             ct.order = order
             ct.description = f"create order {order.id}"
             ct.save()
+
+            data = {
+                'link': link,
+                'expire_time': timezone.now().date() + timedelta(days=365)
+            }
+            res = InstagramAppService.api_call('monitor/orders/', method='post', data=data)
+            if res.status_code == 201:
+                track_id = res.json().get('_id')
+                order.track_id = track_id
+                order.save()
             return order
 
 
