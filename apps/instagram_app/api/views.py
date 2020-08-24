@@ -1,7 +1,6 @@
-import re
-
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
@@ -149,7 +148,18 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         queryset = UserInquiry.objects.filter(id__in=serializer.validated_data['done_ids'])
-        queryset.update(status=UserInquiry.STATUS_DONE)
+        for obj in queryset:
+            obj.status = UserInquiry.STATUS_VALIDATED
+            if obj.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
+                obj.validated_time = timezone.now()
+                CoinTransaction.objects.create(
+                    page=obj.page,
+                    inquiry=obj,
+                    amount=obj.order.action.action_value,
+                    description=f"validated inquiry {obj.id}"
+                )
+            obj.save()
+
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 

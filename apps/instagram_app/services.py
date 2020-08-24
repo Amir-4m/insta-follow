@@ -85,22 +85,6 @@ class InstagramAppService(object):
 
 
 class CustomService(object):
-    @staticmethod
-    def check_activity_from_db(inquiry_user_id, order_track_id, check_type):
-        endpoint = "monitor/orders/%s/user_action/" % order_track_id
-        params = {"user_id": inquiry_user_id}
-        response = InstagramAppService.api_call(endpoint, method='get', params=params)
-        response.raise_for_status()
-        response_json = response.json()
-        if check_type == InstaAction.ACTION_COMMENT and response_json.get('commented') is not None:
-            is_done = response_json.get('commented')
-        elif check_type == InstaAction.ACTION_FOLLOW and response_json.get('followed') is not None:
-            is_done = response_json.get('followed')
-        elif check_type == InstaAction.ACTION_LIKE and response_json.get('liked') is not None:
-            is_done = response_json.get('liked')
-        else:
-            return False
-        return is_done
 
     @staticmethod
     def get_or_create_inquiries(page, action_type, limit=100):

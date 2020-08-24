@@ -164,15 +164,6 @@ class OrderSerializer(serializers.ModelSerializer):
             ct.description = f"create order {order.id}"
             ct.save()
 
-            data = {
-                'link': link,
-                'expire_time': timezone.now().date() + timedelta(days=365)
-            }
-            res = InstagramAppService.api_call('monitor/orders/', method='post', data=data)
-            if res.status_code == 201:
-                track_id = res.json().get('_id')
-                order.track_id = track_id
-                order.save()
             return order
 
 

@@ -126,27 +126,6 @@ def validate_user_inquiries():
         order__action__in=[InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]
     ).update(status=UserInquiry.STATUS_REJECTED)
 
-    done_inquiries = UserInquiry.objects.select_related('page').filter(
-        status=UserInquiry.STATUS_DONE
-    )
-    # validating inquiries and create coin for validated like and comment inquiries
-    for user_inquiry in done_inquiries:
-        if CustomService.check_activity_from_db(
-                user_inquiry.page.instagram_user_id,
-                user_inquiry.order.track_id,
-                user_inquiry.order.action.action_type
-        ):
-            user_inquiry.status = UserInquiry.STATUS_VALIDATED
-            if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
-                user_inquiry.validated_time = timezone.now()
-                CoinTransaction.objects.create(
-                    page=user_inquiry.page,
-                    inquiry=user_inquiry,
-                    amount=user_inquiry.order.action.action_value,
-                    description=f"validated inquiry {user_inquiry.id}"
-                )
-            user_inquiry.save()
-
 
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(minute='0', hour='16')), name="final_validate_user_inquiries", ignore_result=True)
