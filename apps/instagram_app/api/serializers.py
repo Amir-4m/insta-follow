@@ -133,8 +133,9 @@ class OrderSerializer(serializers.ModelSerializer):
         insta_action = validated_data.get('action')
         target_no = validated_data.get('target_no')
         comments = validated_data.get('comments')
+        instagram_username = validated_data.get('instagram_username')
+
         if insta_action.pk == InstaAction.ACTION_FOLLOW:
-            instagram_username = validated_data.get('instagram_username')
             link = f"https://www.instagram.com/{instagram_username}/"
         else:
             shortcode = validated_data.get('shortcode')
@@ -153,6 +154,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 action=insta_action,
                 link=link,
                 target_no=target_no,
+                instagram_username=instagram_username,
                 owner=page,
                 comments=comments
             )
@@ -174,7 +176,7 @@ class UserInquirySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserInquiry
-        fields = ('id', 'link', 'instagram_username', 'media_url', 'done_ids', 'status', 'page', 'action', 'comment')
+        fields = ('id', 'link', 'done_ids', 'status', 'page', 'action', 'comment')
 
     def validate_done_ids(self, value):
         page = self.context['request'].auth['page']

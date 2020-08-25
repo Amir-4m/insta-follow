@@ -104,7 +104,7 @@ class Order(models.Model):
     link = models.URLField(_("link"))
     entity_id = models.BigIntegerField(_('entity ID'), null=True, db_index=True)
     media_url = models.TextField(_("media url"), blank=True)
-    instagram_username = models.CharField(_("instagram username"), max_length=120, blank=True)
+    instagram_username = models.CharField(_("instagram username"), max_length=120)
     comments = ArrayField(models.TextField(max_length=1024), null=True, blank=True)
     description = models.TextField(_("description"), blank=True, default='')
     is_enable = models.BooleanField(_("is enable"), default=True)
