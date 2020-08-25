@@ -7,6 +7,7 @@ from ..models import Config
 
 
 class ConfigAPIView(views.APIView):
+    """Shows init configs params"""
     authentication_classes = (PageAuthentication,)
 
     def get(self, request, *args, **kwargs):

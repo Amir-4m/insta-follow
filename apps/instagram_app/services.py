@@ -1,4 +1,3 @@
-import hashlib
 import logging
 import re
 import requests
@@ -12,7 +11,7 @@ from Crypto.Cipher import AES
 from Crypto import Random
 from base64 import b64decode, b64encode
 
-from .models import InstaAction, UserInquiry, Order, InstagramAccount
+from .models import UserInquiry, Order, InstagramAccount
 
 logger = logging.getLogger(__name__)
 
@@ -143,53 +142,6 @@ class CustomService(object):
                 break
 
         return valid_inquiries
-
-
-class MongoServices(object):
-    @staticmethod
-    def get_object_id(collection, **kwargs):
-        try:
-            obj = collection.objects.mongo_find_one(dict(kwargs))
-            return obj.get("_id")
-        except Exception as e:
-            logger.error(f"error in mongo get object id :{e}")
-
-    @staticmethod
-    def get_object_position(collection, object_id):
-        return collection.objects.mongo_find(
-            {
-                "_id": {
-                    "$lt": object_id
-                },
-            }
-        ).sort([("$natural", -1)]).count() + 1
-
-    @staticmethod
-    def get_object_neighbors(collection, object_id, limit=20):
-        top_neighbors = collection.objects.mongo_find(
-            {
-                "_id": {
-                    "$gt": object_id
-                },
-            }
-        ).sort([("$natural", -1)]).limit(limit)
-
-        bottom_neighbors = collection.objects.mongo_find(
-            {
-                "_id": {
-                    "$lt": object_id
-                },
-            }
-        ).sort([("$natural", -1)]).limit(limit)
-
-        return top_neighbors, bottom_neighbors
-
-    @staticmethod
-    def mongo_exists(collection, **kwargs):
-        try:
-            return bool(collection.objects.mongo_find_one(dict(kwargs)))
-        except Exception as e:
-            logger.error(f"error in mongo filter occurred :{e}")
 
 
 class CryptoService:

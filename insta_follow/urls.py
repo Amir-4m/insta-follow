@@ -37,7 +37,6 @@ urlpatterns = [
     path('api/v1/', include('apps.urls_api')),
     path('docs/', schema_view.with_ui('swagger')),
     path('bot/', include('bot.urls')),
-    path('payments/', include('apps.payments.urls')),
     path('pages/', include('django.contrib.flatpages.urls')),
     path('tinymce/', include('tinymce.urls')),
 

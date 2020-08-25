@@ -16,20 +16,12 @@ from drf_yasg.utils import swagger_auto_schema
 from django_filters.rest_framework import DjangoFilterBackend
 
 from ..authentications import PageAuthentication
-from ..swagger_schemas import ORDER_POST_DOCS, INQUIRY_POST_DOC
+from ..swagger_schemas import *
 from .serializers import (
-    OrderSerializer,
-    UserInquirySerializer,
-    CoinTransactionSerializer,
-    InstaActionSerializer,
-    DeviceSerializer,
-    CoinPackageSerializer,
-    CoinPackageOrderSerializer,
-    LoginVerificationSerializer,
-    PurchaseSerializer,
-    CommentSerializer,
-    CoinTransferSerializer,
-    ReportAbuseSerializer,
+    OrderSerializer, UserInquirySerializer, CoinTransactionSerializer,
+    InstaActionSerializer, DeviceSerializer, CoinPackageSerializer,
+    CoinPackageOrderSerializer, LoginVerificationSerializer, PurchaseSerializer,
+    CommentSerializer, CoinTransferSerializer, ReportAbuseSerializer,
     PackageOrderGateWaySerializer,
 )
 from ..services import CustomService
@@ -45,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 class LoginVerification(generics.CreateAPIView):
+    """verify and create the logged in page"""
     serializer_class = LoginVerificationSerializer
     queryset = InstaPage.objects.all()
 
@@ -199,6 +192,18 @@ class CoinPackageViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
     serializer_class = CoinPackageSerializer
 
 
+@method_decorator(name='list', decorator=swagger_auto_schema(
+    operation_description="Get a list of user created package orders",
+    responses={"200": 'Successful'}
+))
+@method_decorator(name='retrieve', decorator=swagger_auto_schema(
+    operation_description="Get a single package order object by passing its ID",
+    responses={"200": 'Successful'}
+))
+@method_decorator(name='create', decorator=swagger_auto_schema(
+    operation_description="Create an order with a chosen coin package for the page requested",
+    request_body=PackageOrder_DOC
+))
 class CoinPackageOrderViewSet(
     viewsets.GenericViewSet,
     generics.ListAPIView,
@@ -220,6 +225,7 @@ class CoinPackageOrderViewSet(
 class PurchaseVerificationAPIView(views.APIView):
     authentication_classes = (PageAuthentication,)
 
+    @swagger_auto_schema(operation_description='Verify user purchase with bank or psp', request_body=PURCHASE_DOC)
     def post(self, request, *args, **kwargs):
         page = request.auth['page']
         purchase_verified = False
@@ -268,18 +274,27 @@ class PurchaseVerificationAPIView(views.APIView):
 
 
 class CommentViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
+    """Shows a list of pre-defined comments"""
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
 
 
 class CoinTransferAPIView(views.APIView):
+    """
+    API for transfer coin from a page to another, based on a pre-defined maximum amount
+    """
     authentication_classes = (PageAuthentication,)
 
+    @swagger_auto_schema(operation_description='shows the allowed maximum amount to transfer', )
     def get(self, request, *args, **kwargs):
         page = request.auth['page']
         wallet = page.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet']
         return Response({'wallet': wallet, 'maximum_amount': settings.MAXIMUM_COIN_TRANSFER})
 
+    @swagger_auto_schema(
+        operation_description='transfer coin from the current logged in page to another',
+        request_body=TRANSFER_COIN_DOC
+    )
     def post(self, request, *args, **kwargs):
         page = request.auth['page']
         serializer = CoinTransferSerializer(data=request.data)
@@ -288,6 +303,10 @@ class CoinTransferAPIView(views.APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+@method_decorator(name='create', decorator=swagger_auto_schema(
+    operation_description="create a abuser report for an order",
+    request_body=REPORT_ABUSE_DOC
+))
 class ReportAbuseViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = ReportAbuse.objects.all()
     serializer_class = ReportAbuseSerializer
@@ -298,8 +317,14 @@ class ReportAbuseViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
 
 
 class OrderGateWayAPIView(views.APIView):
+    """Set an gateway for a package order to get the payment url"""
     authentication_classes = (PageAuthentication,)
 
+    @swagger_auto_schema(
+        operation_description='Set an gateway for a package order to get the payment url',
+        request_body=TRANSFER_COIN_DOC
+
+    )
     def post(self, request, *args, **kwargs):
         serializer = PackageOrderGateWaySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

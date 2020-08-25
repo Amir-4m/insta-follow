@@ -36,7 +36,6 @@ INSTALLED_APPS = [
     'apps.config',
     'apps.accounts',
     'apps.instagram_app',
-    'apps.payments',
     'apps.telegram_app',
     'bot',
     'rest_framework',
