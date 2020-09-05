@@ -134,6 +134,7 @@ class OrderSerializer(serializers.ModelSerializer):
         target_no = validated_data.get('target_no')
         comments = validated_data.get('comments')
         instagram_username = validated_data.get('instagram_username')
+        media_url = validated_data.get('media_url')
 
         if insta_action.pk == InstaAction.ACTION_FOLLOW:
             link = f"https://www.instagram.com/{instagram_username}/"
@@ -154,6 +155,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 action=insta_action,
                 link=link,
                 target_no=target_no,
+                media_url=media_url,
                 instagram_username=instagram_username,
                 owner=page,
                 comments=comments
@@ -167,6 +169,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class UserInquirySerializer(serializers.ModelSerializer):
     link = serializers.ReadOnlyField(source="order.link")
+    media_url = serializers.ReadOnlyField(source="order.media_url")
+    entity_id = serializers.ReadOnlyField(source="order.entity_id")
     instagram_username = serializers.ReadOnlyField(source='order.instagram_username')
     page = serializers.ReadOnlyField(source='page.instagram_username')
     action = serializers.ReadOnlyField(source='order.action.action_type')
@@ -175,7 +179,11 @@ class UserInquirySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserInquiry
-        fields = ('id', 'instagram_username', 'link', 'done_ids', 'status', 'page', 'action', 'comment')
+        fields = (
+            'id', 'instagram_username', 'media_url',
+            'link', 'entity_id', 'done_ids',
+            'status', 'page', 'action', 'comment'
+        )
 
     def validate_done_ids(self, value):
         page = self.context['request'].auth['page']
