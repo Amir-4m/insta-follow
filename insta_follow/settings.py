@@ -157,11 +157,11 @@ CACHES = {
         'LOCATION': config('CACHE_HOST', default=''),
         'KEY_PREFIX': 'INSTA_FOLLOW',
     },
-    'payments': {
-        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-        'LOCATION': 'apps/payments/access_token',
-        'TIMEOUT': 3600
-    }
+    # 'payments': {
+    #     'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+    #     'LOCATION': 'apps/payments/access_token',
+    #     'TIMEOUT': 3600
+    # }
 }
 
 CELERY_BROKER_URL = 'amqp://%(USER)s:%(PASS)s@%(HOST)s' % {

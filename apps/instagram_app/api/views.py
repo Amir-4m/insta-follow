@@ -322,7 +322,7 @@ class OrderGateWayAPIView(views.APIView):
 
     @swagger_auto_schema(
         operation_description='Set an gateway for a package order to get the payment url',
-        request_body=TRANSFER_COIN_DOC
+        request_body=PURCHASE_DOC
 
     )
     def post(self, request, *args, **kwargs):
