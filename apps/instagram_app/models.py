@@ -198,6 +198,7 @@ class CoinPackageOrder(models.Model):
     page = models.ForeignKey(InstaPage, on_delete=models.PROTECT, related_name='package_orders')
     is_paid = models.BooleanField(_("is paid"), null=True)
     price = models.PositiveIntegerField(_('price'))
+    version_name = models.CharField(_('version_name'), max_length=50)
 
 
 class CoinTransaction(models.Model):

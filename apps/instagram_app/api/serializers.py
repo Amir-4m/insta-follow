@@ -213,13 +213,18 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CoinPackageOrder
-        fields = ('id', 'invoice_number', 'coin_package', 'page', 'is_paid', 'price', 'gateways')
+        fields = ('id', 'invoice_number', 'coin_package', 'page', 'is_paid', 'price', 'version_name', 'gateways')
         read_only_fields = ('page',)
 
     def get_gateways(self, obj):
         try:
             response = CustomService.payment_request('gateways', 'get')
             data = response.json()
+            installed_from = obj.version_name.split('-')[0]
+            if installed_from not in ['GOOGLE_PLAY', 'ALL']:
+                for gateway in data:
+                    if gateway['code'] == installed_from:
+                        data = gateway
         except Exception as e:
             logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
             data = {}
