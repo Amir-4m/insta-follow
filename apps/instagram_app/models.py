@@ -117,6 +117,13 @@ class Order(models.Model):
     def __str__(self):
         return f"{self.id} - {self.action}"
 
+    def achieved_number_approved(self):
+        return UserInquiry.objects.filter(
+            order=self,
+            status=UserInquiry.STATUS_VALIDATED,
+            validated_time__isnull=False,
+        ).count()
+
     def clean(self):
         if self.action in [InstaAction.ACTION_FOLLOW, InstaAction.ACTION_LIKE] and self.comments is not None:
             raise ValidationError(_("Comment is not allowed in like and follow method!"))
@@ -135,7 +142,8 @@ class UserInquiry(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
 
-    status = models.PositiveSmallIntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+    status = models.PositiveSmallIntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_PENDING,
+                                              db_index=True)
     validated_time = models.DateTimeField(_("validated time"), null=True, blank=True, db_index=True)
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='user_inquiries')
