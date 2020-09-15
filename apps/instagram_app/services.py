@@ -111,7 +111,7 @@ class CustomService(object):
                 output_field=IntegerField()
             ), 0),
         ).filter(
-            remaining__lte=F('target_no')
+            remaining__lt=0.10 * F('remaining') + F('remaining')
         )
         valid_orders = []
 
