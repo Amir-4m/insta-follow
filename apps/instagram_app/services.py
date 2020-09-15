@@ -100,48 +100,31 @@ class CustomService(object):
         return response
 
     @staticmethod
-    def get_or_create_inquiries(page, action_type, limit=100):
-        valid_orders = Order.objects.filter(is_enable=True, action=action_type).annotate(
+    def get_or_create_orders(page, action_type, limit=100):
+        orders = Order.objects.filter(is_enable=True, action=action_type).annotate(
             remaining=F('target_no') - Coalesce(Sum(
                 Case(
                     When(
-                        user_inquiries__status__in=[UserInquiry.STATUS_DONE, UserInquiry.STATUS_VALIDATED], then=1
+                        user_inquiries__status__in=[UserInquiry.STATUS_PENDING, UserInquiry.STATUS_VALIDATED], then=1
                     )
                 ),
                 output_field=IntegerField()
             ), 0),
-            open_inquiries_count=Coalesce(Sum(
-                Case(
-
-                    When(
-                        user_inquiries__status=UserInquiry.STATUS_OPEN, then=1
-                    )
-                ),
-                output_field=IntegerField()
-            ), 0)
         ).filter(
-            open_inquiries_count__lt=0.10 * F('remaining') + F('remaining')
+            remaining__lt=F('target_no')
         )
-        valid_inquiries = []
-        given_entities = []
+        valid_orders = []
 
-        for order in valid_orders:
-            if order.entity_id in given_entities:
+        for order in orders:
+            if UserInquiry.objects.filter(page=page, order=order).exists():
                 continue
 
-            user_inquiry, _c = UserInquiry.objects.get_or_create(
-                order=order,
-                page=page,
-                defaults=dict(page=page)
-            )
-            if user_inquiry and _c:
-                valid_inquiries.append(user_inquiry)
-                given_entities.append(order.entity_id)
+            valid_orders.append(order)
 
-            if len(valid_inquiries) == limit:
+            if len(valid_orders) == limit:
                 break
 
-        return valid_inquiries
+        return valid_orders
 
 
 class CryptoService:

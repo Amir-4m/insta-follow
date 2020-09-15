@@ -36,8 +36,6 @@ INSTALLED_APPS = [
     'apps.config',
     'apps.accounts',
     'apps.instagram_app',
-    'apps.telegram_app',
-    'bot',
     'rest_framework',
     'drf_yasg',
     'django_celery_beat',
@@ -242,26 +240,13 @@ LOGGING = ({
             'handlers': ['db_queries'],
             'propagate': False,
         },
-        'instagram_app': {
+        'apps.instagram_app': {
             'level': 'DEBUG',
             'handlers': ['file', 'console']
         },
-        # 'telegram.ext.dispatcher': {
-        #     'level': 'DEBUG',
-        #     'handlers': ['file'],
-        # },
+
     },
 })
-
-PROXY4TELEGRAM_HOST = config('PROXY4TELEGRAM_HOST', default='')
-PROXY4TELEGRAM_PORT = config('PROXY4TELEGRAM_PORT', default=0, cast=int)
-
-TELEGRAM_BOT = {
-    'TOKEN': config('TELEGRAM_BOT_TOKEN'),
-    'MODE': config('TELEGRAM_BOT_MODE', default='POLLING'),
-    'WEBHOOK_SITE': config('TELEGRAM_BOT_WEBHOOK_SITE', default=''),
-    'PROXY': f"http://{PROXY4TELEGRAM_HOST}:{PROXY4TELEGRAM_PORT}" if PROXY4TELEGRAM_HOST else '',
-}
 
 INSTAGRAM_CREDENTIALS = {
     'USERNAME': config('INSTAGRAM_USERNAME', default=''),

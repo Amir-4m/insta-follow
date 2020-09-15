@@ -174,31 +174,20 @@ class UserInquirySerializer(serializers.ModelSerializer):
     instagram_username = serializers.ReadOnlyField(source='order.instagram_username')
     page = serializers.ReadOnlyField(source='page.instagram_username')
     action = serializers.ReadOnlyField(source='order.action.action_type')
-    comment = serializers.SerializerMethodField()
-    done_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True)
+    done_id = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = UserInquiry
         fields = (
             'id', 'instagram_username', 'media_url',
-            'link', 'entity_id', 'done_ids',
-            'status', 'page', 'action', 'comment'
+            'link', 'entity_id', 'done_id',
+            'status', 'page', 'action'
         )
 
-    def validate_done_ids(self, value):
-        page = self.context['request'].auth['page']
-        id_list = UserInquiry.objects.filter(
-            id__in=value, page=page, status=UserInquiry.STATUS_OPEN
-        ).values_list('id', flat=True)
-        if not id_list:
-            raise ParseError(_('list is not valid!'))
+    def validate_done_id(self, value):
+        if not Order.objects.filter(id=value).exists():
+            raise ParseError(_('id is not valid!'))
         return value
-
-    def get_comment(self, obj):
-        if obj.order.action.action_type == InstaAction.ACTION_COMMENT:
-            comments = obj.order.comments
-            return random.choice(comments)
-        return None
 
 
 class CoinTransactionSerializer(serializers.ModelSerializer):

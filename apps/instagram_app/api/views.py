@@ -77,6 +77,33 @@ class OrderViewSet(viewsets.GenericViewSet,
     def perform_create(self, serializer):
         serializer.save(page=self.request.auth['page'])
 
+    def get_orders(self, request, action_type):
+        page = request.auth['page']
+        try:
+            limit = abs(min(int(request.query_params.get('limit', 0)), 100))
+        except ValueError:
+            raise ValidationError(detail={'detail': _('make sure the limit value is a positive number!')})
+
+        orders = CustomService.get_or_create_orders(page, action_type, limit)
+
+        serializer = self.serializer_class(orders, many=True)
+        return Response(serializer.data)
+
+    @action(methods=["get"], detail=False, url_path="like")
+    def like(self, request, *args, **kwargs):
+        """Get a list of like orders that user must like them"""
+        return self.get_orders(request, InstaAction.ACTION_LIKE)
+
+    @action(methods=['get'], detail=False, url_path="comment")
+    def comment(self, request, *args, **kwargs):
+        """Get a list of comment orders that user must comment for them"""
+        return self.get_orders(request, InstaAction.ACTION_COMMENT)
+
+    @action(methods=['get'], detail=False, url_path="follow")
+    def follow(self, request, *args, **kwargs):
+        """Get a list of follow orders that user must follow"""
+        return self.get_orders(request, InstaAction.ACTION_FOLLOW)
+
 
 class UserInquiryViewSet(viewsets.GenericViewSet):
     authentication_classes = (PageAuthentication,)
@@ -84,53 +111,6 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
     serializer_class = UserInquirySerializer
     pagination_class = InquiryPagination
     filterset_fields = ['status', 'order__action']
-
-    def get_inquiry(self, request, action_type):
-        page = request.auth['page']
-        try:
-            limit = abs(min(int(request.query_params.get('limit', 0)), 100))
-        except ValueError:
-            raise ValidationError(detail={'detail': _('make sure the limit value is a positive number!')})
-
-        inquiries = CustomService.get_or_create_inquiries(page, action_type, limit)
-
-        serializer = self.serializer_class(inquiries, many=True)
-        return Response(serializer.data)
-
-    def get_inquiry_report(self, request):
-        self.filter_backends = [DjangoFilterBackend]
-        inquiries = self.filter_queryset(self.get_queryset())
-        inquiries = inquiries.filter(page=request.auth['page'])
-        page_uuid = request.query_params.get('uuid')
-        if page_uuid:
-            try:
-                page = InstaPage.objects.get(uuid=page_uuid)
-                inquiries = inquiries.filter(page=page)
-            except InstaPage.DoesNotExist:
-                raise ValidationError(detail={'detail': _('page does not exists!')})
-        page = self.paginate_queryset(inquiries.order_by('-created_time'))
-        serializer = self.serializer_class(page, many=True)
-        return self.get_paginated_response(serializer.data)
-
-    @action(methods=["get"], detail=False, url_path="like")
-    def like(self, request, *args, **kwargs):
-        """Get a list of like orders that user must like them"""
-        return self.get_inquiry(request, InstaAction.ACTION_LIKE)
-
-    @action(methods=['get'], detail=False, url_path="comment")
-    def comment(self, request, *args, **kwargs):
-        """Get a list of comment orders that user must comment for them"""
-        return self.get_inquiry(request, InstaAction.ACTION_COMMENT)
-
-    @action(methods=['get'], detail=False, url_path="follow")
-    def follow(self, request, *args, **kwargs):
-        """Get a list of follow orders that user must follow"""
-        return self.get_inquiry(request, InstaAction.ACTION_FOLLOW)
-
-    @action(methods=['get'], detail=False, url_path="report")
-    def report(self, request, *args, **kwargs):
-        """Get a list of user inquiries report"""
-        return self.get_inquiry_report(request)
 
     @swagger_auto_schema(
         operation_description='Check whether or not the user did the action properly for the order such as (like, comment or follow).',
@@ -142,20 +122,32 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
     def done(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        queryset = UserInquiry.objects.filter(id__in=serializer.validated_data['done_ids'])
-        for obj in queryset:
-            obj.status = UserInquiry.STATUS_VALIDATED
-            if obj.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
-                obj.validated_time = timezone.now()
-                CoinTransaction.objects.create(
-                    page=obj.page,
-                    inquiry=obj,
-                    amount=obj.order.action.action_value,
-                    description=f"validated inquiry {obj.id}"
-                )
-            obj.save()
+        page = self.request.auth['page']
+        try:
+            order = Order.objects.get(id=serializer.validated_data['done_id'])
+        except Order.DoesNotExist:
+            raise ValidationError(detail={'detail': _('order with this id does not exist !')})
+        user_inquiry, created = UserInquiry.objects.get_or_create(
+            order=order,
+            page=page,
+            defaults=dict(page=page)
+        )
 
-        serializer = self.get_serializer(queryset, many=True)
+        if not created:
+            raise ValidationError(detail={'detail': _('order with this id already has been done by this page !')})
+
+        if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
+            user_inquiry.validated_time = timezone.now()
+            user_inquiry.status = UserInquiry.STATUS_VALIDATED
+            CoinTransaction.objects.create(
+                page=user_inquiry.page,
+                inquiry=user_inquiry,
+                amount=user_inquiry.order.action.action_value,
+                description=f"validated inquiry {user_inquiry.id}"
+            )
+            user_inquiry.save()
+
+        serializer = self.get_serializer(user_inquiry)
         return Response(serializer.data)
 
 
@@ -340,6 +332,9 @@ class OrderGateWayAPIView(views.APIView):
                     'price': package_order.price,
                     'service_reference': package_order.invoice_number,
                     'is_paid': package_order.is_paid
+                    # 'properties': {
+                    #     # 'redirect_url':
+                    # }
                 }
             )
         except Exception as e:

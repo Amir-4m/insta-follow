@@ -117,43 +117,25 @@ class Order(models.Model):
     def __str__(self):
         return f"{self.id} - {self.action}"
 
-    def achieved_number_unapproved(self):
-        return UserInquiry.objects.filter(
-            order=self,
-            status=UserInquiry.STATUS_DONE,
-            done_time__isnull=False,
-        ).count()
-
-    def achieved_number_approved(self):
-        return UserInquiry.objects.filter(
-            order=self,
-            status=UserInquiry.STATUS_VALIDATED,
-            validated_time__isnull=False,
-        ).count()
-
     def clean(self):
         if self.action in [InstaAction.ACTION_FOLLOW, InstaAction.ACTION_LIKE] and self.comments is not None:
             raise ValidationError(_("Comment is not allowed in like and follow method!"))
 
 
 class UserInquiry(models.Model):
-    STATUS_OPEN = 0
-    STATUS_DONE = 1
-    STATUS_VALIDATED = 2
-    STATUS_EXPIRED = 3
-    STATUS_REJECTED = 4
+    STATUS_PENDING = 0
+    STATUS_VALIDATED = 1
+    STATUS_REJECTED = 2
 
     STATUS_CHOICES = [
-        (STATUS_OPEN, _('Open')),
         (STATUS_VALIDATED, _('Validated')),
-        (STATUS_EXPIRED, _('Expired')),
-        (STATUS_DONE, _('Done')),
+        (STATUS_PENDING, _('Pending')),
         (STATUS_REJECTED, _('Rejected')),
     ]
     created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
 
-    status = models.PositiveSmallIntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_OPEN, db_index=True)
+    status = models.PositiveSmallIntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
     validated_time = models.DateTimeField(_("validated time"), null=True, blank=True, db_index=True)
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='user_inquiries')
