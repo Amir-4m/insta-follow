@@ -7,7 +7,7 @@ from .models import (
     CoinPackage, CoinPackageOrder,
     Comment, InstagramAccount,
     ReportAbuse, BlockWordRegex,
-    BlockedText, CoinTransaction
+    BlockedText, AllowedGateway
 )
 
 
@@ -23,7 +23,7 @@ class InstaPageModelAdmin(admin.ModelAdmin):
 class OrderModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'action', 'link', 'instagram_username', 'is_enable', 'created_time')
     list_filter = ('action',)
-    readonly_fields = ('media_url', 'instagram_username', 'entity_id')
+    readonly_fields = ('media_properties', 'instagram_username', 'entity_id')
     sortable_by = ('-created_time',)
     search_fields = ('owner__username', 'owner__email')
 
@@ -85,3 +85,10 @@ class BlockWordRegexModelAdmin(admin.ModelAdmin):
 @admin.register(BlockedText)
 class BlockedTextModelAdmin(admin.ModelAdmin):
     list_display = ('text', 'pattern', 'author', 'created_time')
+
+
+@admin.register(AllowedGateway)
+class AllowedGatewayAdmin(admin.ModelAdmin):
+    list_display = ('id', 'version_name', 'gateways_code')
+    search_fields = ('version_name', 'gateways_code')
+    list_filter = ('gateways_code',)

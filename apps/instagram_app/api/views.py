@@ -137,7 +137,6 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
 
         if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
             user_inquiry.validated_time = timezone.now()
-            user_inquiry.status = UserInquiry.STATUS_VALIDATED
             CoinTransaction.objects.create(
                 page=user_inquiry.page,
                 inquiry=user_inquiry,

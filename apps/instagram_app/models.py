@@ -1,7 +1,7 @@
 import logging
 import uuid
 
-from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
@@ -102,8 +102,8 @@ class Order(models.Model):
     action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
     target_no = models.IntegerField(_("target number"), validators=[MinValueValidator(1)])
     link = models.URLField(_("link"))
+    media_properties = JSONField(_('media properties'), default=dict)
     entity_id = models.BigIntegerField(_('entity ID'), null=True, db_index=True)
-    media_url = models.TextField(_("media url"), blank=True)
     instagram_username = models.CharField(_("instagram username"), max_length=120)
     comments = ArrayField(models.TextField(max_length=1024), null=True, blank=True)
     description = models.TextField(_("description"), blank=True, default='')
@@ -130,20 +130,17 @@ class Order(models.Model):
 
 
 class UserInquiry(models.Model):
-    STATUS_PENDING = 0
-    STATUS_VALIDATED = 1
-    STATUS_REJECTED = 2
+    STATUS_VALIDATED = 0
+    STATUS_REJECTED = 1
 
     STATUS_CHOICES = [
         (STATUS_VALIDATED, _('Validated')),
-        (STATUS_PENDING, _('Pending')),
         (STATUS_REJECTED, _('Rejected')),
     ]
     created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
 
-    status = models.PositiveSmallIntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_PENDING,
-                                              db_index=True)
+    status = models.PositiveSmallIntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_VALIDATED, db_index=True)
     validated_time = models.DateTimeField(_("validated time"), null=True, blank=True, db_index=True)
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='user_inquiries')
@@ -247,3 +244,10 @@ class BlockedText(models.Model):
     text = models.TextField(_('blocked text'))
     pattern = models.ForeignKey(BlockWordRegex, on_delete=models.PROTECT, related_name='blocked_texts')
     author = models.ForeignKey(InstaPage, related_name='blocked_texts', on_delete=models.PROTECT)
+
+
+class AllowedGateway(models.Model):
+    created_time = models.DateTimeField(_("created time"), auto_now_add=True)
+    updated_time = models.DateTimeField(_("updated time"), auto_now=True)
+    version_name = models.CharField(_('version_name'), max_length=50, unique=True)
+    gateways_code = ArrayField(models.CharField(verbose_name=_('code'), max_length=10))

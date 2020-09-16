@@ -1,5 +1,4 @@
 import logging
-import random
 import re
 
 import requests
@@ -15,7 +14,8 @@ from apps.instagram_app.models import (
     UserInquiry, CoinTransaction, Order,
     InstaAction, Device, CoinPackage,
     CoinPackageOrder, InstaPage, Comment,
-    ReportAbuse, BlockWordRegex, BlockedText
+    ReportAbuse, BlockWordRegex, BlockedText,
+    AllowedGateway
 )
 from apps.instagram_app.services import CustomService
 
@@ -89,7 +89,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'id', 'entity_id', 'action',
             'target_no', 'achieved_number_approved', 'link',
             'instagram_username', 'is_enable', 'description',
-            'media_url', 'comments', 'shortcode'
+            'comments', 'shortcode', 'media_properties'
         )
         read_only_fields = ('is_enable', 'achieved_number_approved', 'description', 'link')
 
@@ -134,7 +134,7 @@ class OrderSerializer(serializers.ModelSerializer):
         target_no = validated_data.get('target_no')
         comments = validated_data.get('comments')
         instagram_username = validated_data.get('instagram_username')
-        media_url = validated_data.get('media_url')
+        media_properties = validated_data.get('media_properties')
 
         if insta_action.pk == InstaAction.ACTION_FOLLOW:
             link = f"https://www.instagram.com/{instagram_username}/"
@@ -155,7 +155,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 action=insta_action,
                 link=link,
                 target_no=target_no,
-                media_url=media_url,
+                media_properties=media_properties,
                 instagram_username=instagram_username,
                 owner=page,
                 comments=comments
@@ -169,7 +169,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class UserInquirySerializer(serializers.ModelSerializer):
     link = serializers.ReadOnlyField(source="order.link")
-    media_url = serializers.ReadOnlyField(source="order.media_url")
+    media_properties = serializers.ReadOnlyField(source="order.media_properties")
     entity_id = serializers.ReadOnlyField(source="order.entity_id")
     instagram_username = serializers.ReadOnlyField(source='order.instagram_username')
     page = serializers.ReadOnlyField(source='page.instagram_username')
@@ -179,7 +179,7 @@ class UserInquirySerializer(serializers.ModelSerializer):
     class Meta:
         model = UserInquiry
         fields = (
-            'id', 'instagram_username', 'media_url',
+            'id', 'instagram_username', 'media_properties',
             'link', 'entity_id', 'done_id',
             'status', 'page', 'action'
         )
@@ -217,18 +217,19 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
         read_only_fields = ('page',)
 
     def get_gateways(self, obj):
+        gateways_list = []
         try:
             response = CustomService.payment_request('gateways', 'get')
             data = response.json()
-            installed_from = obj.version_name.split('-')[0]
-            if installed_from not in ['GOOGLE_PLAY', 'ALL']:
-                for gateway in data:
-                    if gateway['code'] == installed_from:
-                        data = gateway
+            allowed_gateways = AllowedGateway.objects.get(version_name=obj.version_name)
+            for gateway in data:
+                if gateway['code'] in allowed_gateways.gateways_code:
+                    gateways_list.append(gateway)
         except Exception as e:
             logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
-            data = {}
-        return data
+            gateways_list.clear()
+
+        return gateways_list
 
 
 class PurchaseSerializer(serializers.Serializer):

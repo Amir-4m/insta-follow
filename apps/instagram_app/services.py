@@ -105,13 +105,13 @@ class CustomService(object):
             remaining=F('target_no') - Coalesce(Sum(
                 Case(
                     When(
-                        user_inquiries__status__in=[UserInquiry.STATUS_PENDING, UserInquiry.STATUS_VALIDATED], then=1
+                        user_inquiries__status=UserInquiry.STATUS_VALIDATED, then=1
                     )
                 ),
                 output_field=IntegerField()
             ), 0),
         ).filter(
-            remaining__lt=0.10 * F('remaining') + F('remaining')
+            remaining__lte=F('remaining')
         )
         valid_orders = []
 
