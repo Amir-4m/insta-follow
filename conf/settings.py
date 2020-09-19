@@ -62,7 +62,7 @@ MIDDLEWARE = [
     'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
 ]
 
-ROOT_URLCONF = 'insta_follow.urls'
+ROOT_URLCONF = 'conf.urls'
 APPEND_SLASH = False
 
 TEMPLATES = [
@@ -82,7 +82,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'insta_follow.wsgi.application'
+WSGI_APPLICATION = 'conf.wsgi.application'
 AUTH_USER_MODEL = 'accounts.User'
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
