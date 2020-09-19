@@ -2,52 +2,39 @@ from django.contrib import admin
 
 from .forms import InstagramAccountForm
 from .models import (
-    Category, InstaPage, UserPage,
+    InstaPage,
     Order, UserInquiry, InstaAction,
-    CoinPackage, InstagramAccount
+    CoinPackage, CoinPackageOrder,
+    Comment, InstagramAccount,
+    ReportAbuse, BlockWordRegex,
+    BlockedText, AllowedGateway
 )
-
-
-@admin.register(Category)
-class CategoryModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'created_time')
-    list_filter = ('name',)
-    search_fields = ('name',)
-    sortable_by = ('-created_time',)
 
 
 @admin.register(InstaPage)
 class InstaPageModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'instagram_username', 'instagram_user_id', 'updated_time', 'created_time')
-    list_filter = ('category',)
+    readonly_fields = ('uuid',)
     search_fields = ('instagram_username', 'instagram_user_id')
     sortable_by = ('-created_time',)
-
-
-@admin.register(UserPage)
-class UserPageModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'page', 'updated_time', 'created_time')
-    list_select_related = ['user', 'page']
-    sortable_by = ('-created_time',)
-    search_fields = ('user__username', 'user__email')
 
 
 @admin.register(Order)
 class OrderModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'action', 'link', 'instagram_username', 'is_enable', 'created_time')
     list_filter = ('action',)
-    readonly_fields = ('media_url', 'instagram_username', 'entity_id')
+    readonly_fields = ('media_properties', 'instagram_username', 'entity_id')
     sortable_by = ('-created_time',)
     search_fields = ('owner__username', 'owner__email')
 
 
 @admin.register(UserInquiry)
 class UserInquiryModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'order', 'user_page', 'status', 'validated_time', 'updated_time', 'created_time')
-    list_select_related = ['order', 'user_page']
+    list_display = ('id', 'order', 'page', 'status', 'validated_time', 'updated_time', 'created_time')
+    list_select_related = ['order', 'page']
     list_filter = ('status',)
     sortable_by = ('-created_time',)
-    search_fields = ('user_page__user__username', 'user_page__user__email')
+    search_fields = ('page__instagram_username',)
 
 
 @admin.register(InstaAction)
@@ -67,3 +54,41 @@ class InstagramAccountModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'username', 'updated_time', 'created_time')
     readonly_fields = ('login_attempt',)
     search_fields = ('username',)
+
+
+@admin.register(CoinPackageOrder)
+class CoinPackageOrderModelAdmin(admin.ModelAdmin):
+    list_display = ('id', 'invoice_number', 'is_paid', 'updated_time', 'created_time')
+
+
+@admin.register(Comment)
+class CommentModelAdmin(admin.ModelAdmin):
+    list_display = ('id', 'text', 'updated_time', 'created_time')
+
+
+@admin.register(ReportAbuse)
+class ReportAbuseModelAdmin(admin.ModelAdmin):
+    list_display = ('id', 'reporter', 'text', 'abuser', 'status', 'created_time')
+    list_filter = ('status',)
+
+    def save_model(self, request, obj, form, change):
+        if obj.status == ReportAbuse.STATUS_APPROVED:
+            Order.objects.filter(id=obj.abuser.id).update(is_enable=False)
+        return super(ReportAbuseModelAdmin, self).save_model(request, obj, form, change)
+
+
+@admin.register(BlockWordRegex)
+class BlockWordRegexModelAdmin(admin.ModelAdmin):
+    list_display = ('pattern', 'updated_time', 'created_time')
+
+
+@admin.register(BlockedText)
+class BlockedTextModelAdmin(admin.ModelAdmin):
+    list_display = ('text', 'pattern', 'author', 'created_time')
+
+
+@admin.register(AllowedGateway)
+class AllowedGatewayAdmin(admin.ModelAdmin):
+    list_display = ('id', 'version_name', 'gateways_code')
+    search_fields = ('version_name', 'gateways_code')
+    list_filter = ('gateways_code',)

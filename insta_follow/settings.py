@@ -28,16 +28,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config("SECRET_KEY")
-
+# This is used so that application data can hook into specific sites.
+SITE_ID = 1
 # Application definition
 INSTALLED_APPS = [
+    'apps.contents',
+    'apps.config',
     'apps.accounts',
     'apps.instagram_app',
-    'apps.telegram_app',
-    'bot',
     'rest_framework',
     'drf_yasg',
     'django_celery_beat',
+    'tinymce',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -45,6 +47,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
+    'django.contrib.flatpages'
 ]
 
 MIDDLEWARE = [
@@ -55,6 +59,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
 ]
 
 ROOT_URLCONF = 'insta_follow.urls'
@@ -88,7 +93,7 @@ REST_FRAMEWORK = {
 }
 SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('ACCESS_TOKEN_LIFETIME', default=30, cast=int)),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('ACCESS_TOKEN_LIFETIME', default=56000, cast=int)),
     'REFRESH_TOKEN_LIFETIME': timedelta(minutes=config('REFRESH_TOKEN_LIFETIME', default=90, cast=int)),
 }
 
@@ -150,6 +155,11 @@ CACHES = {
         'LOCATION': config('CACHE_HOST', default=''),
         'KEY_PREFIX': 'INSTA_FOLLOW',
     },
+    # 'payments': {
+    #     'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+    #     'LOCATION': 'apps/payments/access_token',
+    #     'TIMEOUT': 3600
+    # }
 }
 
 CELERY_BROKER_URL = 'amqp://%(USER)s:%(PASS)s@%(HOST)s' % {
@@ -230,26 +240,13 @@ LOGGING = ({
             'handlers': ['db_queries'],
             'propagate': False,
         },
-        'instagram_app': {
+        'apps.instagram_app': {
             'level': 'DEBUG',
             'handlers': ['file', 'console']
         },
-        # 'telegram.ext.dispatcher': {
-        #     'level': 'DEBUG',
-        #     'handlers': ['file'],
-        # },
+
     },
 })
-
-PROXY4TELEGRAM_HOST = config('PROXY4TELEGRAM_HOST', default='')
-PROXY4TELEGRAM_PORT = config('PROXY4TELEGRAM_PORT', default=0, cast=int)
-
-TELEGRAM_BOT = {
-    'TOKEN': config('TELEGRAM_BOT_TOKEN'),
-    'MODE': config('TELEGRAM_BOT_MODE', default='POLLING'),
-    'WEBHOOK_SITE': config('TELEGRAM_BOT_WEBHOOK_SITE', default=''),
-    'PROXY': f"http://{PROXY4TELEGRAM_HOST}:{PROXY4TELEGRAM_PORT}" if PROXY4TELEGRAM_HOST else '',
-}
 
 INSTAGRAM_CREDENTIALS = {
     'USERNAME': config('INSTAGRAM_USERNAME', default=''),
@@ -258,16 +255,24 @@ INSTAGRAM_CREDENTIALS = {
 
 DEVLYTIC_TOKEN = config('DEVLYTIC_TOKEN', default='')
 PUSH_API_URL = config('PUSH_API_URL', default='')
-
+PAYMENT_API_URL = config('PAYMENT_API_URL', default='')
+PAYMENT_SERVICE_SECRET = config('PAYMENT_SERVICE_SECRET', default='')
+MONITOR_TOKEN = config('MONITOR_TOKEN', default='')
 USER_PENALTY_AMOUNT = config('USER_PENALTY_AMOUNT', default=1.5, cast=float)
 
 FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=20000, cast=int)
+
+MAXIMUM_COIN_TRANSFER = config('MAXIMUM_COIN_TRANSFER', default=1000, cast=int)
+COIN_TRANSFER_FEE = config('COIN_TRANSFER_FEE', default=5, cast=int)
+
+TINYMCE_COMPRESSOR = config('TINYMCE_COMPRESSOR', default=False, cast=bool)
 
 if DEVEL is False:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
     from sentry_sdk.integrations.celery import CeleryIntegration
     from sentry_sdk.integrations.logging import LoggingIntegration
+
     SENTRY_KEY = config('SENTRY_KEY')
     SENTRY_HOST = config('SENTRY_HOST')
     SENTRY_PROJECT_ID = config('SENTRY_PROJECT_ID')

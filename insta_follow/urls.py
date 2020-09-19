@@ -36,6 +36,8 @@ urlpatterns = [
     path('admin4f3ad95/', admin.site.urls),
     path('api/v1/', include('apps.urls_api')),
     path('docs/', schema_view.with_ui('swagger')),
-    path('bot/', include('bot.urls'))
+    path('pages/', include('django.contrib.flatpages.urls')),
+    path('instagram/', include('apps.instagram_app.urls')),
+    path('tinymce/', include('tinymce.urls')),
 
 ]

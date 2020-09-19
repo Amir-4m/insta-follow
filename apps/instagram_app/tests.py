@@ -126,7 +126,7 @@ class InstagramAPITestCase(APITestCase):
         }
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(UserInquiry.objects.filter(id=1, status=UserInquiry.STATUS_DONE))
+        self.assertTrue(UserInquiry.objects.filter(id=1, status=UserInquiry.STATUS_PENDING))
 
     def test_get_coin_transaction(self):
         url = reverse('cointransaction-list')

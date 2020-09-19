@@ -11,13 +11,15 @@ django-filter
 python-decouple
 celery>=4.4, <4.5
 django-celery-beat
-python-telegram-bot>=12.6, <12.7
 drf-yasg==1.17.1
 coverage==5.1
 mock==4.0.2
 sentry-sdk==0.14.2
+pycrypto==2.6.1
 
 PyJWT
 psycopg2-binary
 python-memcached
 Pillow
+zeep
+django-tinymce
