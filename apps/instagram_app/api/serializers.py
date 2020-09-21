@@ -89,9 +89,9 @@ class OrderSerializer(serializers.ModelSerializer):
             'id', 'entity_id', 'action',
             'target_no', 'achieved_number_approved', 'link',
             'instagram_username', 'is_enable', 'description',
-            'comments', 'shortcode', 'media_properties'
+            'comments', 'shortcode', 'media_properties', 'created_time'
         )
-        read_only_fields = ('is_enable', 'achieved_number_approved', 'description', 'link')
+        read_only_fields = ('is_enable', 'achieved_number_approved', 'description', 'link', 'created_time')
 
     def validate(self, attrs):
         action_value = attrs.get('action')
