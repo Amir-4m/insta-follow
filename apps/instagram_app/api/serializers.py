@@ -264,15 +264,14 @@ class CoinTransferSerializer(serializers.ModelSerializer):
         model = CoinTransaction
         fields = ('amount', 'to_page')
 
-    def validate_amount(self, value):
-        if value > settings.MAXIMUM_COIN_TRANSFER or value <= 0:
+    def validate(self, attrs):
+        amount = attrs['amount']
+        username = attrs['to_page']
+        if amount > settings.MAXIMUM_COIN_TRANSFER or amount <= 0:
             raise ValidationError(detail={'detail': _("Transfer amount is invalid!")})
-        return value
-
-    def validate_to_page(self, value):
-        if InstaPage.objects.filter(instagram_username=value).exists():
-            return value
-        raise ValidationError(detail={'detail': _('Target page does not exists')})
+        if not InstaPage.objects.filter(instagram_username=username).exists():
+            raise ValidationError(detail={'detail': _('Target page does not exists')})
+        return attrs
 
     def create(self, validated_data):
         sender = validated_data.get('sender')
