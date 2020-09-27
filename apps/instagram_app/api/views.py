@@ -31,6 +31,7 @@ from apps.instagram_app.models import (
     CoinTransaction, Device, CoinPackage,
     CoinPackageOrder, InstaPage, Comment,
     ReportAbuse,
+    AllowedGateway
 )
 
 logger = logging.getLogger(__name__)
@@ -354,3 +355,32 @@ class OrderGateWayAPIView(views.APIView):
             raise ValidationError(detail={'detail': _('error in getting order gateway')})
 
         return Response(data={'gateway_url': response.json().get('gateway_url')})
+
+
+class GatewayAPIView(views.APIView):
+    authentication_classes = (PageAuthentication,)
+
+    def get(self, request, *args, **kwargs):
+        version_name = request.query_params.get('version_name')
+        if version_name is None:
+            raise ValidationError(detail={'detail': _('version must be set in query params!')})
+
+        gateways_list = []
+        try:
+            response = CustomService.payment_request('gateways', 'get')
+            data = response.json()
+            allowed_gateways = AllowedGateway.objects.get(version_name=version_name)
+            print(allowed_gateways.gateways_code)
+            for gateway in data:
+                if gateway['code'] in allowed_gateways.gateways_code:
+                    gateways_list.append(gateway)
+
+        except AllowedGateway.DoesNotExist as e:
+            logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
+            raise ValidationError(detail={'detail': _('no allowed gateway found!')})
+
+        except Exception as e:
+            logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
+            gateways_list.clear()
+            raise ValidationError(detail={'detail': _('error in getting gateway')})
+        return Response({'gateways': gateways_list})
