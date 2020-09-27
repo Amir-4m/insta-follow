@@ -358,7 +358,7 @@ class OrderGateWayAPIView(views.APIView):
 
 
 class GatewayAPIView(views.APIView):
-    authentication_classes = (PageAuthentication,)
+    # authentication_classes = (PageAuthentication,)
 
     def get(self, request, *args, **kwargs):
         version_name = request.query_params.get('version_name')
@@ -383,4 +383,4 @@ class GatewayAPIView(views.APIView):
             logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
             gateways_list.clear()
             raise ValidationError(detail={'detail': _('error in getting gateway')})
-        return Response({'gateways': gateways_list})
+        return Response(gateways_list)
