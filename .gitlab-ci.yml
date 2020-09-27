@@ -49,30 +49,8 @@ test:
   tags:
     - django
 
-.migrate:
-  stage: migrate
-  before_script:
-    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
-  script:
-    - source $CI_PROJECT_DIR/venv/bin/activate
-    - python manage.py makemigrations
-  after_script:
-    - rm $CI_PROJECT_DIR/.env
-  only:
-    changes:
-      - apps/*/models.py
-  tags:
-    - django
-    - staging
-
-#.deploy:
-#  before_script:
-#    - cd /var/www/$PROJECT_DIR/project/
-#    - source /var/www/$PROJECT_DIR/venv/bin/activate
-
 staging:
   stage: deploy
-#  extends: .deploy
   before_script:
     - cd /var/www/$PROJECT_DIR/project/
     - source /var/www/$PROJECT_DIR/venv/bin/activate
@@ -85,16 +63,16 @@ staging:
     - supervisorctl restart $PROJECT_ABR:*
   only:
     - develop
-#    - /^staging-.*$/
-#  except:
-#    - branches
+  #    - /^staging-.*$/
+  #  except:
+  #    - branches
   tags:
     - django
     - staging
 
 production:
   stage: deploy
-#  extends: .deploy
+  #  extends: .deploy
   before_script:
     - cd /var/www/$PROJECT_DIR/project/
     - source /var/www/$PROJECT_DIR/venv/bin/activate
