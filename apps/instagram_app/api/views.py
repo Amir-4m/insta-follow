@@ -11,6 +11,7 @@ from rest_framework import status, viewsets, generics, mixins, views
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
 
 from drf_yasg.utils import swagger_auto_schema
 
@@ -68,6 +69,8 @@ class OrderViewSet(viewsets.GenericViewSet,
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
     pagination_class = OrderPagination
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ['is_enable', 'action']
 
     def get_queryset(self):
         qs = super(OrderViewSet, self).get_queryset()
@@ -109,6 +112,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
     queryset = UserInquiry.objects.all()
     serializer_class = UserInquirySerializer
     pagination_class = InquiryPagination
+    filter_backends = (DjangoFilterBackend,)
     filterset_fields = ['status', 'order__action']
 
     @swagger_auto_schema(

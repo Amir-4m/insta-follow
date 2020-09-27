@@ -89,9 +89,9 @@ class OrderSerializer(serializers.ModelSerializer):
             'id', 'entity_id', 'action',
             'target_no', 'achieved_number_approved', 'link',
             'instagram_username', 'is_enable', 'description',
-            'comments', 'shortcode', 'media_properties'
+            'comments', 'shortcode', 'media_properties', 'created_time'
         )
-        read_only_fields = ('is_enable', 'achieved_number_approved', 'description', 'link')
+        read_only_fields = ('is_enable', 'achieved_number_approved', 'description', 'link', 'created_time')
 
     def validate(self, attrs):
         action_value = attrs.get('action')
@@ -205,7 +205,7 @@ class InstaActionSerializer(serializers.ModelSerializer):
 class CoinPackageSerializer(serializers.ModelSerializer):
     class Meta:
         model = CoinPackage
-        fields = ('name', 'sku', 'package_amount', 'package_price', 'is_enable', 'featured')
+        fields = ('name', 'sku', 'amount', 'price', 'is_enable', 'featured', 'price_offer', 'amount_offer')
 
 
 class CoinPackageOrderSerializer(serializers.ModelSerializer):
@@ -264,15 +264,14 @@ class CoinTransferSerializer(serializers.ModelSerializer):
         model = CoinTransaction
         fields = ('amount', 'to_page')
 
-    def validate_amount(self, value):
-        if value > settings.MAXIMUM_COIN_TRANSFER or value <= 0:
+    def validate(self, attrs):
+        amount = attrs['amount']
+        username = attrs['to_page']
+        if amount > settings.MAXIMUM_COIN_TRANSFER or amount <= 0:
             raise ValidationError(detail={'detail': _("Transfer amount is invalid!")})
-        return value
-
-    def validate_to_page(self, value):
-        if InstaPage.objects.filter(instagram_username=value).exists():
-            return value
-        raise ValidationError(detail={'detail': _('Target page does not exists')})
+        if not InstaPage.objects.filter(instagram_username=username).exists():
+            raise ValidationError(detail={'detail': _('Target page does not exists')})
+        return attrs
 
     def create(self, validated_data):
         sender = validated_data.get('sender')

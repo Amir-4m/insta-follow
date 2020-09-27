@@ -7,7 +7,7 @@ from .models import (
     CoinPackage, CoinPackageOrder,
     Comment, InstagramAccount,
     ReportAbuse, BlockWordRegex,
-    BlockedText, AllowedGateway
+    BlockedText, AllowedGateway, CoinTransaction
 )
 
 
@@ -92,3 +92,8 @@ class AllowedGatewayAdmin(admin.ModelAdmin):
     list_display = ('id', 'version_name', 'gateways_code')
     search_fields = ('version_name', 'gateways_code')
     list_filter = ('gateways_code',)
+
+
+@admin.register(CoinTransaction)
+class ada(admin.ModelAdmin):
+    pass
