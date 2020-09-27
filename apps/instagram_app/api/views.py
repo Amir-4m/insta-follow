@@ -370,7 +370,6 @@ class GatewayAPIView(views.APIView):
             response = CustomService.payment_request('gateways', 'get')
             data = response.json()
             allowed_gateways = AllowedGateway.objects.get(version_name=version_name)
-            print(allowed_gateways.gateways_code)
             for gateway in data:
                 if gateway['code'] in allowed_gateways.gateways_code:
                     gateways_list.append(gateway)
