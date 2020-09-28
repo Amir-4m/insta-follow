@@ -28,6 +28,10 @@ test:
   before_script:
     - mkdir $CI_PROJECT_DIR/logs
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
+    - virtualenv --prompt='($PROJECT_DIR)' -q venv
+    - virtualenv --relocatable venv
+    - source venv/bin/activate
+    - pip install -r requirements.txt
   script:
     - source $CI_PROJECT_DIR/venv/bin/activate
     - python manage.py check
