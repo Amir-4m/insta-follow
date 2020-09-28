@@ -1,10 +1,19 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Instafollow</title>
+    <link rel="stylesheet" href="{% static 'instagram_app/css/style.css' %}">
 </head>
 <body style="direction: rtl; text-align: center">
-<h2>پرداخت شما با موفقیت انجام شد.</h2>
+<div class="payment_done">
+    <h2>پرداخت شما با موفقیت انجام شد.</h2>
+    <h5>در حال بازگشت به برنامه</h5>
+    <img src="{% static 'instagram_app/image/paydone.svg' %}" alt="done"/>
+    <br>
+    <button>بازگشت به برنامه</button>
+
+</div>
 </body>
 </html>
