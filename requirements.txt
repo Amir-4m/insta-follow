@@ -16,7 +16,6 @@ mock==4.0.2
 sentry-sdk==0.14.2
 pycrypto==2.6.1
 django-picklefield==3.0.1
-
 PyJWT
 psycopg2-binary
 python-memcached
