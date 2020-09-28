@@ -196,6 +196,7 @@ class CoinPackageOrder(models.Model):
     is_paid = models.BooleanField(_("is paid"), null=True)
     price = models.PositiveIntegerField(_('price'))
     version_name = models.CharField(_('version name'), max_length=50)
+    redirect_url = models.CharField(_('redirect url'), max_length=120)
 
 
 class CoinTransaction(models.Model):
