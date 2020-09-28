@@ -1,7 +1,9 @@
+import json
 import logging
 
 from django.conf import settings
 from django.db import transaction
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import Sum
@@ -317,7 +319,7 @@ class OrderGateWayAPIView(views.APIView):
 
     @swagger_auto_schema(
         operation_description='Set an gateway for a package order to get the payment url',
-        request_body=PURCHASE_DOC
+        request_body=Order_GateWay_DOC
 
     )
     def post(self, request, *args, **kwargs):
@@ -326,7 +328,6 @@ class OrderGateWayAPIView(views.APIView):
         package_order = serializer.validated_data['package_order']
         gateway = serializer.validated_data['gateway']
         try:
-            # TODO redirect_url
             CustomService.payment_request(
                 'orders',
                 'post',
@@ -334,10 +335,10 @@ class OrderGateWayAPIView(views.APIView):
                     'gateway': gateway,
                     'price': package_order.price,
                     'service_reference': package_order.invoice_number,
-                    'is_paid': package_order.is_paid
-                    # 'properties': {
-                    #     # 'redirect_url':
-                    # }
+                    'is_paid': package_order.is_paid,
+                    "properties": json.dumps({
+                        "redirect_url": request.build_absolute_uri(reverse('payment-done'))
+                    })
                 }
             )
         except Exception as e:
@@ -358,7 +359,7 @@ class OrderGateWayAPIView(views.APIView):
 
 
 class GatewayAPIView(views.APIView):
-    # authentication_classes = (PageAuthentication,)
+    authentication_classes = (PageAuthentication,)
 
     def get(self, request, *args, **kwargs):
         version_name = request.query_params.get('version_name')
