@@ -14,6 +14,11 @@ build:
     - virtualenv --relocatable venv
     - source venv/bin/activate
     - pip install -r requirements.txt
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - venv/
+    policy: push
   only:
     refs:
       - develop
@@ -28,15 +33,16 @@ test:
   before_script:
     - mkdir $CI_PROJECT_DIR/logs
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
-    - virtualenv --prompt='($PROJECT_DIR)' -q venv
-    - virtualenv --relocatable venv
-    - source venv/bin/activate
-    - pip install -r requirements.txt
   script:
     - source $CI_PROJECT_DIR/venv/bin/activate
     - python manage.py check
   after_script:
     - rm $CI_PROJECT_DIR/.env
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - venv/
+    policy: pull
   only:
     - develop
     - master
