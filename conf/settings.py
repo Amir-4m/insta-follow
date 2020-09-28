@@ -119,16 +119,6 @@ DATABASES = {
         'HOST': config('DB_HOST'),
         'PORT': config('DB_PORT'),
     },
-    'mongo': {
-        'ENGINE': 'djongo',
-        'NAME': config('MONGO_DB_NAME'),
-        'CLIENT': {
-            'host': config('MONGO_DB_HOST'),
-            'username': config('MONGO_DB_USER', ''),
-            'password': config('MONGO_DB_PASS', ''),
-            'authSource': config('MONGO_DB_AS', ''),
-        }
-    }
 }
 # DATABASE_ROUTERS = ['apps.instagram_app.dbrouters.MongoRouter', ]
 
