@@ -9,8 +9,11 @@ from apps.instagram_app.models import CoinPackageOrder
 class PaymentView(View):
     def get(self, request, *args, **kwargs):
         invoice_number = request.GET.get('service_reference')
-        purchase_verified = json.loads(request.GET.get('purchase_verified'))
-        if purchase_verified is True:
+        purchase_verified = request.GET.get('purchase_verified')
+        if purchase_verified is None:
+            return HttpResponse('')
+
+        if json.loads(purchase_verified) is True:
             html = 'instagram_app/payment_done.html'
         else:
             html = 'instagram_app/payment_failed.html'
