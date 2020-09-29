@@ -11,7 +11,7 @@ class PaymentView(View):
         invoice_number = request.GET.get('service_reference')
         purchase_verified = request.GET.get('purchase_verified')
         if purchase_verified is None:
-            return HttpResponse('')
+            return HttpResponse('وضعیت سفارش نا معتبر می باشد !')
 
         if json.loads(purchase_verified) is True:
             html = 'instagram_app/payment_done.html'
@@ -20,7 +20,7 @@ class PaymentView(View):
         try:
             order = CoinPackageOrder.objects.get(invoice_number=invoice_number)
         except CoinPackageOrder.DoesNotExist:
-            return HttpResponse('')
+            return HttpResponse('سفارشی یافت نشد !')
 
         context = {
             "redirect_url": order.redirect_url,
