@@ -247,15 +247,15 @@ class PurchaseVerificationAPIView(views.APIView):
                 except Exception as e:
                     logger.error(f"error calling payment with endpoint purchase/verify and action post: {e}")
                     raise ValidationError(detail={'detail': _('error in verifying purchase')})
-            elif gateway_code == "SAMAN":
-                try:
-                    response = CustomService.payment_request(f'orders/{order.invoice_number}', 'get')
-                    purchase_verified = response.json()['is_paid']
-                except Exception as e:
-                    logger.error(
-                        f"error calling payment with endpoint orders/{order.invoice_number} and action get: {e}"
-                    )
-                    raise ValidationError(detail={'detail': _('error in verifying purchase')})
+            # elif gateway_code == "SAMAN":
+            #     try:
+            #         response = CustomService.payment_request(f'orders/{order.invoice_number}', 'get')
+            #         purchase_verified = response.json()['is_paid']
+            #     except Exception as e:
+            #         logger.error(
+            #             f"error calling payment with endpoint orders/{order.invoice_number} and action get: {e}"
+            #         )
+            #         raise ValidationError(detail={'detail': _('error in verifying purchase')})
 
             order.is_paid = purchase_verified
             order.save()
