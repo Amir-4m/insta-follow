@@ -40,5 +40,9 @@
     color: white;
 }
 
+.payment_done button a{
+    color: white;
+    text-decoration: none;
+}
 
 
