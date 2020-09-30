@@ -14,12 +14,14 @@ class PaymentView(View):
         if purchase_verified is None:
             return HttpResponse('وضعیت سفارش نا معتبر می باشد !')
 
+        purchase_verified = json.loads(purchase_verified)
+
         try:
             order = CoinPackageOrder.objects.get(invoice_number=invoice_number, is_paid=None)
         except CoinPackageOrder.DoesNotExist:
             return HttpResponse('سفارشی یافت نشد !')
 
-        if json.loads(purchase_verified) is True:
+        if purchase_verified is True:
             html = 'instagram_app/payment_done.html'
             order.is_paid = purchase_verified
             order.save()
