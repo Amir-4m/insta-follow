@@ -211,8 +211,6 @@ class CoinPackageOrderViewSet(
     queryset = CoinPackageOrder.objects.all()
     serializer_class = CoinPackageOrderSerializer
     pagination_class = CoinPackageOrderPagination
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ['created_time']
 
     def get_queryset(self):
         qs = super(CoinPackageOrderViewSet, self).get_queryset()
