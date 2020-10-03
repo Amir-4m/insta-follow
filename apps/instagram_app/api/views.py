@@ -27,7 +27,7 @@ from .serializers import (
     PackageOrderGateWaySerializer,
 )
 from ..services import CustomService
-from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination
+from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination, CoinPackageOrderPagination
 from apps.instagram_app.models import (
     InstaAction, Order, UserInquiry,
     CoinTransaction, Device, CoinPackage,
@@ -210,6 +210,7 @@ class CoinPackageOrderViewSet(
     authentication_classes = (PageAuthentication,)
     queryset = CoinPackageOrder.objects.all()
     serializer_class = CoinPackageOrderSerializer
+    pagination_class = CoinPackageOrderPagination
 
     def get_queryset(self):
         qs = super(CoinPackageOrderViewSet, self).get_queryset()
