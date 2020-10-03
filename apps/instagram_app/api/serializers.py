@@ -210,7 +210,6 @@ class CoinPackageSerializer(serializers.ModelSerializer):
 
 class CoinPackageOrderSerializer(serializers.ModelSerializer):
     gateways = serializers.SerializerMethodField(read_only=True)
-    coin_package = CoinPackageSerializer()
 
     class Meta:
         model = CoinPackageOrder
