@@ -183,7 +183,7 @@ class InstaActionAPIView(generics.ListAPIView):
     serializer_class = InstaActionSerializer
 
 
-class CoinPackageViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
+class CoinPackageViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
     """Get a list of coin packages"""
     queryset = CoinPackage.objects.filter(is_enable=True)
     serializer_class = CoinPackageSerializer
