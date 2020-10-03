@@ -355,7 +355,7 @@ class OrderGateWayAPIView(views.APIView):
             logger.error(f"error calling payment with endpoint orders and action post: {e}")
             raise ValidationError(detail={'detail': _('error in getting order gateway')})
 
-        return Response(data={'gateway_url': response.json().get('gateway_url')})
+        return Response(data=response.json())
 
 
 class GatewayAPIView(views.APIView):
