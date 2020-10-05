@@ -9,26 +9,27 @@ from apps.instagram_app.models import CoinPackageOrder, CoinTransaction
 
 class PaymentView(View):
     def get(self, request, *args, **kwargs):
-        invoice_number = request.GET.get('service_reference')
+        transaction_id = request.GET.get('transaction_id')
         purchase_verified = request.GET.get('purchase_verified')
         if purchase_verified is None:
             return HttpResponse('وضعیت سفارش نا معتبر می باشد !')
 
-        purchase_verified = json.loads(purchase_verified)
+        purchase_verified = purchase_verified.lower().strip()
 
         try:
-            order = CoinPackageOrder.objects.get(invoice_number=invoice_number, is_paid=None)
+            order = CoinPackageOrder.objects.get(transaction_id=transaction_id, is_paid=None)
         except CoinPackageOrder.DoesNotExist:
             return HttpResponse('سفارشی یافت نشد !')
 
-        if purchase_verified is True:
+        if purchase_verified == 'true':
             html = 'instagram_app/payment_done.html'
-            order.is_paid = purchase_verified
-            order.save()
+            order.is_paid = True
 
         else:
             html = 'instagram_app/payment_failed.html'
+            order.is_paid = False
 
+        order.save()
         if order.is_paid is True:
             CoinTransaction.objects.create(
                 page=order.page,
