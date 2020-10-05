@@ -239,7 +239,7 @@ class PurchaseVerificationAPIView(views.APIView):
                         'purchase/verify',
                         'post',
                         data={
-                            'order_reference': order.invoice_number,
+                            'order': str(order.invoice_number),
                             'purchase_token': purchase_token
                         }
                     )
@@ -327,20 +327,30 @@ class OrderGateWayAPIView(views.APIView):
         serializer.is_valid(raise_exception=True)
         package_order = serializer.validated_data['package_order']
         gateway = serializer.validated_data['gateway']
+        sku = None
+        if package_order.coin_package.sku is not None:
+            sku = package_order.coin_package.sku
         try:
-            CustomService.payment_request(
+
+            order_response = CustomService.payment_request(
                 'orders',
                 'post',
                 data={
                     'gateway': gateway,
                     'price': package_order.price,
-                    'service_reference': package_order.invoice_number,
+                    'service_reference': str(package_order.invoice_number),
                     'is_paid': package_order.is_paid,
-                    "properties": json.dumps({
-                        "redirect_url": request.build_absolute_uri(reverse('payment-done'))
-                    })
+                    "properties": {
+                        "redirect_url": request.build_absolute_uri(reverse('payment-done')),
+                        "sku": sku,
+                        "package_name": settings.CAFE_BAZAAR_PACKAGE_NAME
+                    }
                 }
             )
+            CoinPackageOrder.objects.select_for_update(of=('self',))
+            transaction_id = order_response.json().get('transaction_id')
+            package_order.transaction_id = transaction_id
+            package_order.save()
         except Exception as e:
             logger.error(f"error calling payment with endpoint orders and action post: {e}")
             raise ValidationError(detail={'detail': _('error in submitting order gateway')})
@@ -349,7 +359,7 @@ class OrderGateWayAPIView(views.APIView):
             response = CustomService.payment_request(
                 'purchase/gateway',
                 'post',
-                data={'order': package_order.invoice_number, 'gateway': gateway}
+                data={'order': str(package_order.invoice_number), 'gateway': gateway}
             )
         except Exception as e:
             logger.error(f"error calling payment with endpoint orders and action post: {e}")
