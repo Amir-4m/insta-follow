@@ -148,7 +148,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
                 page=user_inquiry.page,
                 inquiry=user_inquiry,
                 amount=user_inquiry.order.action.action_value,
-                description=f"validated inquiry {user_inquiry.id}"
+                description=_("validated inquiry %s") % user_inquiry.id
             )
             user_inquiry.save()
 
