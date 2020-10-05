@@ -210,11 +210,20 @@ class CoinPackageSerializer(serializers.ModelSerializer):
 
 class CoinPackageOrderSerializer(serializers.ModelSerializer):
     gateways = serializers.SerializerMethodField(read_only=True)
+    package_detail = serializers.SerializerMethodField()
 
     class Meta:
         model = CoinPackageOrder
-        fields = ('id', 'invoice_number', 'coin_package', 'page', 'is_paid', 'price', 'version_name', 'gateways')
+        fields = (
+            'id', 'invoice_number', 'coin_package',
+            'page', 'is_paid', 'price', 'package_detail',
+            'version_name', 'gateways', 'created_time'
+        )
         read_only_fields = ('page',)
+
+    def get_package_detail(self, obj):
+        if obj.coin_package:
+            return CoinPackageSerializer(obj.coin_package).data
 
     def get_gateways(self, obj):
         gateways_list = []

@@ -27,7 +27,7 @@ from .serializers import (
     PackageOrderGateWaySerializer,
 )
 from ..services import CustomService
-from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination
+from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination, CoinPackageOrderPagination
 from apps.instagram_app.models import (
     InstaAction, Order, UserInquiry,
     CoinTransaction, Device, CoinPackage,
@@ -183,7 +183,7 @@ class InstaActionAPIView(generics.ListAPIView):
     serializer_class = InstaActionSerializer
 
 
-class CoinPackageViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
+class CoinPackageViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
     """Get a list of coin packages"""
     queryset = CoinPackage.objects.filter(is_enable=True)
     serializer_class = CoinPackageSerializer
@@ -210,6 +210,7 @@ class CoinPackageOrderViewSet(
     authentication_classes = (PageAuthentication,)
     queryset = CoinPackageOrder.objects.all()
     serializer_class = CoinPackageOrderSerializer
+    pagination_class = CoinPackageOrderPagination
 
     def get_queryset(self):
         qs = super(CoinPackageOrderViewSet, self).get_queryset()
@@ -365,7 +366,7 @@ class OrderGateWayAPIView(views.APIView):
             logger.error(f"error calling payment with endpoint orders and action post: {e}")
             raise ValidationError(detail={'detail': _('error in getting order gateway')})
 
-        return Response(data={'gateway_url': response.json().get('gateway_url')})
+        return Response(data=response.json())
 
 
 class GatewayAPIView(views.APIView):
