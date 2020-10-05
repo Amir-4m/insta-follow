@@ -6,8 +6,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.db.models import F, Sum, Case, When, IntegerField
 from django.utils import timezone
 from django.conf import settings
-
-from celery import shared_task
+from django.utils.translation import ugettext_lazy as _
 
 from .services import InstagramAppService
 from .models import Order, UserInquiry, InstaAction, CoinTransaction
@@ -41,11 +40,11 @@ def final_validate_user_inquiries():
             if inquiry.page.instagram_username in followers_username:
                 inquiry.validated_time = timezone.now()
                 amount = inquiry.order.action.action_value
-                description = f"validated inquiry {inquiry.id}"
+                description = _("validated inquiry %s") % inquiry.id
             else:
                 inquiry.status = UserInquiry.STATUS_REJECTED
                 amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
-                description = f"rejected inquiry {inquiry.id}"
+                description = _("rejected inquiry %s") % inquiry.id
 
             inquiry.save()
             CoinTransaction.objects.create(
