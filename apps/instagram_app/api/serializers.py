@@ -217,7 +217,7 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'invoice_number', 'coin_package',
             'page', 'is_paid', 'price', 'package_detail',
-            'version_name', 'gateways', 'created_time'
+            'version_name', 'gateways', 'created_time', 'redirect_url'
         )
         read_only_fields = ('page',)
 
