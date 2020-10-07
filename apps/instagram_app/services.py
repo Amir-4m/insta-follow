@@ -114,7 +114,7 @@ class CustomService(object):
             ), 0),
         ).filter(
             remaining__lte=F('remaining')
-        )
+        ).exclude(owner=page)
         valid_orders = []
 
         for order in orders:
