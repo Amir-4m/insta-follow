@@ -401,21 +401,23 @@ class DailyRewardAPIView(views.APIView):
     authentication_classes = (PageAuthentication,)
 
     @swagger_auto_schema(
-        operation_description='Reward page a daily reward with a specific amount of coins',
+        operation_description='Reward page daily with a specific amount of coins',
         responses={200: DAILY_REWARD_DOCS_RESPONSE}
     )
     def get(self, request, *args, **kwargs):
         page = request.auth['service']
+        reward_amount = settings.COIN_DAILY_REWARD_AMOUNT
         if CoinTransaction.objects.filter(
                 created_time__gte=timezone.now().replace(hour=0, minute=0, second=0),
                 description=_("daily reward"),
                 page=page
         ).exists():
-            raise ValidationError(detail={'detail': _("You have claimed your daily reward already!")})
-
-        ct = CoinTransaction.objects.create(
-            page=page,
-            description=_("daily reward"),
-            amount=settings.COIN_DAILY_REWARD_AMOUNT
-        )
-        return Response({'page': page.instagram_username, 'rewarded_amount': ct.amount})
+            rewarded = False
+        else:
+            CoinTransaction.objects.create(
+                page=page,
+                description=_("daily reward"),
+                amount=reward_amount
+            )
+            rewarded = True
+        return Response({'page': page.instagram_username, 'amount': reward_amount, 'rewarded': rewarded})
