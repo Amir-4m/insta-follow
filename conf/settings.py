@@ -258,6 +258,7 @@ COIN_TRANSFER_FEE = config('COIN_TRANSFER_FEE', default=5, cast=int)
 TINYMCE_COMPRESSOR = config('TINYMCE_COMPRESSOR', default=False, cast=bool)
 
 CAFE_BAZAAR_PACKAGE_NAME = config('CAFE_BAZAAR_PACKAGE_NAME')
+COIN_DAILY_REWARD_AMOUNT = config('COIN_DAILY_REWARD_AMOUNT', default=10, cast=int)
 
 if DEVEL is False:
     import sentry_sdk

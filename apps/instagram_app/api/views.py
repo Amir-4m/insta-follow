@@ -395,3 +395,21 @@ class GatewayAPIView(views.APIView):
             gateways_list.clear()
             raise ValidationError(detail={'detail': _('error in getting gateway')})
         return Response(gateways_list)
+
+
+class DailyRewardAPIView(views.APIView):
+    def get(self, request, *args, **kwargs):
+        page = request.auth['service']
+        if CoinTransaction.objects.filter(
+                created_time__gte=timezone.now().replace(hour=0, minute=0, second=0),
+                description=_("daily reward"),
+                page=page
+        ).exists():
+            raise ValidationError(detail={'detail': _("You have claimed your daily reward already!")})
+
+        ct = CoinTransaction.objects.create(
+            page=page,
+            description=_("daily reward"),
+            amount=settings.COIN_DAILY_REWARD_AMOUNT
+        )
+        return Response({'page': page.instagram_username, 'rewarded_amount': ct.amount})
