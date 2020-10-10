@@ -122,3 +122,20 @@ Order_GateWay_DOC = openapi.Schema(
         ),
     }
 )
+
+DAILY_REWARD_DOCS_RESPONSE = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    properties={
+        'page': openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            description='username of the page which got the reward'
+
+        ),
+        'rewarded_amount': openapi.Schema(
+            type=openapi.TYPE_INTEGER,
+            description='amount of the coins that rewarded to the page.'
+        ),
+
+
+    }
+)
