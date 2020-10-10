@@ -398,6 +398,12 @@ class GatewayAPIView(views.APIView):
 
 
 class DailyRewardAPIView(views.APIView):
+    authentication_classes = (PageAuthentication,)
+
+    @swagger_auto_schema(
+        operation_description='Reward page a daily reward with a specific amount of coins',
+        responses={200: DAILY_REWARD_DOCS_RESPONSE}
+    )
     def get(self, request, *args, **kwargs):
         page = request.auth['service']
         if CoinTransaction.objects.filter(
