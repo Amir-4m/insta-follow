@@ -204,7 +204,7 @@ class CoinTransaction(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     page = models.ForeignKey(InstaPage, related_name='coin_transactions', on_delete=models.CASCADE)
     amount = models.IntegerField(_('amount'))
-    description = models.TextField(_("action"), blank=True)
+    description = models.TextField(_("description"), blank=True)
     inquiry = models.ForeignKey(UserInquiry, on_delete=models.PROTECT, null=True, blank=True)
     order = models.ForeignKey(Order, on_delete=models.PROTECT, null=True, blank=True)
     package = models.ForeignKey(CoinPackageOrder, on_delete=models.PROTECT, null=True, blank=True)
