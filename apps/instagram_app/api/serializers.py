@@ -150,14 +150,14 @@ class OrderSerializer(serializers.ModelSerializer):
                 raise ValidationError(detail={'detail': _("You do not have enough coin to create order")})
 
             ct = CoinTransaction.objects.create(page=page, amount=-(insta_action.buy_value * target_no))
+
             if Order.objects.filter(owner=page, entity_id=entity_id, is_enable=True, action=insta_action).exists():
-                with transaction.atomic():
-                    order = Order.objects.select_related('owner', 'action').select_for_update().get(
-                        owner=page, entity_id=entity_id, is_enable=True, action=insta_action
-                    )
-                    order.target_no += target_no
-                    order.comments = comments
-                    order.save()
+                order = Order.objects.select_related('owner', 'action').select_for_update().get(
+                    owner=page, entity_id=entity_id, is_enable=True, action=insta_action
+                )
+                order.target_no += target_no
+                order.comments = comments
+                order.save()
             else:
                 order = Order.objects.create(
                     entity_id=entity_id,
