@@ -59,10 +59,6 @@ class InstaPage(models.Model):
     def __str__(self):
         return self.instagram_username
 
-    @property
-    def is_authenticated(self):
-        return InstaPage.objects.filter(uuid=self.uuid).exists()
-
 
 class Device(models.Model):
     page = models.ForeignKey(InstaPage, on_delete=models.CASCADE, related_name='devices')
@@ -160,7 +156,7 @@ class CoinPackage(models.Model):
     amount_offer = models.PositiveIntegerField(_('amount offer'), null=True, blank=True)
     price = models.PositiveIntegerField(_('price'))
     price_offer = models.PositiveIntegerField(_('price offer'), null=True, blank=True)
-    name = models.CharField(_('package name'), max_length=100, blank=True)
+    name = models.CharField(_('package title'), max_length=100, blank=True)
     sku = models.CharField(_('package sku'), max_length=40, unique=True, null=True)
     featured = models.DateTimeField(null=True, blank=True)
     is_enable = models.BooleanField(default=True)
@@ -199,6 +195,9 @@ class CoinPackageOrder(models.Model):
     price = models.PositiveIntegerField(_('price'))
     version_name = models.CharField(_('version name'), max_length=50)
     redirect_url = models.CharField(_('redirect url'), max_length=120)
+
+    def __str__(self):
+        return f"order {self.id}"
 
 
 class CoinTransaction(models.Model):
