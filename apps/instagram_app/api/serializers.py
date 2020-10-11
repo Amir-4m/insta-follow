@@ -155,7 +155,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     order = Order.objects.select_related('owner', 'action').select_for_update().get(
                         owner=page, entity_id=entity_id, is_enable=True, action=insta_action
                     )
-                    order.target_no = target_no
+                    order.target_no += target_no
                     order.comments = comments
                     order.save()
             else:
