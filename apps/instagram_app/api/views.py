@@ -214,7 +214,7 @@ class CoinPackageOrderViewSet(
 
     def get_queryset(self):
         qs = super(CoinPackageOrderViewSet, self).get_queryset()
-        return qs.filter(page=self.request.auth['page'])
+        return qs.filter(page=self.request.auth['page']).order_by('-created_time')
 
     def perform_create(self, serializer):
         serializer.save(page=self.request.auth['page'])
