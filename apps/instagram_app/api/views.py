@@ -405,7 +405,7 @@ class DailyRewardAPIView(views.APIView):
         responses={200: DAILY_REWARD_DOCS_RESPONSE}
     )
     def get(self, request, *args, **kwargs):
-        page = request.auth['service']
+        page = request.auth['page']
         reward_amount = settings.COIN_DAILY_REWARD_AMOUNT
         if CoinTransaction.objects.filter(
                 created_time__gte=timezone.now().replace(hour=0, minute=0, second=0),
