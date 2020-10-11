@@ -152,9 +152,10 @@ class OrderSerializer(serializers.ModelSerializer):
             ct = CoinTransaction.objects.create(page=page, amount=-(insta_action.buy_value * target_no))
 
             if Order.objects.filter(owner=page, entity_id=entity_id, is_enable=True, action=insta_action).exists():
-                order = Order.objects.select_related('owner', 'action').select_for_update().get(
+                order = Order.objects.select_related('owner', 'action').select_for_update().filter(
                     owner=page, entity_id=entity_id, is_enable=True, action=insta_action
-                )
+                ).first()
+
                 order.target_no += target_no
                 order.comments = comments
                 order.save()
