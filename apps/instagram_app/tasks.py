@@ -9,7 +9,7 @@ from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 
 from .services import InstagramAppService
-from .models import Order, UserInquiry, InstaAction, CoinTransaction
+from .models import Order, UserInquiry, InstaAction, CoinTransaction, CoinPackage
 
 logger = logging.getLogger(__name__)
 
@@ -76,3 +76,16 @@ def update_orders_achieved_number():
         )
     except Exception as e:
         logger.error(f"updating orders achieved number got exception: {e}")
+
+
+# PERIODIC TASK
+@periodic_task(run_every=(crontab(minute='*/5')), name="update_expired_featured_packages")
+def update_expired_featured_packages():
+    try:
+        CoinPackage.objects.filter(
+            featured__lt=timezone.now()
+        ).update(
+            featured=None
+        )
+    except Exception as e:
+        logger.error(f"updating expired featured packages got error: {e}")

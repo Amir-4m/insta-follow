@@ -1,4 +1,3 @@
-import json
 import logging
 
 from django.conf import settings
@@ -18,6 +17,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 
 from ..authentications import PageAuthentication
+from ..permissions import PagePermission
 from ..swagger_schemas import *
 from .serializers import (
     OrderSerializer, UserInquirySerializer, CoinTransactionSerializer,
@@ -51,6 +51,7 @@ class DeviceViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     """
     serializer_class = DeviceSerializer
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
     queryset = Device.objects.all()
 
     def perform_create(self, serializer):
@@ -69,6 +70,7 @@ class OrderViewSet(viewsets.GenericViewSet,
                    mixins.CreateModelMixin,
                    mixins.ListModelMixin):
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
     pagination_class = OrderPagination
@@ -112,6 +114,7 @@ class OrderViewSet(viewsets.GenericViewSet,
 
 class UserInquiryViewSet(viewsets.GenericViewSet):
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
     queryset = UserInquiry.objects.all()
     serializer_class = UserInquirySerializer
     pagination_class = InquiryPagination
@@ -159,6 +162,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
 class CoinTransactionAPIView(viewsets.GenericViewSet, mixins.ListModelMixin):
     """Shows a list of user transactions"""
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
     queryset = CoinTransaction.objects.all()
     serializer_class = CoinTransactionSerializer
     pagination_class = CoinTransactionPagination
@@ -208,6 +212,7 @@ class CoinPackageOrderViewSet(
     generics.CreateAPIView,
 ):
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
     queryset = CoinPackageOrder.objects.all()
     serializer_class = CoinPackageOrderSerializer
     pagination_class = CoinPackageOrderPagination
@@ -222,6 +227,7 @@ class CoinPackageOrderViewSet(
 
 class PurchaseVerificationAPIView(views.APIView):
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
 
     @swagger_auto_schema(operation_description='Verify user purchase with bank or psp', request_body=PURCHASE_DOC)
     def post(self, request, *args, **kwargs):
@@ -248,15 +254,6 @@ class PurchaseVerificationAPIView(views.APIView):
                 except Exception as e:
                     logger.error(f"error calling payment with endpoint purchase/verify and action post: {e}")
                     raise ValidationError(detail={'detail': _('error in verifying purchase')})
-            # elif gateway_code == "SAMAN":
-            #     try:
-            #         response = CustomService.payment_request(f'orders/{order.invoice_number}', 'get')
-            #         purchase_verified = response.json()['is_paid']
-            #     except Exception as e:
-            #         logger.error(
-            #             f"error calling payment with endpoint orders/{order.invoice_number} and action get: {e}"
-            #         )
-            #         raise ValidationError(detail={'detail': _('error in verifying purchase')})
 
             order.is_paid = purchase_verified
             order.save()
@@ -282,6 +279,7 @@ class CoinTransferAPIView(views.APIView):
     API for transfer coin from a page to another, based on a pre-defined maximum amount
     """
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
 
     @swagger_auto_schema(operation_description='shows the allowed maximum amount to transfer', )
     def get(self, request, *args, **kwargs):
@@ -309,6 +307,7 @@ class ReportAbuseViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = ReportAbuse.objects.all()
     serializer_class = ReportAbuseSerializer
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
 
     def perform_create(self, serializer):
         serializer.save(reporter=self.request.auth['page'])
@@ -317,6 +316,7 @@ class ReportAbuseViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
 class OrderGateWayAPIView(views.APIView):
     """Set an gateway for a package order to get the payment url"""
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
 
     @swagger_auto_schema(
         operation_description='Set an gateway for a package order to get the payment url',
@@ -371,6 +371,7 @@ class OrderGateWayAPIView(views.APIView):
 
 class GatewayAPIView(views.APIView):
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
 
     def get(self, request, *args, **kwargs):
         version_name = request.query_params.get('version_name')
@@ -399,6 +400,7 @@ class GatewayAPIView(views.APIView):
 
 class DailyRewardAPIView(views.APIView):
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
 
     @swagger_auto_schema(
         operation_description='Reward page daily with a specific amount of coins',
