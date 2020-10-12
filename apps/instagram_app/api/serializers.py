@@ -237,6 +237,9 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
 
     def get_gateways(self, obj):
         gateways_list = []
+        if self.context['view'].action != 'create':
+            return gateways_list
+
         try:
             response = CustomService.payment_request('gateways', 'get')
             data = response.json()
