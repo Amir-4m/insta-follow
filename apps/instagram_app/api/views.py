@@ -239,7 +239,7 @@ class PurchaseVerificationAPIView(views.APIView):
         purchase_token = serializer.validated_data.get('purchase_token')
         package_order = serializer.validated_data['package_order']
         with transaction.atomic():
-            order = CoinPackageOrder.objects.select_related().get(id=package_order.id)
+            order = CoinPackageOrder.objects.select_related('coin_package').get(id=package_order.id)
             if gateway_code == "BAZAAR":
                 try:
                     response = CustomService.payment_request(
@@ -259,9 +259,12 @@ class PurchaseVerificationAPIView(views.APIView):
             order.save()
 
         if order.is_paid is True:
+            coin_package = order.coin_package
+            ct_amount = coin_package.amount if coin_package.amount_offer is None else coin_package.amount_offer
+
             CoinTransaction.objects.create(
                 page=page,
-                amount=order.coin_package.amount,
+                amount=ct_amount,
                 package=order,
                 description=_("coin package has been purchased.")
             )

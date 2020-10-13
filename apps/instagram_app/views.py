@@ -17,7 +17,10 @@ class PaymentView(View):
         purchase_verified = purchase_verified.lower().strip()
 
         try:
-            order = CoinPackageOrder.objects.get(transaction_id=transaction_id, is_paid=None)
+            order = CoinPackageOrder.objects.select_related('coin_package').get(
+                transaction_id=transaction_id,
+                is_paid=None
+            )
         except CoinPackageOrder.DoesNotExist:
             return HttpResponse('سفارشی یافت نشد !')
 
@@ -31,9 +34,11 @@ class PaymentView(View):
 
         order.save()
         if order.is_paid is True:
+            coin_package = order.coin_package
+            ct_amount = coin_package.amount if coin_package.amount_offer is None else coin_package.amount_offer
             CoinTransaction.objects.create(
                 page=order.page,
-                amount=order.coin_package.amount,
+                amount=ct_amount,
                 package=order,
                 description=_("coin package has been purchased.")
             )
