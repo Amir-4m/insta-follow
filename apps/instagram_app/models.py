@@ -165,7 +165,7 @@ class CoinPackage(models.Model):
         db_table = "insta_coin_packages"
 
     def __str__(self):
-        return f"{self.amount} - {self.price}"
+        return f"{self.name} - {self.id}"
 
     @property
     def package_price(self):
