@@ -373,7 +373,7 @@ msgstr "رد شده"
 
 #: apps/instagram_app/models.py:143
 msgid "status"
-msgstr "فضعیت"
+msgstr "وضعیت"
 
 #: apps/instagram_app/models.py:145
 msgid "validated time"
