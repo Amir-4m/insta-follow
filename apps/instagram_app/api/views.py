@@ -288,7 +288,12 @@ class CoinTransferAPIView(views.APIView):
     def get(self, request, *args, **kwargs):
         page = request.auth['page']
         wallet = page.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet']
-        return Response({'wallet': wallet, 'maximum_amount': settings.MAXIMUM_COIN_TRANSFER})
+        return Response({
+            'wallet': wallet,
+            'maximum_amount': settings.MAXIMUM_COIN_TRANSFER,
+            'minimum_amount': settings.MINIMUM_COIN_TRANSFER,
+            'fee_amount': settings.COIN_TRANSFER_FEE
+        })
 
     @swagger_auto_schema(
         operation_description='transfer coin from the current logged in page to another',
