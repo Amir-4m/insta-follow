@@ -3,6 +3,7 @@ import re
 
 import requests
 from django.conf import settings
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
@@ -241,12 +242,11 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
             return gateways_list
 
         try:
-            response = CustomService.payment_request('gateways', 'get')
-            data = response.json()
+            codes = cache.get("gateway_codes")
             allowed_gateways = AllowedGateway.objects.get(version_name=obj.version_name)
-            for gateway in data:
-                if gateway['code'] in allowed_gateways.gateways_code:
-                    gateways_list.append(gateway)
+            for code in codes:
+                if code in allowed_gateways.gateways_code:
+                    gateways_list.append(code)
         except Exception as e:
             logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
             gateways_list.clear()

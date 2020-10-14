@@ -2,13 +2,14 @@ import logging
 import requests
 from celery.schedules import crontab
 from celery.task import periodic_task
+from django.core.cache import cache
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import F, Sum, Case, When, IntegerField
 from django.utils import timezone
 from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 
-from .services import InstagramAppService
+from .services import InstagramAppService, CustomService
 from .models import Order, UserInquiry, InstaAction, CoinTransaction, CoinPackage
 
 logger = logging.getLogger(__name__)
@@ -89,3 +90,14 @@ def update_expired_featured_packages():
         )
     except Exception as e:
         logger.error(f"updating expired featured packages got error: {e}")
+
+
+# PERIODIC TASK
+@periodic_task(run_every=(crontab(minute='*/30')), name="cache_gateways")
+def cache_gateways():
+    codes = []
+    response = CustomService.payment_request('gateways', 'get')
+    data = response.json()
+    for gateway in data:
+        codes.append(gateway['code'])
+    cache.set("gateway_codes", codes, None)
