@@ -246,7 +246,6 @@ USER_PENALTY_AMOUNT = config('USER_PENALTY_AMOUNT', default=1.5, cast=float)
 FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=20000, cast=int)
 
 MAXIMUM_COIN_TRANSFER = config('MAXIMUM_COIN_TRANSFER', default=1000, cast=int)
-MINIMUM_COIN_TRANSFER = config('MINIMUM_COIN_TRANSFER', default=10, cast=int)
 COIN_TRANSFER_FEE = config('COIN_TRANSFER_FEE', default=5, cast=int)
 
 TINYMCE_COMPRESSOR = config('TINYMCE_COMPRESSOR', default=False, cast=bool)

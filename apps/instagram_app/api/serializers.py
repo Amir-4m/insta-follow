@@ -297,11 +297,12 @@ class CoinTransferSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         sender = validated_data.get('sender')
-        amount = validated_data['amount']
+        real_amount = validated_data['amount']
         target = validated_data['to_page']
-        if sender.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet'] < amount:
+        fee_amount = real_amount + settings.COIN_TRANSFER_FEE
+        if sender.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet'] < fee_amount:
             raise ValidationError(detail={'detail': _("Transfer amount is higher than your coin balance!")})
-        if amount < settings.MINIMUM_COIN_TRANSFER or amount > settings.MAXIMUM_COIN_TRANSFER:
+        if real_amount > settings.MAXIMUM_COIN_TRANSFER:
             raise ValidationError(detail={'detail': _("Transfer amount is invalid!")})
         with transaction.atomic():
             qs = InstaPage.objects.select_for_update()
@@ -309,13 +310,13 @@ class CoinTransferSerializer(serializers.ModelSerializer):
             target_page = qs.get(instagram_username=target)
             sender_transaction = CoinTransaction.objects.create(
                 page=sender_page,
-                amount=-amount,
+                amount=-fee_amount,
                 description=_("transfer to page %s") % target_page,
                 to_page=target_page
             )
             CoinTransaction.objects.create(
                 page=target_page,
-                amount=amount - settings.COIN_TRANSFER_FEE,
+                amount=real_amount,
                 description=_("transfer from page %s") % sender_page,
                 from_page=sender_page
             )

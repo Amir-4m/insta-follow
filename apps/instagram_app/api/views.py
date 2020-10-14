@@ -291,7 +291,6 @@ class CoinTransferAPIView(views.APIView):
         return Response({
             'wallet': wallet,
             'maximum_amount': settings.MAXIMUM_COIN_TRANSFER,
-            'minimum_amount': settings.MINIMUM_COIN_TRANSFER,
             'fee_amount': settings.COIN_TRANSFER_FEE
         })
 
