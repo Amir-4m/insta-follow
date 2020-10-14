@@ -18,6 +18,10 @@ class InstagramAccount(models.Model):
     login_attempt = models.IntegerField(_('login attempt'), default=0)
     is_enable = models.BooleanField(_("is enable"), default=True)
 
+    class Meta:
+        verbose_name = _("Instagram Account")
+        verbose_name_plural = _("Instagram Accounts")
+
 
 class InstaAction(models.Model):
     ACTION_LIKE = 'L'
@@ -36,6 +40,8 @@ class InstaAction(models.Model):
 
     class Meta:
         db_table = "insta_actions"
+        verbose_name = _("Insta Action")
+        verbose_name_plural = _("Insta Actions")
 
     def __str__(self):
         return self.action_type
@@ -55,6 +61,8 @@ class InstaPage(models.Model):
 
     class Meta:
         db_table = "insta_pages"
+        verbose_name = _("Insta Page")
+        verbose_name_plural = _("Insta Pages")
 
     def __str__(self):
         return self.instagram_username
@@ -66,6 +74,8 @@ class Device(models.Model):
 
     class Meta:
         db_table = "insta_devices"
+        verbose_name = _("Device")
+        verbose_name_plural = _("Devices")
 
     def __str__(self):
         return f"{self.page.instagram_username} - {self.device_id}"
@@ -91,6 +101,10 @@ class Comment(models.Model):
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     text = models.TextField(_("comment text"), max_length=1024)
 
+    class Meta:
+        verbose_name = _("Comment")
+        verbose_name_plural = _("Comments")
+
 
 # Inventory
 class Order(models.Model):
@@ -109,6 +123,8 @@ class Order(models.Model):
 
     class Meta:
         db_table = "insta_orders"
+        verbose_name = _("Order")
+        verbose_name_plural = _("Orders")
 
     def __str__(self):
         return f"{self.id} - {self.action}"
@@ -145,8 +161,12 @@ class UserInquiry(models.Model):
 
     class Meta:
         db_table = "insta_inquiries"
-        verbose_name_plural = _('user inquiries')
+        verbose_name = _("User Inquiry")
+        verbose_name_plural = _('User Inquiries')
         unique_together = ('order', 'page')
+
+    def __str__(self):
+        return f"inquiry {self.id}"
 
 
 class CoinPackage(models.Model):
@@ -163,6 +183,8 @@ class CoinPackage(models.Model):
 
     class Meta:
         db_table = "insta_coin_packages"
+        verbose_name = _("Coin Package")
+        verbose_name_plural = _('Coin Packages')
 
     def __str__(self):
         return f"{self.name} - {self.id}"
@@ -196,6 +218,10 @@ class CoinPackageOrder(models.Model):
     version_name = models.CharField(_('version name'), max_length=50)
     redirect_url = models.CharField(_('redirect url'), max_length=120)
 
+    class Meta:
+        verbose_name = _("Coin Package Order")
+        verbose_name_plural = _('Coin Package Orders')
+
     def __str__(self):
         return f"order {self.id}"
 
@@ -213,6 +239,8 @@ class CoinTransaction(models.Model):
 
     class Meta:
         db_table = "insta_transactions"
+        verbose_name = _("Coin Transaction")
+        verbose_name_plural = _('Coin Transactions')
 
     def __str__(self):
         return f"{self.page.instagram_username} - {self.amount}"
@@ -234,11 +262,19 @@ class ReportAbuse(models.Model):
     abuser = models.ForeignKey(Order, related_name='reports', on_delete=models.PROTECT)
     status = models.CharField(max_length=8, blank=False, choices=STATUS_CHOICES, default=STATUS_OPEN)
 
+    class Meta:
+        verbose_name = _("Report Abuse")
+        verbose_name_plural = _('Report Abuses')
+
 
 class BlockWordRegex(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     pattern = models.CharField(_("pattern"), max_length=120)
+
+    class Meta:
+        verbose_name = _("Block Word Regex")
+        verbose_name_plural = _('Block Word Regex')
 
 
 class BlockedText(models.Model):
@@ -247,9 +283,17 @@ class BlockedText(models.Model):
     pattern = models.ForeignKey(BlockWordRegex, on_delete=models.PROTECT, related_name='blocked_texts')
     author = models.ForeignKey(InstaPage, related_name='blocked_texts', on_delete=models.PROTECT)
 
+    class Meta:
+        verbose_name = _("Blocked Text")
+        verbose_name_plural = _('Blocked Texts')
+
 
 class AllowedGateway(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     version_name = models.CharField(_('version_name'), max_length=50, unique=True)
     gateways_code = ArrayField(models.CharField(verbose_name=_('code'), max_length=10))
+
+    class Meta:
+        verbose_name = _("Allowed Gateway")
+        verbose_name_plural = _('Allowed Gateways')
