@@ -81,21 +81,6 @@ class Device(models.Model):
         return f"{self.page.instagram_username} - {self.device_id}"
 
 
-class UserPage(models.Model):
-    created_time = models.DateTimeField(_("created time"), auto_now_add=True)
-    updated_time = models.DateTimeField(_("updated time"), auto_now=True)
-    user = models.ForeignKey("accounts.User", related_name='user_pages', on_delete=models.CASCADE)
-    page = models.ForeignKey(InstaPage, related_name='user_pages', on_delete=models.PROTECT)
-    is_active = models.BooleanField(default=True)
-
-    class Meta:
-        db_table = "insta_user_pages"
-        unique_together = ['user', 'page']
-
-    def __str__(self):
-        return f"{self.user.username} with instagram page {self.page.instagram_username}"
-
-
 class Comment(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
