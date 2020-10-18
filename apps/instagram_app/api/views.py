@@ -17,6 +17,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 
 from ..authentications import PageAuthentication
+from ..filterset import CoinTransactionFilterBackend
 from ..permissions import PagePermission
 from ..swagger_schemas import *
 from .serializers import (
@@ -151,8 +152,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
                 page=user_inquiry.page,
                 inquiry=user_inquiry,
                 amount=user_inquiry.order.action.action_value,
-                description=_("validated inquiry %s") % user_inquiry.id
-            )
+                description=_("%s") % user_inquiry.order.get_action_type_display())
             user_inquiry.save()
 
         serializer = self.get_serializer(user_inquiry)
@@ -165,6 +165,8 @@ class CoinTransactionAPIView(viewsets.GenericViewSet, mixins.ListModelMixin):
     permission_classes = (PagePermission,)
     queryset = CoinTransaction.objects.all()
     serializer_class = CoinTransactionSerializer
+    filter_backends = (CoinTransactionFilterBackend,)
+    filterset_fields = ['inquiry__order__action', 'order__action']
     pagination_class = CoinTransactionPagination
 
     def get_queryset(self):
@@ -423,6 +425,8 @@ class DailyRewardAPIView(views.APIView):
         ).exists():
             rewarded = False
         else:
+            CoinTransaction.objects.filter(
+            )
             CoinTransaction.objects.create(
                 page=page,
                 description=_("daily reward"),
