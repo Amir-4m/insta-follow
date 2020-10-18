@@ -41,7 +41,7 @@ def final_validate_user_inquiries():
             if inquiry.page.instagram_username in followers_username:
                 inquiry.validated_time = timezone.now()
                 amount = inquiry.order.action.action_value
-                description = _("%s") % inquiry.order.get_action_type_display()
+                description = _("%s") % inquiry.order.action.get_action_type_display()
             else:
                 inquiry.status = UserInquiry.STATUS_REJECTED
                 amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)

@@ -152,7 +152,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
                 page=user_inquiry.page,
                 inquiry=user_inquiry,
                 amount=user_inquiry.order.action.action_value,
-                description=_("%s") % user_inquiry.order.get_action_type_display())
+                description=_("%s") % user_inquiry.order.action.get_action_type_display())
             user_inquiry.save()
 
         serializer = self.get_serializer(user_inquiry)
