@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-10-18 17:25+0330\n"
+"POT-Creation-Date: 2020-10-18 17:30+0330\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -194,8 +194,9 @@ msgid "You do not have enough coin to create order"
 msgstr "سکه شمابرای ثبت سفارش کافی نیست"
 
 #: apps/instagram_app/api/serializers.py:175
-msgid "order created"
-msgstr "سفارش ساخته شد"
+#, python-format
+msgid "order %s"
+msgstr "سفارش %s"
 
 #: apps/instagram_app/api/serializers.py:200
 msgid "id is not valid!"
@@ -598,6 +599,9 @@ msgstr "جریمه"
 #: apps/instagram_app/tasks.py:76
 msgid "order completed"
 msgstr "سفارش تکمیل شد"
+
+#~ msgid "order created"
+#~ msgstr "سفارش ساخته شد"
 
 #~ msgid "validated inquiry %s"
 #~ msgstr "وظیفه %s تایید شد"

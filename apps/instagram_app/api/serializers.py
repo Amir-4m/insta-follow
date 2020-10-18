@@ -172,7 +172,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     comments=comments
                 )
             ct.order = order
-            ct.description = _("order created")
+            ct.description = _("order %s") % insta_action.get_action_type_display()
             ct.save()
 
             return order
