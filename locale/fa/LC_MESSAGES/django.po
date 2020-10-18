@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-10-18 17:13+0330\n"
+"POT-Creation-Date: 2020-10-18 17:25+0330\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -193,38 +193,42 @@ msgstr "کلمه نامناسب در متن یافت شد!"
 msgid "You do not have enough coin to create order"
 msgstr "سکه شمابرای ثبت سفارش کافی نیست"
 
-#: apps/instagram_app/api/serializers.py:199
+#: apps/instagram_app/api/serializers.py:175
+msgid "order created"
+msgstr "سفارش ساخته شد"
+
+#: apps/instagram_app/api/serializers.py:200
 msgid "id is not valid!"
 msgstr "آی دی معتبر نمی باشد!"
 
-#: apps/instagram_app/api/serializers.py:265
+#: apps/instagram_app/api/serializers.py:266
 msgid "purchase_token is required for gateway bazaar!"
 msgstr "توکن خرید برای درگاه بازار احباری می باشد!"
 
-#: apps/instagram_app/api/serializers.py:292
-#: apps/instagram_app/api/serializers.py:305
+#: apps/instagram_app/api/serializers.py:293
+#: apps/instagram_app/api/serializers.py:306
 msgid "Transfer amount is invalid!"
 msgstr "مقدار ورودی برای انتقال نامعتبر می باشد."
 
-#: apps/instagram_app/api/serializers.py:294
+#: apps/instagram_app/api/serializers.py:295
 msgid "Target page does not exists"
 msgstr "کاربری با این صفحه وجود ندارد"
 
-#: apps/instagram_app/api/serializers.py:303
+#: apps/instagram_app/api/serializers.py:304
 msgid "Transfer amount is higher than your coin balance!"
 msgstr "مقدار سکه ورودی برای انتقال بیشتر از سکه موجود شما می باشد."
 
-#: apps/instagram_app/api/serializers.py:313
+#: apps/instagram_app/api/serializers.py:314
 #, python-format
 msgid "transfer to page %s"
 msgstr "انتقال سکه به صفحه %s"
 
-#: apps/instagram_app/api/serializers.py:319
+#: apps/instagram_app/api/serializers.py:320
 #, python-format
 msgid "transfer from page %s"
 msgstr "انتقال سکه از صفحه %s"
 
-#: apps/instagram_app/api/serializers.py:333
+#: apps/instagram_app/api/serializers.py:334
 msgid "order does not exists!"
 msgstr "سفارش موجود نمی باشد!"
 
