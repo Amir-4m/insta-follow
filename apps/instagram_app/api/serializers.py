@@ -172,6 +172,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     comments=comments
                 )
             ct.order = order
+            ct.description = _("order created")
             ct.save()
 
             return order
