@@ -38,7 +38,7 @@ class OrderModelAdmin(admin.ModelAdmin):
 class UserInquiryModelAdmin(admin.ModelAdmin):
     list_display = ('order', 'page', 'status', 'validated_time', 'updated_time', 'created_time')
     list_select_related = ['order', 'page']
-    list_filter = ('status',)
+    list_filter = ('status', 'order__action')
     sortable_by = ('-created_time',)
     search_fields = ('page__instagram_username',)
 
