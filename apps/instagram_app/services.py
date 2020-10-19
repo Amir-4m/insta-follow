@@ -4,7 +4,7 @@ import requests
 
 from django.conf import settings
 from django.db.models.functions import Coalesce
-from django.db.models import F, Sum, Case, When, IntegerField
+from django.db.models import F, Sum, Case, When, IntegerField, Q
 
 from igramscraper.instagram import Instagram
 from Crypto.Cipher import AES
@@ -114,7 +114,7 @@ class CustomService(object):
             ), 0),
         ).filter(
             remaining__lte=F('remaining')
-        ).exclude(owner=page)
+        ).exclude(Q(owner=page) | Q(instagram_username=page.instagram_username))
         valid_orders = []
 
         for order in orders:
