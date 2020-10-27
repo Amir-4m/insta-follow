@@ -148,11 +148,12 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
 
         if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
             user_inquiry.validated_time = timezone.now()
-            CoinTransaction.objects.create(
-                page=user_inquiry.page,
-                inquiry=user_inquiry,
-                amount=user_inquiry.order.action.action_value,
-                description=_("%s") % user_inquiry.order.action.get_action_type_display())
+            if order.owner != page:
+                CoinTransaction.objects.create(
+                    page=user_inquiry.page,
+                    inquiry=user_inquiry,
+                    amount=user_inquiry.order.action.action_value,
+                    description=_("%s") % user_inquiry.order.action.get_action_type_display())
             user_inquiry.save()
 
         serializer = self.get_serializer(user_inquiry)
