@@ -372,7 +372,7 @@ class OrderGateWayAPIView(views.APIView):
                 data={'order': str(package_order.invoice_number), 'gateway': gateway}
             )
         except Exception as e:
-            logger.error(f"error calling payment with endpoint orders and action post: {e}")
+            logger.error(f"error calling payment with endpoint purchase/gateway and action post: {e}")
             raise ValidationError(detail={'detail': _('error in getting order gateway')})
 
         return Response(data=response.json())
