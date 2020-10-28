@@ -7,6 +7,7 @@ from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, ParseError
@@ -289,6 +290,13 @@ class CoinTransferSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         amount = attrs['amount']
         username = attrs['to_page']
+        page = self.context['request'].auth['page']
+        transfers_done = page.coin_transactions.filter(
+            to_page__isnull=False,
+            created_time__gte=timezone.now().replace(hour=0, minute=0, second=0)
+        ).count()
+        if transfers_done >= settings.DAILY_TRANSFER_LIMIT:
+            raise ValidationError(detail={'detail': _("you've reached today's transfer limit!")})
         if amount > settings.MAXIMUM_COIN_TRANSFER or amount <= 0:
             raise ValidationError(detail={'detail': _("Transfer amount is invalid!")})
         if not InstaPage.objects.filter(instagram_username=username).exists():
