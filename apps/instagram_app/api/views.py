@@ -358,7 +358,6 @@ class OrderGateWayAPIView(views.APIView):
                     }
                 }
             )
-            package_order = CoinPackageOrder.objects.select_for_update(of=('self',)).get(id=package_order.id)
             transaction_id = order_response.json().get('transaction_id')
             package_order.transaction_id = transaction_id
             package_order.save()
