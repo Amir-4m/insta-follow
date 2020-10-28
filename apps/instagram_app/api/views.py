@@ -148,7 +148,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
 
         if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
             user_inquiry.validated_time = timezone.now()
-            if order.owner != page:
+            if order.owner != page and order.instagram_username != page.instagram_username:
                 CoinTransaction.objects.create(
                     page=user_inquiry.page,
                     inquiry=user_inquiry,
