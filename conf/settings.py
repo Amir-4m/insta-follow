@@ -34,7 +34,6 @@ SITE_ID = 1
 INSTALLED_APPS = [
     'apps.contents',
     'apps.config',
-    'apps.accounts',
     'apps.instagram_app',
     'rest_framework',
     'drf_yasg',
@@ -83,11 +82,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'conf.wsgi.application'
-AUTH_USER_MODEL = 'accounts.User'
-AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-    'apps.accounts.backends.GoogleAuthBackend',
-]
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'apps.instagram_app.utils.custom_exception_handler'
 }
