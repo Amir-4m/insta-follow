@@ -1,0 +1,94 @@
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  PROJECT_DIR: "insta_follow"
+  PROJECT_ABR: "instaflw"
+
+build:
+  stage: build
+  script:
+    - virtualenv --prompt='($PROJECT_DIR)' -q venv
+    - virtualenv --relocatable venv
+    - source venv/bin/activate
+    - pip install -r requirements.txt
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - venv/
+    policy: push
+  only:
+    refs:
+      - develop
+      - master
+    changes:
+      - requirements.txt
+  tags:
+    - python
+
+test:
+  stage: test
+  before_script:
+    - mkdir $CI_PROJECT_DIR/logs
+    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
+  script:
+    - source $CI_PROJECT_DIR/venv/bin/activate
+    - python manage.py check
+  after_script:
+    - rm $CI_PROJECT_DIR/.env
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - venv/
+    policy: pull
+  only:
+    - develop
+    - master
+  tags:
+    - django
+
+staging:
+  stage: deploy
+  before_script:
+    - cd /var/www/$PROJECT_DIR/project/
+    - source /var/www/$PROJECT_DIR/venv/bin/activate
+  script:
+    - git pull
+    - pip install -r requirements.txt
+    - python manage.py makemigrations
+    - python manage.py migrate
+    - python manage.py collectstatic --noinput
+    - python manage.py compilemessages -l fa
+    - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
+    - supervisorctl restart $PROJECT_ABR:*
+  only:
+    - develop
+  #    - /^staging-.*$/
+  #  except:
+  #    - branches
+  tags:
+    - django
+    - staging
+
+production:
+  stage: deploy
+  #  extends: .deploy
+  before_script:
+    - cd /var/www/$PROJECT_DIR/project/
+    - source /var/www/$PROJECT_DIR/venv/bin/activate
+  script:
+    - git pull
+    - pip install -r requirements.txt
+    - python manage.py migrate
+    - python manage.py collectstatic --noinput
+    - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
+    - supervisorctl restart $PROJECT_ABR:*
+  only:
+    - /^release-.*$/
+  except:
+    - branches
+  tags:
+    - django
+    - release
