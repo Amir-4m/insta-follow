@@ -44,7 +44,7 @@ class PageAuthentication(authentication.BaseAuthentication):
         payload = {}
         token = self.get_page_token_value(request)
         if not token:  # no id passed in request headers
-            raise exceptions.AuthenticationFailed('No such page')  # authentication did not succeed
+            raise exceptions.AuthenticationFailed(_('No such page'))  # authentication did not succeed
         try:
             dt = datetime.utcnow().strftime("%d%m%y%H")
             uuid = CryptoService(dt + dt).decrypt(token)

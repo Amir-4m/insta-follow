@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-10-18 17:30+0330\n"
+"POT-Creation-Date: 2020-10-31 17:56+0330\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -169,67 +169,71 @@ msgstr "مقدار"
 msgid "value data type"
 msgstr "جنس مقدار"
 
-#: apps/instagram_app/api/serializers.py:49
+#: apps/instagram_app/api/serializers.py:50
 msgid "error occurred while logging in!"
 msgstr "خطا در ورود کاربر رخ داده!"
 
-#: apps/instagram_app/api/serializers.py:54
+#: apps/instagram_app/api/serializers.py:55
 msgid "invalid credentials provided!"
 msgstr "اطلاعات نادرست می باشد!"
 
-#: apps/instagram_app/api/serializers.py:104
+#: apps/instagram_app/api/serializers.py:105
 msgid "shortcode field is required for like and comment !"
 msgstr "فیلد shortcode برای لایک و کامنت اجباری می باشد"
 
-#: apps/instagram_app/api/serializers.py:108
+#: apps/instagram_app/api/serializers.py:109
 msgid "instagram_username field is required for follow!"
 msgstr "فیلد نام کاربری اینستاگرام برای فالو اجباری می باشد"
 
-#: apps/instagram_app/api/serializers.py:128
+#: apps/instagram_app/api/serializers.py:129
 msgid "inappropriate word has been found in the text!"
 msgstr "کلمه نامناسب در متن یافت شد!"
 
-#: apps/instagram_app/api/serializers.py:151
+#: apps/instagram_app/api/serializers.py:152
 msgid "You do not have enough coin to create order"
 msgstr "سکه شمابرای ثبت سفارش کافی نیست"
 
-#: apps/instagram_app/api/serializers.py:175
+#: apps/instagram_app/api/serializers.py:176
 #, python-format
 msgid "order %s"
 msgstr "سفارش %s"
 
-#: apps/instagram_app/api/serializers.py:200
+#: apps/instagram_app/api/serializers.py:201
 msgid "id is not valid!"
 msgstr "آی دی معتبر نمی باشد!"
 
-#: apps/instagram_app/api/serializers.py:266
+#: apps/instagram_app/api/serializers.py:267
 msgid "purchase_token is required for gateway bazaar!"
 msgstr "توکن خرید برای درگاه بازار احباری می باشد!"
 
-#: apps/instagram_app/api/serializers.py:293
-#: apps/instagram_app/api/serializers.py:306
+#: apps/instagram_app/api/serializers.py:299
+msgid "you've reached today's transfer limit!"
+msgstr ""
+
+#: apps/instagram_app/api/serializers.py:301
+#: apps/instagram_app/api/serializers.py:314
 msgid "Transfer amount is invalid!"
 msgstr "مقدار ورودی برای انتقال نامعتبر می باشد."
 
-#: apps/instagram_app/api/serializers.py:295
+#: apps/instagram_app/api/serializers.py:303
 msgid "Target page does not exists"
 msgstr "کاربری با این صفحه وجود ندارد"
 
-#: apps/instagram_app/api/serializers.py:304
+#: apps/instagram_app/api/serializers.py:312
 msgid "Transfer amount is higher than your coin balance!"
 msgstr "مقدار سکه ورودی برای انتقال بیشتر از سکه موجود شما می باشد."
 
-#: apps/instagram_app/api/serializers.py:314
+#: apps/instagram_app/api/serializers.py:322
 #, python-format
 msgid "transfer to page %s"
 msgstr "انتقال سکه به صفحه %s"
 
-#: apps/instagram_app/api/serializers.py:320
+#: apps/instagram_app/api/serializers.py:328
 #, python-format
 msgid "transfer from page %s"
 msgstr "انتقال سکه از صفحه %s"
 
-#: apps/instagram_app/api/serializers.py:334
+#: apps/instagram_app/api/serializers.py:342
 msgid "order does not exists!"
 msgstr "سفارش موجود نمی باشد!"
 
@@ -245,40 +249,40 @@ msgstr "سفارشی با این آی دی موجود نمی باشد!"
 msgid "order with this id already has been done by this page !"
 msgstr "سفارش با این آی دی قبلا توسط این صفحه انجام شده است!"
 
-#: apps/instagram_app/api/views.py:155 apps/instagram_app/tasks.py:44
+#: apps/instagram_app/api/views.py:156 apps/instagram_app/tasks.py:44
 #, python-format
 msgid "%s"
 msgstr ""
 
-#: apps/instagram_app/api/views.py:258
+#: apps/instagram_app/api/views.py:259
 msgid "error in verifying purchase"
 msgstr "خطا در تایید پرداخت"
 
-#: apps/instagram_app/api/views.py:271 apps/instagram_app/views.py:43
+#: apps/instagram_app/api/views.py:272 apps/instagram_app/views.py:43
 msgid "coin package has been purchased."
 msgstr "بسته سکه خریداری شده است."
 
-#: apps/instagram_app/api/views.py:366
+#: apps/instagram_app/api/views.py:367
 msgid "error in submitting order gateway"
 msgstr "خطا در ثبت درگاه"
 
-#: apps/instagram_app/api/views.py:376
+#: apps/instagram_app/api/views.py:377
 msgid "error in getting order gateway"
 msgstr "خطا در دریافت درگاه برای سفارش"
 
-#: apps/instagram_app/api/views.py:388
+#: apps/instagram_app/api/views.py:389
 msgid "version must be set in query params!"
 msgstr "شماره نسخه باید در پارامتر کوئری ایجاد شود! "
 
-#: apps/instagram_app/api/views.py:401
+#: apps/instagram_app/api/views.py:402
 msgid "no allowed gateway found!"
 msgstr "هیچ درگاهی یافت نشد!"
 
-#: apps/instagram_app/api/views.py:406
+#: apps/instagram_app/api/views.py:407
 msgid "error in getting gateway"
 msgstr "خطا در دریافت درگاه"
 
-#: apps/instagram_app/api/views.py:423 apps/instagram_app/api/views.py:432
+#: apps/instagram_app/api/views.py:424 apps/instagram_app/api/views.py:433
 #: apps/instagram_app/filterset.py:14
 msgid "daily reward"
 msgstr "هدیه روزانه"
@@ -292,11 +296,15 @@ msgid ""
 "Invalid Authorization header. Credentials string should not contain spaces."
 msgstr ""
 
-#: apps/instagram_app/authentications.py:67
+#: apps/instagram_app/authentications.py:47
+msgid "No such page"
+msgstr "صفحه مورد نظر وجود ندارد"
+
+#: apps/instagram_app/authentications.py:68
 msgid "Invalid payload."
 msgstr "ورودی نامعتبر!"
 
-#: apps/instagram_app/authentications.py:73
+#: apps/instagram_app/authentications.py:74
 msgid "Invalid signature."
 msgstr "توکن احراز هویت نامعتبر می باشد."
 
