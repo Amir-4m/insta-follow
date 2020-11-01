@@ -5,7 +5,7 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.db.models.functions import Coalesce
 from django.utils.decorators import method_decorator
 from rest_framework import status, viewsets, generics, mixins, views
@@ -137,15 +137,17 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
             order = Order.objects.get(id=serializer.validated_data['done_id'])
         except Order.DoesNotExist:
             raise ValidationError(detail={'detail': _('order with this id does not exist !')})
-        user_inquiry, created = UserInquiry.objects.get_or_create(
-            order=order,
-            page=page,
-            defaults=dict(page=page)
-        )
 
-        if not created:
+        if UserInquiry.objects.select_related('order').filter(
+                Q(order=order) | (Q(order__action=order.action.action_type) & Q(order__entity_id=order.entity_id)),
+                page=page
+        ).exists():
             raise ValidationError(detail={'detail': _('order with this id already has been done by this page !')})
 
+        user_inquiry = UserInquiry.objects.create(
+            order=order,
+            page=page,
+        )
         if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
             user_inquiry.validated_time = timezone.now()
             if order.owner != page and order.instagram_username != page.instagram_username:
