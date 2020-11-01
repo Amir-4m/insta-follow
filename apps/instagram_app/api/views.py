@@ -138,8 +138,9 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
         except Order.DoesNotExist:
             raise ValidationError(detail={'detail': _('order with this id does not exist !')})
 
-        if UserInquiry.objects.select_related('order').filter(
-                Q(order=order) | (Q(order__action=order.action.action_type) & Q(order__entity_id=order.entity_id)),
+        if UserInquiry.objects.filter(
+                order__action=order.action.action_type,
+                order__entity_id=order.entity_id,
                 page=page
         ).exists():
             raise ValidationError(detail={'detail': _('order with this id already has been done by this page !')})
