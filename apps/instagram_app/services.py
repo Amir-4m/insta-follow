@@ -118,7 +118,10 @@ class CustomService(object):
         valid_orders = []
 
         for order in orders:
-            if UserInquiry.objects.filter(page=page, order=order).exists():
+            if UserInquiry.objects.select_related('order').filter(
+                    Q(order=order) | (Q(order__action=action_type) & Q(order__entity_id=order.entity_id)),
+                    page=page
+            ).exists():
                 continue
 
             valid_orders.append(order)
