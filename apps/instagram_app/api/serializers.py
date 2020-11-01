@@ -114,7 +114,10 @@ class OrderSerializer(serializers.ModelSerializer):
 
         elif action_value.pk == InstaAction.ACTION_COMMENT:
             if not comments:
-                attrs.update({"comments": list(Comment.objects.all().values_list('text', flat=True))})
+                if Comment.objects.exists():
+                    attrs.update({"comments": list(Comment.objects.all().values_list('text', flat=True))})
+                else:
+                    raise ValidationError(detail={'detail': _('no comment is set for this order!')})
             else:
                 regex = BlockWordRegex.objects.all()
                 for reg in regex:
