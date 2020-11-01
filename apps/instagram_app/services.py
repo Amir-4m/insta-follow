@@ -115,6 +115,8 @@ class CustomService(object):
             remaining__lte=F('remaining')
         ).exclude(
             Q(owner=page) | Q(instagram_username=page.instagram_username),
+
+        ).exclude(
             entity_id__in=UserInquiry.objects.filter(page=page, order__action=action_type).values_list(
                 'order__entity_id', flat=True
             )
