@@ -87,7 +87,6 @@ class CustomService(object):
 
     @staticmethod
     def payment_request(endpoint, method, data=None):
-
         headers = {
             "Authorization": f"TOKEN {settings.PAYMENT_SERVICE_SECRET}",
             "Content-Type": "application/json"
@@ -114,19 +113,16 @@ class CustomService(object):
             ), 0),
         ).filter(
             remaining__lte=F('remaining')
-        ).exclude(Q(owner=page) | Q(instagram_username=page.instagram_username))
-        valid_orders = []
+        ).exclude(
+            Q(owner=page) | Q(instagram_username=page.instagram_username),
 
-        for order in orders:
-            if UserInquiry.objects.filter(page=page, order=order).exists():
-                continue
+        ).exclude(
+            entity_id__in=UserInquiry.objects.filter(page=page, order__action=action_type).values_list(
+                'order__entity_id', flat=True
+            )
+        )[:limit]
 
-            valid_orders.append(order)
-
-            if len(valid_orders) == limit:
-                break
-
-        return valid_orders
+        return orders
 
 
 class CryptoService:
