@@ -60,7 +60,7 @@ class InstagramAccountModelAdmin(admin.ModelAdmin):
     list_display = ('username', 'is_enable', 'updated_time', 'created_time')
     readonly_fields = ('login_attempt',)
     search_fields = ('username',)
-    list_filter = ('is_enbale',)
+    list_filter = ('is_enable',)
 
 
 @admin.register(CoinPackageOrder)
