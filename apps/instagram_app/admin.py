@@ -57,9 +57,10 @@ class CoinPackageModelAdmin(admin.ModelAdmin):
 @admin.register(InstagramAccount)
 class InstagramAccountModelAdmin(admin.ModelAdmin):
     form = InstagramAccountForm
-    list_display = ('username', 'updated_time', 'created_time')
+    list_display = ('username', 'is_enable', 'updated_time', 'created_time')
     readonly_fields = ('login_attempt',)
     search_fields = ('username',)
+    list_filter = ('is_enbale',)
 
 
 @admin.register(CoinPackageOrder)
