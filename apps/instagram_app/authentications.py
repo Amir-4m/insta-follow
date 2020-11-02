@@ -73,5 +73,7 @@ class PageAuthentication(authentication.BaseAuthentication):
         except InstaPage.DoesNotExist:
             msg = _('Invalid signature.')
             raise exceptions.AuthenticationFailed(msg)
+        except Exception as e:
+            raise exceptions.AuthenticationFailed(e)
 
         return page

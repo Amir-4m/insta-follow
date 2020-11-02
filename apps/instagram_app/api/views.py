@@ -8,6 +8,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.db.models import Sum, Q
 from django.db.models.functions import Coalesce
 from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_headers
 from rest_framework import status, viewsets, generics, mixins, views
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
@@ -67,6 +69,8 @@ class DeviceViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     operation_description="Create an order with a chosen action for the post or profile that user requested",
     request_body=ORDER_POST_DOCS
 ))
+@method_decorator(name='list', decorator=cache_page(60 * 60))  # 1 hour cache
+@method_decorator(name='list', decorator=vary_on_headers('Authorization'))
 class OrderViewSet(viewsets.GenericViewSet,
                    mixins.CreateModelMixin,
                    mixins.ListModelMixin):
@@ -187,12 +191,15 @@ class CoinTransactionAPIView(viewsets.GenericViewSet, mixins.ListModelMixin):
         return Response({'wallet': wallet})
 
 
+@method_decorator(name='list', decorator=cache_page(60 * 60 * 3600))  # 3600 hours cache
 class InstaActionAPIView(generics.ListAPIView):
     """Get a list of action types and their values"""
     queryset = InstaAction.objects.all()
     serializer_class = InstaActionSerializer
 
 
+@method_decorator(name='list', decorator=cache_page(60 * 60 * 5))  # 5 hours cache
+@method_decorator(name='retrieve', decorator=cache_page(60 * 60 * 5))  # 5 hours cache
 class CoinPackageViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
     """Get a list of coin packages"""
     queryset = CoinPackage.objects.filter(is_enable=True)
@@ -277,6 +284,7 @@ class PurchaseVerificationAPIView(views.APIView):
         return Response({'purchase_verified': purchase_verified})
 
 
+@method_decorator(name='list', decorator=cache_page(60 * 60 * 5))  # 5 hours cache
 class CommentViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
     """Shows a list of pre-defined comments"""
     queryset = Comment.objects.all()
