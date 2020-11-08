@@ -32,6 +32,7 @@ SECRET_KEY = config("SECRET_KEY")
 SITE_ID = 1
 # Application definition
 INSTALLED_APPS = [
+    'apps.reward',
     'apps.contents',
     'apps.config',
     'apps.instagram_app',
@@ -221,6 +222,10 @@ LOGGING = ({
             'propagate': False,
         },
         'apps.instagram_app': {
+            'level': 'DEBUG',
+            'handlers': ['file', 'console']
+        },
+        'apps.reward': {
             'level': 'DEBUG',
             'handlers': ['file', 'console']
         },
