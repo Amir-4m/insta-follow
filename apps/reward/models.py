@@ -15,3 +15,6 @@ class AdReward(models.Model):
     signature = models.CharField(_("signature"), max_length=512)
     transaction_id = models.CharField(_("transaction id"), max_length=256, blank=True)
     page = models.ForeignKey(InstaPage, related_name='ad_rewards', on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('page', 'transaction_id')
