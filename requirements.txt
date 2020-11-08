@@ -22,3 +22,4 @@ python-memcached
 Pillow
 zeep
 django-tinymce
+django-admob-ssv
