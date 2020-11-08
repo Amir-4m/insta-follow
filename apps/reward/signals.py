@@ -27,6 +27,8 @@ def reward_user(sender, query, **kwargs):
     except InstaPage.DoesNotExist:
         logger.error(f'error in validating user ad reward: user with uuid {user_id} does not exists !')
         return
+    if AdReward.objects.filter(page=page, transaction_id=transaction_id).exists():
+        return
 
     logger.info(f'Valid SSV! Reward item: {reward_item}, Reward amount: {reward_amount}, User ID: {user_id}')
 
