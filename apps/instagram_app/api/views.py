@@ -205,7 +205,7 @@ class CoinPackageViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.
 @method_decorator(name='create', decorator=swagger_auto_schema(
     operation_description="Create an order with a chosen coin package for the page requested",
     request_body=PackageOrder_DOC,
-    responses={"200": PackageOrder_DOCS_RESPONSE, "201": PackageOrder_DOCS_RESPONSE}
+    responses={"201": PackageOrder_DOCS_RESPONSE}
 ))
 class CoinPackageOrderViewSet(
     viewsets.GenericViewSet,
