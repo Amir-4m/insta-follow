@@ -198,15 +198,14 @@ class CoinPackageViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.
 
 @method_decorator(name='list', decorator=swagger_auto_schema(
     operation_description="Get a list of user created package orders",
-    responses={"200": 'Successful'}
 ))
 @method_decorator(name='retrieve', decorator=swagger_auto_schema(
     operation_description="Get a single package order object by passing its ID",
-    responses={"200": 'Successful'}
 ))
 @method_decorator(name='create', decorator=swagger_auto_schema(
     operation_description="Create an order with a chosen coin package for the page requested",
-    request_body=PackageOrder_DOC
+    request_body=PackageOrder_DOC,
+    responses={"200": PackageOrder_DOCS_RESPONSE, "201": PackageOrder_DOCS_RESPONSE}
 ))
 class CoinPackageOrderViewSet(
     viewsets.GenericViewSet,
@@ -330,7 +329,8 @@ class OrderGateWayAPIView(views.APIView):
 
     @swagger_auto_schema(
         operation_description='Set an gateway for a package order to get the payment url',
-        request_body=Order_GateWay_DOC
+        request_body=Order_GateWay_DOC,
+        responses={"200": ORDER_POST_DOCS_RESPONSE}
 
     )
     def post(self, request, *args, **kwargs):
