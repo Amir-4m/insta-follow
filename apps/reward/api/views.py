@@ -43,12 +43,30 @@ class DailyRewardAPIView(views.APIView):
 
 
 class TapsellRewardAPIView(views.APIView):
+    authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
+
     def post(self, request, *args, **kwargs):
         suggestion_id = request.data.get('suggestion_id')
+        event = request.data.get('event')
         if suggestion_id is None:
             raise ValidationError(detail={'detail': _('suggestion_id is required!')})
         response = requests.post(
             url='http://api.tapsell.ir/v2/suggestions/validate-suggestion/',
             json={"suggestionId": suggestion_id}
         )
-        return Response({'valid': response.json().get('valid', False)})
+        is_valid = response.json().get('valid', False)
+        if is_valid:
+            page = request.auth['page']
+            if event == 'click':
+                reward = settings.COIN_AD_CLICKED_REWARD_AMOUNT
+
+            else:
+                reward = settings.COIN_AD_VIEW_REWARD_AMOUNT
+
+            CoinTransaction.objects.create(
+                page=page,
+                amount=reward,
+                description=_('ad reward')
+            )
+        return Response({'valid': is_valid})
