@@ -1,7 +1,9 @@
+import requests
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import views
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.instagram_app.authentications import PageAuthentication
@@ -38,3 +40,15 @@ class DailyRewardAPIView(views.APIView):
             )
             rewarded = True
         return Response({'page': page.instagram_username, 'amount': reward_amount, 'rewarded': rewarded})
+
+
+class TapsellRewardAPIView(views.APIView):
+    def post(self, request, *args, **kwargs):
+        suggestion_id = request.data.get('suggestion_id')
+        if suggestion_id is None:
+            raise ValidationError(detail={'detail': _('suggestion_id is required!')})
+        response = requests.post(
+            url='http://api.tapsell.ir/v2/suggestions/validate-suggestion/',
+            json={"suggestionId": suggestion_id}
+        )
+        return Response({'valid': response.json().get('valid', False)})
