@@ -19,3 +19,31 @@ DAILY_REWARD_DOCS_RESPONSE = openapi.Schema(
 
     }
 )
+
+TAPSELL_REWARD_DOCS_RESPONSE = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    properties={
+        'valid': openapi.Schema(
+            type=openapi.TYPE_BOOLEAN,
+            description='confirms that the user viewed the ad properly or not'
+
+        )
+    }
+)
+
+TAPSELL_REWARD_DOCS = openapi.Schema(
+    required=['suggestion_id', 'event'],
+    type=openapi.TYPE_OBJECT,
+    properties={
+        'event': openapi.Schema(
+            type=openapi.TYPE_STRING,
+            description='event of the user action on ad (click/view)'
+
+        ),
+        'suggestion_id': openapi.Schema(
+            type=openapi.TYPE_STRING,
+            description='id that the tapsell returns on ad view'
+        ),
+
+    }
+)
