@@ -10,7 +10,7 @@ from apps.instagram_app.authentications import PageAuthentication
 from apps.instagram_app.models import CoinTransaction
 from apps.instagram_app.permissions import PagePermission
 from apps.reward.models import AdReward
-from apps.reward.swagger_schemas import DAILY_REWARD_DOCS_RESPONSE
+from apps.reward.swagger_schemas import DAILY_REWARD_DOCS_RESPONSE, TAPSELL_REWARD_DOCS, TAPSELL_REWARD_DOCS_RESPONSE
 from conf import settings
 
 
@@ -47,6 +47,11 @@ class TapsellRewardAPIView(views.APIView):
     authentication_classes = (PageAuthentication,)
     permission_classes = (PagePermission,)
 
+    @swagger_auto_schema(
+        operation_description='Reward the page, if page has viewed the ad properly',
+        request_body=TAPSELL_REWARD_DOCS,
+        responses={200: TAPSELL_REWARD_DOCS_RESPONSE}
+    )
     def post(self, request, *args, **kwargs):
         suggestion_id = request.data.get('suggestion_id')
         event = request.data.get('event')
