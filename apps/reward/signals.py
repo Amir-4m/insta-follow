@@ -37,15 +37,9 @@ def reward_user(sender, query, **kwargs):
         amount=reward_amount,
         description=_("ad reward")
     )
-
     AdReward.objects.create(
-        ad_network=ad_network,
-        ad_unit=ad_unit,
-        custom_data=custom_data,
-        key_id=key_id,
+        properties=query,
         reward_amount=reward_amount,
-        reward_item=reward_item,
-        signature=signature,
         transaction_id=transaction_id,
         page=page,
     )
