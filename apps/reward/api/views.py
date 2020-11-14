@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from apps.instagram_app.authentications import PageAuthentication
 from apps.instagram_app.models import CoinTransaction
 from apps.instagram_app.permissions import PagePermission
+from apps.reward.models import AdReward
 from apps.reward.swagger_schemas import DAILY_REWARD_DOCS_RESPONSE
 from conf import settings
 
@@ -68,5 +69,10 @@ class TapsellRewardAPIView(views.APIView):
                 page=page,
                 amount=reward,
                 description=_('ad reward')
+            )
+            AdReward.objects.create(
+                reward_amount=reward,
+                transaction_id=suggestion_id,
+                page=page,
             )
         return Response({'valid': is_valid})
