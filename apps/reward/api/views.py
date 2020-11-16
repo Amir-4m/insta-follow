@@ -105,7 +105,7 @@ class AdViewVerificationViewsSet(viewsets.ViewSet):
     def verify(self, request, *args, **kwargs):
         serializer = AdViewVerificationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        page = InstaPage.objects.get(uuid=serializer.validated_data['uuid'])
+        page = InstaPage.objects.get(uuid=serializer.validated_data['page'])
         CoinTransaction.objects.create(
             page=page,
             amount=settings.COIN_AD_VIEW_REWARD_AMOUNT,
