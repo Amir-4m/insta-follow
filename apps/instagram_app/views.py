@@ -24,6 +24,9 @@ class PaymentView(View):
         except CoinPackageOrder.DoesNotExist:
             return HttpResponse('سفارشی یافت نشد !')
 
+        except CoinPackageOrder.MultipleObjectsReturned:
+            return HttpResponse('')
+
         if purchase_verified == 'true':
             html = 'instagram_app/payment_done.html'
             order.is_paid = True
