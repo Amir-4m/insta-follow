@@ -99,7 +99,7 @@ class AdViewVerificationViewsSet(viewsets.ViewSet):
         text += str(get_random_string(64 - len(text)))
         encrypted_text = CryptoService(dt + dt).encrypt(text)
         cache.set(f'{page.uuid}-ad', encrypted_text.decode('utf-8'), 70)
-        return Response({'token': encrypted_text})
+        return Response({'data': encrypted_text})
 
     @action(methods=['post'], detail=False, url_path='verify')
     def verify(self, request, *args, **kwargs):
