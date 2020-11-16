@@ -114,5 +114,6 @@ class AdViewVerificationViewsSet(viewsets.ViewSet):
         AdReward.objects.create(
             reward_amount=settings.COIN_AD_VIEW_REWARD_AMOUNT,
             page=page,
+            transaction_id=serializer.validated_data['data']
         )
         return Response({'valid': True})
