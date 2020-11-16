@@ -1,7 +1,8 @@
 from django.urls import path
 from django_admob_ssv.views import admob_ssv
-from .views import TapsellRewardAPIView
-from .views import DailyRewardAPIView
+from rest_framework import routers
+
+from .views import TapsellRewardAPIView, DailyRewardAPIView, AdViewVerificationViewsSet
 
 urlpatterns = [
     path('ad-reward/google/', admob_ssv),
@@ -9,3 +10,8 @@ urlpatterns = [
     path('daily-reward/', DailyRewardAPIView.as_view(), name='daily-reward')
 
 ]
+
+router = routers.DefaultRouter()
+router.register('verification', AdViewVerificationViewsSet, basename='verification')
+
+urlpatterns += router.urls

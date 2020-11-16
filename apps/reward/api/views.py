@@ -1,14 +1,21 @@
+from datetime import datetime
+
 import requests
+from django.core.cache import cache
 from django.utils import timezone
+from django.utils.crypto import get_random_string
 from django.utils.translation import ugettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import views
+from rest_framework import views, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.instagram_app.authentications import PageAuthentication
-from apps.instagram_app.models import CoinTransaction
+from apps.instagram_app.models import CoinTransaction, InstaPage
 from apps.instagram_app.permissions import PagePermission
+from apps.instagram_app.services import CryptoService
+from apps.reward.api.serializers import AdViewVerificationSerializer
 from apps.reward.models import AdReward
 from apps.reward.swagger_schemas import DAILY_REWARD_DOCS_RESPONSE, TAPSELL_REWARD_DOCS, TAPSELL_REWARD_DOCS_RESPONSE
 from conf import settings
@@ -54,7 +61,7 @@ class TapsellRewardAPIView(views.APIView):
     )
     def post(self, request, *args, **kwargs):
         suggestion_id = request.data.get('suggestion_id')
-        event = request.data.get('event')
+        # event = request.data.get('event')
         if suggestion_id is None:
             raise ValidationError(detail={'detail': _('suggestion_id is required!')})
         response = requests.post(
@@ -64,11 +71,8 @@ class TapsellRewardAPIView(views.APIView):
         is_valid = response.json().get('valid', False)
         if is_valid:
             page = request.auth['page']
-            if event == 'click':
-                reward = settings.COIN_AD_CLICKED_REWARD_AMOUNT
 
-            else:
-                reward = settings.COIN_AD_VIEW_REWARD_AMOUNT
+            reward = settings.COIN_AD_VIEW_REWARD_AMOUNT
 
             CoinTransaction.objects.create(
                 page=page,
@@ -81,3 +85,34 @@ class TapsellRewardAPIView(views.APIView):
                 page=page,
             )
         return Response({'valid': is_valid})
+
+
+class AdViewVerificationViewsSet(viewsets.ViewSet):
+    authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
+
+    @action(methods=['get'], detail=False, url_path='token')
+    def token(self, request, *args, **kwargs):
+        page = request.auth['page']
+        dt = datetime.utcnow().strftime("%d%m%y%H")
+        text = f'{page.uuid}-%25{timezone.now().timestamp()}-%25'
+        text += str(get_random_string(64 - len(text)))
+        encrypted_text = CryptoService(dt + dt).encrypt(text)
+        cache.set(f'{page.uuid}-ad', encrypted_text.decode('utf-8'), 70)
+        return Response({'token': encrypted_text})
+
+    @action(methods=['post'], detail=False, url_path='verify')
+    def verify(self, request, *args, **kwargs):
+        serializer = AdViewVerificationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        page = InstaPage.objects.get(uuid=serializer.validated_data['uuid'])
+        CoinTransaction.objects.create(
+            page=page,
+            amount=settings.COIN_AD_VIEW_REWARD_AMOUNT,
+            description=_('ad reward')
+        )
+        AdReward.objects.create(
+            reward_amount=settings.COIN_AD_VIEW_REWARD_AMOUNT,
+            page=page,
+        )
+        return Response({'valid': True})
