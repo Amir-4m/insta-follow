@@ -25,6 +25,7 @@ build:
       - requirements.txt
   tags:
     - python
+    - $CI_COMMIT_BRANCH
 
 test:
   stage: test
@@ -45,6 +46,7 @@ test:
     - master
   tags:
     - django
+    - $CI_COMMIT_BRANCH
 
 staging:
   stage: deploy
@@ -74,6 +76,7 @@ production:
   script:
     - git pull
     - pip install -r requirements.txt
+    - python manage.py makemigrations
     - python manage.py migrate
     - python manage.py collectstatic --noinput
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
