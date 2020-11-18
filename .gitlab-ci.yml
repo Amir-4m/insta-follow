@@ -18,20 +18,25 @@ variables:
       - venv/
     policy: push
   only:
-    refs:
-      - develop
-      - master
     changes:
       - requirements.txt
 
 build_staging:
   extends: .build
+  only:
+    refs:
+      - develop
   tags:
+    - python
     - staging
 
 build_production:
   extends: .build
+  only:
+    refs:
+      - master
   tags:
+    - python
     - production
 
 .test:
@@ -48,18 +53,21 @@ build_production:
     paths:
       - venv/
     policy: pull
-  only:
-    - develop
-    - master
 
 test_staging:
   extends: .test
+  only:
+    - develop
   tags:
+    - django
     - staging
 
 test_production:
   extends: .test
+  only:
+    - master
   tags:
+    - django
     - production
 
 .deploy:
@@ -76,27 +84,17 @@ test_production:
     - python manage.py compilemessages
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_DIR:*
-  only:
-    - develop
-    - master
 
 deploy_staging:
   extends: .deploy
+  only:
+    - develop
   tags:
+    - django
     - staging
 
-production:
-  stage: deploy
-  before_script:
-    - cd /var/www/$PROJECT_DIR/project/
-    - source /var/www/$PROJECT_DIR/venv/bin/activate
-  script:
-    - git pull
-    - pip install -r requirements.txt
-    - python manage.py migrate
-    - python manage.py collectstatic --noinput
-    - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
-    - supervisorctl restart $PROJECT_DIR:*
+depoly_production:
+  extends: .deploy
   only:
     - master
     # - /^release-.*$/
@@ -104,4 +102,4 @@ production:
     # - branches
   tags:
     - django
-    - release
+    - production
