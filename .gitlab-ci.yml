@@ -23,6 +23,8 @@ variables:
       - master
     changes:
       - requirements.txt
+  tags:
+    - python
 
 build_staging:
   extends: .build
@@ -51,7 +53,8 @@ build_production:
   only:
     - develop
     - master
-
+  tags:
+    - django
 
 
 test_staging:
@@ -78,6 +81,11 @@ test_production:
     - python manage.py compilemessages
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_DIR:*
+  only:
+    - develop
+    tags:
+      - django
+      - staging
 
 
 deploy_staging:
