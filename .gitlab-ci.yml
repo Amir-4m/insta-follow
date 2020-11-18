@@ -25,14 +25,12 @@ variables:
       - requirements.txt
 
 build_staging:
-  extends:
-    - .build
+  extends: .build
   tags:
     - staging
 
 build_production:
-  extends:
-    - .build
+  extends: .build
   tags:
     - production
 
@@ -53,8 +51,6 @@ build_production:
   only:
     - develop
     - master
-
-
 
 test_staging:
   extends: .test
@@ -80,20 +76,20 @@ test_production:
     - python manage.py compilemessages
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_DIR:*
-
-
-deploy_staging:
-  extends:
-    - .deploy
   only:
     - develop
+    - master
+
+deploy_staging:
+  extends: .deploy
   tags:
     - staging
 
 deploy_production:
-  extends:
-    - .deploy
-  only:
-    - master
+  extends: .deploy
   tags:
     - production
+#  only:
+#    - /^release-.*$/
+#    except:
+#      - branches
