@@ -6,7 +6,7 @@ stages:
 variables:
   PROJECT_DIR: "insta_follow"
 
-build:
+.build:
   stage: build
   script:
     - virtualenv --prompt='($PROJECT_DIR)' -q venv
@@ -23,10 +23,18 @@ build:
       - master
     changes:
       - requirements.txt
-  tags:
-    - python
 
-test:
+build_staging:
+  extends: .build
+  tags:
+    - staging
+
+build_production:
+  extends: .build
+  tags:
+    - production
+
+.test:
   stage: test
   before_script:
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
@@ -43,10 +51,20 @@ test:
   only:
     - develop
     - master
-  tags:
-    - django
 
-staging:
+
+
+test_staging:
+  extends: .test
+  tags:
+    - staging
+
+test_production:
+  extends: .test
+  tags:
+    - production
+
+.deploy:
   stage: deploy
   before_script:
     - cd /var/www/$PROJECT_DIR/project/
@@ -60,29 +78,20 @@ staging:
     - python manage.py compilemessages
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
     - supervisorctl restart $PROJECT_DIR:*
+
+
+deploy_staging:
+  extends:
+    - .deploy
   only:
     - develop
   tags:
-    - django
     - staging
 
-production:
-  stage: deploy
-  before_script:
-    - cd /var/www/$PROJECT_DIR/project/
-    - source /var/www/$PROJECT_DIR/venv/bin/activate
-  script:
-    - git pull
-    - pip install -r requirements.txt
-    - python manage.py migrate
-    - python manage.py collectstatic --noinput
-    - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
-    - supervisorctl restart $PROJECT_DIR:*
-  only:
-    - master
-    # - /^release-.*$/
-  # except:
-    # - branches
-  tags:
-    - django
-    - release
+deploy_production:
+  extends:
+    - .deploy
+    only:
+      - master
+    tags:
+      - production
