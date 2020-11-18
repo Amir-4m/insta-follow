@@ -5,13 +5,11 @@ stages:
 
 variables:
   PROJECT_DIR: "insta_follow"
-  PROJECT_ABR: "instaflw"
 
 build:
   stage: build
   script:
     - virtualenv --prompt='($PROJECT_DIR)' -q venv
-    - virtualenv --relocatable venv
     - source venv/bin/activate
     - pip install -r requirements.txt
   cache:
@@ -31,7 +29,6 @@ build:
 test:
   stage: test
   before_script:
-    - mkdir $CI_PROJECT_DIR/logs
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
   script:
     - source $CI_PROJECT_DIR/venv/bin/activate
@@ -60,21 +57,17 @@ staging:
     - python manage.py makemigrations
     - python manage.py migrate
     - python manage.py collectstatic --noinput
-    - python manage.py compilemessages -l fa
+    - python manage.py compilemessages
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
-    - supervisorctl restart $PROJECT_ABR:*
+    - supervisorctl restart $PROJECT_DIR:*
   only:
     - develop
-  #    - /^staging-.*$/
-  #  except:
-  #    - branches
   tags:
     - django
     - staging
 
 production:
   stage: deploy
-  #  extends: .deploy
   before_script:
     - cd /var/www/$PROJECT_DIR/project/
     - source /var/www/$PROJECT_DIR/venv/bin/activate
@@ -84,11 +77,12 @@ production:
     - python manage.py migrate
     - python manage.py collectstatic --noinput
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
-    - supervisorctl restart $PROJECT_ABR:*
+    - supervisorctl restart $PROJECT_DIR:*
   only:
-    - /^release-.*$/
-  except:
-    - branches
+    - master
+    # - /^release-.*$/
+  # except:
+    # - branches
   tags:
     - django
     - release
