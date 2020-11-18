@@ -1,4 +1,3 @@
-import json
 import logging
 
 from django.conf import settings
@@ -6,7 +5,7 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.db.models.functions import Coalesce
 from django.utils.decorators import method_decorator
 from rest_framework import status, viewsets, generics, mixins, views
@@ -18,6 +17,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 
 from ..authentications import PageAuthentication
+from ..filterset import CoinTransactionFilterBackend
+from ..permissions import PagePermission
 from ..swagger_schemas import *
 from .serializers import (
     OrderSerializer, UserInquirySerializer, CoinTransactionSerializer,
@@ -27,7 +28,7 @@ from .serializers import (
     PackageOrderGateWaySerializer,
 )
 from ..services import CustomService
-from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination
+from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination, CoinPackageOrderPagination
 from apps.instagram_app.models import (
     InstaAction, Order, UserInquiry,
     CoinTransaction, Device, CoinPackage,
@@ -51,6 +52,7 @@ class DeviceViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     """
     serializer_class = DeviceSerializer
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
     queryset = Device.objects.all()
 
     def perform_create(self, serializer):
@@ -69,6 +71,7 @@ class OrderViewSet(viewsets.GenericViewSet,
                    mixins.CreateModelMixin,
                    mixins.ListModelMixin):
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
     pagination_class = OrderPagination
@@ -112,6 +115,7 @@ class OrderViewSet(viewsets.GenericViewSet,
 
 class UserInquiryViewSet(viewsets.GenericViewSet):
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
     queryset = UserInquiry.objects.all()
     serializer_class = UserInquirySerializer
     pagination_class = InquiryPagination
@@ -133,23 +137,26 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
             order = Order.objects.get(id=serializer.validated_data['done_id'])
         except Order.DoesNotExist:
             raise ValidationError(detail={'detail': _('order with this id does not exist !')})
-        user_inquiry, created = UserInquiry.objects.get_or_create(
-            order=order,
-            page=page,
-            defaults=dict(page=page)
-        )
 
-        if not created:
+        if UserInquiry.objects.filter(
+                order__action=order.action.action_type,
+                order__entity_id=order.entity_id,
+                page=page
+        ).exists():
             raise ValidationError(detail={'detail': _('order with this id already has been done by this page !')})
 
+        user_inquiry = UserInquiry.objects.create(
+            order=order,
+            page=page,
+        )
         if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
             user_inquiry.validated_time = timezone.now()
-            CoinTransaction.objects.create(
-                page=user_inquiry.page,
-                inquiry=user_inquiry,
-                amount=user_inquiry.order.action.action_value,
-                description=f"validated inquiry {user_inquiry.id}"
-            )
+            if order.owner != page and order.instagram_username != page.instagram_username:
+                CoinTransaction.objects.create(
+                    page=user_inquiry.page,
+                    inquiry=user_inquiry,
+                    amount=user_inquiry.order.action.action_value,
+                    description=_("%s") % user_inquiry.order.action.get_action_type_display())
             user_inquiry.save()
 
         serializer = self.get_serializer(user_inquiry)
@@ -159,8 +166,11 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
 class CoinTransactionAPIView(viewsets.GenericViewSet, mixins.ListModelMixin):
     """Shows a list of user transactions"""
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
     queryset = CoinTransaction.objects.all()
     serializer_class = CoinTransactionSerializer
+    filter_backends = (CoinTransactionFilterBackend,)
+    filterset_fields = ['inquiry__order__action', 'order__action']
     pagination_class = CoinTransactionPagination
 
     def get_queryset(self):
@@ -183,7 +193,7 @@ class InstaActionAPIView(generics.ListAPIView):
     serializer_class = InstaActionSerializer
 
 
-class CoinPackageViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
+class CoinPackageViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
     """Get a list of coin packages"""
     queryset = CoinPackage.objects.filter(is_enable=True)
     serializer_class = CoinPackageSerializer
@@ -191,15 +201,14 @@ class CoinPackageViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
 
 @method_decorator(name='list', decorator=swagger_auto_schema(
     operation_description="Get a list of user created package orders",
-    responses={"200": 'Successful'}
 ))
 @method_decorator(name='retrieve', decorator=swagger_auto_schema(
     operation_description="Get a single package order object by passing its ID",
-    responses={"200": 'Successful'}
 ))
 @method_decorator(name='create', decorator=swagger_auto_schema(
     operation_description="Create an order with a chosen coin package for the page requested",
-    request_body=PackageOrder_DOC
+    request_body=PackageOrder_DOC,
+    responses={"201": PackageOrder_DOCS_RESPONSE}
 ))
 class CoinPackageOrderViewSet(
     viewsets.GenericViewSet,
@@ -208,12 +217,14 @@ class CoinPackageOrderViewSet(
     generics.CreateAPIView,
 ):
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
     queryset = CoinPackageOrder.objects.all()
     serializer_class = CoinPackageOrderSerializer
+    pagination_class = CoinPackageOrderPagination
 
     def get_queryset(self):
         qs = super(CoinPackageOrderViewSet, self).get_queryset()
-        return qs.filter(page=self.request.auth['page'])
+        return qs.filter(page=self.request.auth['page']).order_by('-created_time')
 
     def perform_create(self, serializer):
         serializer.save(page=self.request.auth['page'])
@@ -221,6 +232,7 @@ class CoinPackageOrderViewSet(
 
 class PurchaseVerificationAPIView(views.APIView):
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
 
     @swagger_auto_schema(operation_description='Verify user purchase with bank or psp', request_body=PURCHASE_DOC)
     def post(self, request, *args, **kwargs):
@@ -232,14 +244,14 @@ class PurchaseVerificationAPIView(views.APIView):
         purchase_token = serializer.validated_data.get('purchase_token')
         package_order = serializer.validated_data['package_order']
         with transaction.atomic():
-            order = CoinPackageOrder.objects.select_related().get(id=package_order.id)
+            order = CoinPackageOrder.objects.select_related('coin_package').get(id=package_order.id)
             if gateway_code == "BAZAAR":
                 try:
                     response = CustomService.payment_request(
                         'purchase/verify',
                         'post',
                         data={
-                            'order_reference': order.invoice_number,
+                            'order': str(order.invoice_number),
                             'purchase_token': purchase_token
                         }
                     )
@@ -247,23 +259,17 @@ class PurchaseVerificationAPIView(views.APIView):
                 except Exception as e:
                     logger.error(f"error calling payment with endpoint purchase/verify and action post: {e}")
                     raise ValidationError(detail={'detail': _('error in verifying purchase')})
-            elif gateway_code == "SAMAN":
-                try:
-                    response = CustomService.payment_request(f'orders/{order.invoice_number}', 'get')
-                    purchase_verified = response.json()['is_paid']
-                except Exception as e:
-                    logger.error(
-                        f"error calling payment with endpoint orders/{order.invoice_number} and action get: {e}"
-                    )
-                    raise ValidationError(detail={'detail': _('error in verifying purchase')})
 
             order.is_paid = purchase_verified
             order.save()
 
         if order.is_paid is True:
+            coin_package = order.coin_package
+            ct_amount = coin_package.amount if coin_package.amount_offer is None else coin_package.amount_offer
+
             CoinTransaction.objects.create(
                 page=page,
-                amount=order.coin_package.amount,
+                amount=ct_amount,
                 package=order,
                 description=_("coin package has been purchased.")
             )
@@ -281,12 +287,17 @@ class CoinTransferAPIView(views.APIView):
     API for transfer coin from a page to another, based on a pre-defined maximum amount
     """
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
 
     @swagger_auto_schema(operation_description='shows the allowed maximum amount to transfer', )
     def get(self, request, *args, **kwargs):
         page = request.auth['page']
         wallet = page.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet']
-        return Response({'wallet': wallet, 'maximum_amount': settings.MAXIMUM_COIN_TRANSFER})
+        return Response({
+            'wallet': wallet,
+            'maximum_amount': settings.MAXIMUM_COIN_TRANSFER,
+            'fee_amount': settings.COIN_TRANSFER_FEE
+        })
 
     @swagger_auto_schema(
         operation_description='transfer coin from the current logged in page to another',
@@ -294,7 +305,7 @@ class CoinTransferAPIView(views.APIView):
     )
     def post(self, request, *args, **kwargs):
         page = request.auth['page']
-        serializer = CoinTransferSerializer(data=request.data)
+        serializer = CoinTransferSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save(sender=page)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -308,6 +319,7 @@ class ReportAbuseViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     queryset = ReportAbuse.objects.all()
     serializer_class = ReportAbuseSerializer
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
 
     def perform_create(self, serializer):
         serializer.save(reporter=self.request.auth['page'])
@@ -316,10 +328,12 @@ class ReportAbuseViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
 class OrderGateWayAPIView(views.APIView):
     """Set an gateway for a package order to get the payment url"""
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
 
     @swagger_auto_schema(
         operation_description='Set an gateway for a package order to get the payment url',
-        request_body=Order_GateWay_DOC
+        request_body=Order_GateWay_DOC,
+        responses={"200": ORDER_POST_DOCS_RESPONSE}
 
     )
     def post(self, request, *args, **kwargs):
@@ -327,20 +341,29 @@ class OrderGateWayAPIView(views.APIView):
         serializer.is_valid(raise_exception=True)
         package_order = serializer.validated_data['package_order']
         gateway = serializer.validated_data['gateway']
+        sku = None
+        if package_order.coin_package.sku is not None:
+            sku = package_order.coin_package.sku
         try:
-            CustomService.payment_request(
+
+            order_response = CustomService.payment_request(
                 'orders',
                 'post',
                 data={
                     'gateway': gateway,
                     'price': package_order.price,
-                    'service_reference': package_order.invoice_number,
+                    'service_reference': str(package_order.invoice_number),
                     'is_paid': package_order.is_paid,
-                    "properties": json.dumps({
-                        "redirect_url": request.build_absolute_uri(reverse('payment-done'))
-                    })
+                    "properties": {
+                        "redirect_url": request.build_absolute_uri(reverse('payment-done')),
+                        "sku": sku,
+                        "package_name": settings.CAFE_BAZAAR_PACKAGE_NAME
+                    }
                 }
             )
+            transaction_id = order_response.json().get('transaction_id')
+            package_order.transaction_id = transaction_id
+            package_order.save()
         except Exception as e:
             logger.error(f"error calling payment with endpoint orders and action post: {e}")
             raise ValidationError(detail={'detail': _('error in submitting order gateway')})
@@ -349,17 +372,18 @@ class OrderGateWayAPIView(views.APIView):
             response = CustomService.payment_request(
                 'purchase/gateway',
                 'post',
-                data={'order': package_order.invoice_number, 'gateway': gateway}
+                data={'order': str(package_order.invoice_number), 'gateway': gateway}
             )
         except Exception as e:
-            logger.error(f"error calling payment with endpoint orders and action post: {e}")
+            logger.error(f"error calling payment with endpoint purchase/gateway and action post: {e}")
             raise ValidationError(detail={'detail': _('error in getting order gateway')})
 
-        return Response(data={'gateway_url': response.json().get('gateway_url')})
+        return Response(data=response.json())
 
 
 class GatewayAPIView(views.APIView):
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
 
     def get(self, request, *args, **kwargs):
         version_name = request.query_params.get('version_name')

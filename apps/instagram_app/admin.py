@@ -13,26 +13,32 @@ from .models import (
 
 @admin.register(InstaPage)
 class InstaPageModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'instagram_username', 'instagram_user_id', 'updated_time', 'created_time')
+    list_display = ('instagram_username', 'instagram_user_id', 'updated_time', 'created_time')
     readonly_fields = ('uuid',)
     search_fields = ('instagram_username', 'instagram_user_id')
     sortable_by = ('-created_time',)
 
+    def has_change_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(Order)
 class OrderModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'action', 'link', 'instagram_username', 'is_enable', 'created_time')
+    list_display = ('action', 'link', 'instagram_username', 'is_enable', 'achieved_number_approved', 'created_time')
     list_filter = ('action',)
-    readonly_fields = ('media_properties', 'instagram_username', 'entity_id')
+    readonly_fields = ('media_properties', 'instagram_username', 'entity_id', 'achieved_number_approved')
     sortable_by = ('-created_time',)
     search_fields = ('owner__username', 'owner__email')
+
+    def has_change_permission(self, request, obj=None):
+        return True if request.user.is_superuser else False
 
 
 @admin.register(UserInquiry)
 class UserInquiryModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'order', 'page', 'status', 'validated_time', 'updated_time', 'created_time')
+    list_display = ('order', 'page', 'status', 'validated_time', 'updated_time', 'created_time')
     list_select_related = ['order', 'page']
-    list_filter = ('status',)
+    list_filter = ('status', 'order__action')
     sortable_by = ('-created_time',)
     search_fields = ('page__instagram_username',)
 
@@ -44,31 +50,35 @@ class InstaActionModelAdmin(admin.ModelAdmin):
 
 @admin.register(CoinPackage)
 class CoinPackageModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'amount', 'price', 'updated_time', 'created_time')
+    list_display = ('name', 'amount', 'price', 'updated_time', 'created_time')
     sortable_by = ('-created_time', 'price')
 
 
 @admin.register(InstagramAccount)
 class InstagramAccountModelAdmin(admin.ModelAdmin):
     form = InstagramAccountForm
-    list_display = ('id', 'username', 'updated_time', 'created_time')
+    list_display = ('username', 'updated_time', 'created_time')
     readonly_fields = ('login_attempt',)
     search_fields = ('username',)
 
 
 @admin.register(CoinPackageOrder)
 class CoinPackageOrderModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'invoice_number', 'is_paid', 'updated_time', 'created_time')
+    list_display = ('invoice_number', 'is_paid', 'updated_time', 'created_time')
+    list_filter = ('is_paid',)
+
+    def has_change_permission(self, request, obj=None):
+        return True if request.user.is_superuser else False
 
 
 @admin.register(Comment)
 class CommentModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'text', 'updated_time', 'created_time')
+    list_display = ('text', 'updated_time', 'created_time')
 
 
 @admin.register(ReportAbuse)
 class ReportAbuseModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'reporter', 'text', 'abuser', 'status', 'created_time')
+    list_display = ('reporter', 'text', 'abuser', 'status', 'created_time')
     list_filter = ('status',)
 
     def save_model(self, request, obj, form, change):
@@ -95,5 +105,8 @@ class AllowedGatewayAdmin(admin.ModelAdmin):
 
 
 @admin.register(CoinTransaction)
-class ada(admin.ModelAdmin):
-    pass
+class CoinTransactionAdmin(admin.ModelAdmin):
+    list_display = ('page', 'amount', 'created_time')
+
+    def has_change_permission(self, request, obj=None):
+        return False

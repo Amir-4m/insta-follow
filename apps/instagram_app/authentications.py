@@ -58,8 +58,9 @@ class PageAuthentication(authentication.BaseAuthentication):
         payload.update({'page': page})
         return anonymous_user, payload  # authentication successful
 
+    @staticmethod
     @lru_cache(maxsize=None)
-    def authenticate_credentials(self, uuid):
+    def authenticate_credentials(uuid):
         """
         Returns an user of the existing service
         """

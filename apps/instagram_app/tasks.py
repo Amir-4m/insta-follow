@@ -2,15 +2,15 @@ import logging
 import requests
 from celery.schedules import crontab
 from celery.task import periodic_task
+from django.core.cache import cache
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import F, Sum, Case, When, IntegerField
 from django.utils import timezone
 from django.conf import settings
+from django.utils.translation import ugettext_lazy as _
 
-from celery import shared_task
-
-from .services import InstagramAppService
-from .models import Order, UserInquiry, InstaAction, CoinTransaction
+from .services import InstagramAppService, CustomService
+from .models import Order, UserInquiry, InstaAction, CoinTransaction, CoinPackage
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +41,11 @@ def final_validate_user_inquiries():
             if inquiry.page.instagram_username in followers_username:
                 inquiry.validated_time = timezone.now()
                 amount = inquiry.order.action.action_value
-                description = f"validated inquiry {inquiry.id}"
+                description = _("%s") % inquiry.order.action.get_action_type_display()
             else:
                 inquiry.status = UserInquiry.STATUS_REJECTED
                 amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
-                description = f"rejected inquiry {inquiry.id}"
+                description = _("penalty")
 
             inquiry.save()
             CoinTransaction.objects.create(
@@ -77,3 +77,27 @@ def update_orders_achieved_number():
         )
     except Exception as e:
         logger.error(f"updating orders achieved number got exception: {e}")
+
+
+# PERIODIC TASK
+@periodic_task(run_every=(crontab(minute='*/5')), name="update_expired_featured_packages")
+def update_expired_featured_packages():
+    try:
+        CoinPackage.objects.filter(
+            featured__lt=timezone.now()
+        ).update(
+            featured=None
+        )
+    except Exception as e:
+        logger.error(f"updating expired featured packages got error: {e}")
+
+
+# PERIODIC TASK
+@periodic_task(run_every=(crontab(minute='*/30')), name="cache_gateways")
+def cache_gateways():
+    codes = []
+    response = CustomService.payment_request('gateways', 'get')
+    data = response.json()
+    for gateway in data:
+        codes.append(gateway['code'])
+    cache.set("gateway_codes", codes, None)

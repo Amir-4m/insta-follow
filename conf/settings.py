@@ -32,9 +32,9 @@ SECRET_KEY = config("SECRET_KEY")
 SITE_ID = 1
 # Application definition
 INSTALLED_APPS = [
+    'apps.reward',
     'apps.contents',
     'apps.config',
-    'apps.accounts',
     'apps.instagram_app',
     'rest_framework',
     'drf_yasg',
@@ -83,11 +83,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'conf.wsgi.application'
-AUTH_USER_MODEL = 'accounts.User'
-AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-    'apps.accounts.backends.GoogleAuthBackend',
-]
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'apps.instagram_app.utils.custom_exception_handler'
 }
@@ -116,8 +111,8 @@ DATABASES = {
         'NAME': config('DB_NAME'),
         'USER': config('DB_USER'),
         'PASSWORD': config('DB_PASS'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
+        'HOST': config('DB_HOST', default=""),
+        'PORT': config('DB_PORT', default=""),
     },
 }
 # DATABASE_ROUTERS = ['apps.instagram_app.dbrouters.MongoRouter', ]
@@ -145,11 +140,7 @@ CACHES = {
         'LOCATION': config('CACHE_HOST', default=''),
         'KEY_PREFIX': 'INSTA_FOLLOW',
     },
-    # 'payments': {
-    #     'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-    #     'LOCATION': 'apps/payments/access_token',
-    #     'TIMEOUT': 3600
-    # }
+
 }
 
 CELERY_BROKER_URL = 'amqp://%(USER)s:%(PASS)s@%(HOST)s' % {
@@ -160,7 +151,7 @@ CELERY_BROKER_URL = 'amqp://%(USER)s:%(PASS)s@%(HOST)s' % {
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = config('LANGUAGE_CODE', default='fa')
 TIME_ZONE = 'Asia/Tehran'
 USE_I18N = True
 USE_L10N = False
@@ -234,6 +225,10 @@ LOGGING = ({
             'level': 'DEBUG',
             'handlers': ['file', 'console']
         },
+        'apps.reward': {
+            'level': 'DEBUG',
+            'handlers': ['file', 'console']
+        },
 
     },
 })
@@ -250,12 +245,19 @@ PAYMENT_SERVICE_SECRET = config('PAYMENT_SERVICE_SECRET', default='')
 MONITOR_TOKEN = config('MONITOR_TOKEN', default='')
 USER_PENALTY_AMOUNT = config('USER_PENALTY_AMOUNT', default=1.5, cast=float)
 
-FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=20000, cast=int)
+FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=100000, cast=int)
 
 MAXIMUM_COIN_TRANSFER = config('MAXIMUM_COIN_TRANSFER', default=1000, cast=int)
+DAILY_TRANSFER_LIMIT = config('DAILY_TRANSFER_LIMIT', default=2, cast=int)
 COIN_TRANSFER_FEE = config('COIN_TRANSFER_FEE', default=5, cast=int)
 
 TINYMCE_COMPRESSOR = config('TINYMCE_COMPRESSOR', default=False, cast=bool)
+
+CAFE_BAZAAR_PACKAGE_NAME = config('CAFE_BAZAAR_PACKAGE_NAME')
+COIN_DAILY_REWARD_AMOUNT = config('COIN_DAILY_REWARD_AMOUNT', default=10, cast=int)
+
+COIN_AD_VIEW_REWARD_AMOUNT = config('COIN_AD_VIEW_REWARD_AMOUNT', default=2, cast=int)
+COIN_AD_CLICKED_REWARD_AMOUNT = config('COIN_AD_CLICKED_REWARD_AMOUNT', default=5, cast=int)
 
 if DEVEL is False:
     import sentry_sdk

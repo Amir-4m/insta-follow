@@ -3,9 +3,11 @@ import re
 
 import requests
 from django.conf import settings
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, ParseError
@@ -112,7 +114,10 @@ class OrderSerializer(serializers.ModelSerializer):
 
         elif action_value.pk == InstaAction.ACTION_COMMENT:
             if not comments:
-                attrs.update({"comments": list(Comment.objects.all().values_list('text', flat=True))})
+                if Comment.objects.exists():
+                    attrs.update({"comments": list(Comment.objects.all().values_list('text', flat=True))})
+                else:
+                    raise ValidationError(detail={'detail': _('no comment is set for this order!')})
             else:
                 regex = BlockWordRegex.objects.all()
                 for reg in regex:
@@ -150,18 +155,28 @@ class OrderSerializer(serializers.ModelSerializer):
                 raise ValidationError(detail={'detail': _("You do not have enough coin to create order")})
 
             ct = CoinTransaction.objects.create(page=page, amount=-(insta_action.buy_value * target_no))
-            order = Order.objects.create(
-                entity_id=entity_id,
-                action=insta_action,
-                link=link,
-                target_no=target_no,
-                media_properties=media_properties,
-                instagram_username=instagram_username,
-                owner=page,
-                comments=comments
-            )
+
+            if Order.objects.filter(owner=page, entity_id=entity_id, is_enable=True, action=insta_action).exists():
+                order = Order.objects.select_related('owner', 'action').select_for_update().filter(
+                    owner=page, entity_id=entity_id, is_enable=True, action=insta_action
+                ).first()
+
+                order.target_no += target_no
+                order.comments = comments
+                order.save()
+            else:
+                order = Order.objects.create(
+                    entity_id=entity_id,
+                    action=insta_action,
+                    link=link,
+                    target_no=target_no,
+                    media_properties=media_properties,
+                    instagram_username=instagram_username,
+                    owner=page,
+                    comments=comments
+                )
             ct.order = order
-            ct.description = f"create order {order.id}"
+            ct.description = _("order %s") % insta_action.get_action_type_display()
             ct.save()
 
             return order
@@ -210,21 +225,32 @@ class CoinPackageSerializer(serializers.ModelSerializer):
 
 class CoinPackageOrderSerializer(serializers.ModelSerializer):
     gateways = serializers.SerializerMethodField(read_only=True)
+    package_detail = serializers.SerializerMethodField()
 
     class Meta:
         model = CoinPackageOrder
-        fields = ('id', 'invoice_number', 'coin_package', 'page', 'is_paid', 'price', 'version_name', 'gateways')
+        fields = (
+            'id', 'invoice_number', 'coin_package',
+            'page', 'is_paid', 'price', 'package_detail',
+            'version_name', 'gateways', 'created_time', 'redirect_url'
+        )
         read_only_fields = ('page',)
+
+    def get_package_detail(self, obj):
+        if obj.coin_package:
+            return CoinPackageSerializer(obj.coin_package).data
 
     def get_gateways(self, obj):
         gateways_list = []
+        if self.context['view'].action != 'create':
+            return gateways_list
+
         try:
-            response = CustomService.payment_request('gateways', 'get')
-            data = response.json()
+            codes = cache.get("gateway_codes")
             allowed_gateways = AllowedGateway.objects.get(version_name=obj.version_name)
-            for gateway in data:
-                if gateway['code'] in allowed_gateways.gateways_code:
-                    gateways_list.append(gateway)
+            for code in codes:
+                if code in allowed_gateways.gateways_code:
+                    gateways_list.append(code)
         except Exception as e:
             logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
             gateways_list.clear()
@@ -267,6 +293,13 @@ class CoinTransferSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         amount = attrs['amount']
         username = attrs['to_page']
+        page = self.context['request'].auth['page']
+        transfers_done = page.coin_transactions.filter(
+            to_page__isnull=False,
+            created_time__gte=timezone.now().replace(hour=0, minute=0, second=0)
+        ).count()
+        if transfers_done >= settings.DAILY_TRANSFER_LIMIT:
+            raise ValidationError(detail={'detail': _("you've reached today's transfer limit!")})
         if amount > settings.MAXIMUM_COIN_TRANSFER or amount <= 0:
             raise ValidationError(detail={'detail': _("Transfer amount is invalid!")})
         if not InstaPage.objects.filter(instagram_username=username).exists():
@@ -275,23 +308,26 @@ class CoinTransferSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         sender = validated_data.get('sender')
-        amount = validated_data['amount']
+        real_amount = validated_data['amount']
         target = validated_data['to_page']
-        if sender.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet'] < amount:
+        fee_amount = real_amount + settings.COIN_TRANSFER_FEE
+        if sender.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet'] < fee_amount:
             raise ValidationError(detail={'detail': _("Transfer amount is higher than your coin balance!")})
+        if real_amount > settings.MAXIMUM_COIN_TRANSFER:
+            raise ValidationError(detail={'detail': _("Transfer amount is invalid!")})
         with transaction.atomic():
             qs = InstaPage.objects.select_for_update()
             sender_page = qs.get(id=sender.id)
             target_page = qs.get(instagram_username=target)
             sender_transaction = CoinTransaction.objects.create(
                 page=sender_page,
-                amount=-amount,
+                amount=-fee_amount,
                 description=_("transfer to page %s") % target_page,
                 to_page=target_page
             )
             CoinTransaction.objects.create(
                 page=target_page,
-                amount=amount,
+                amount=real_amount,
                 description=_("transfer from page %s") % sender_page,
                 from_page=sender_page
             )

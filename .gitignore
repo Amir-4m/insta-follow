@@ -54,6 +54,7 @@ coverage.xml
 *.log
 local_*.py
 media/*
+*/django.mo
 static/*
 db.sqlite3
 .idea

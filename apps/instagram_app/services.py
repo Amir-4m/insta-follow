@@ -4,7 +4,7 @@ import requests
 
 from django.conf import settings
 from django.db.models.functions import Coalesce
-from django.db.models import F, Sum, Case, When, IntegerField
+from django.db.models import F, Sum, Case, When, IntegerField, Q
 
 from igramscraper.instagram import Instagram
 from Crypto.Cipher import AES
@@ -88,14 +88,15 @@ class CustomService(object):
     @staticmethod
     def payment_request(endpoint, method, data=None):
         headers = {
-            "Authorization": f"TOKEN {settings.PAYMENT_SERVICE_SECRET}"
+            "Authorization": f"TOKEN {settings.PAYMENT_SERVICE_SECRET}",
+            "Content-Type": "application/json"
         }
         methods = {
             'get': requests.get,
             'post': requests.post
         }
 
-        response = methods[method](f"{settings.PAYMENT_API_URL}{endpoint}/", headers=headers, data=data)
+        response = methods[method](f"{settings.PAYMENT_API_URL}{endpoint}/", headers=headers, json=data)
         response.raise_for_status()
         return response
 
@@ -112,19 +113,16 @@ class CustomService(object):
             ), 0),
         ).filter(
             remaining__lte=F('remaining')
-        )
-        valid_orders = []
+        ).exclude(
+            Q(owner=page) | Q(instagram_username=page.instagram_username),
 
-        for order in orders:
-            if UserInquiry.objects.filter(page=page, order=order).exists():
-                continue
+        ).exclude(
+            entity_id__in=UserInquiry.objects.filter(page=page, order__action=action_type).values_list(
+                'order__entity_id', flat=True
+            )
+        )[:limit]
 
-            valid_orders.append(order)
-
-            if len(valid_orders) == limit:
-                break
-
-        return valid_orders
+        return orders
 
 
 class CryptoService:

@@ -17,7 +17,7 @@ urlpatterns = [
     path('login-verification/', LoginVerification.as_view(), name='login-verification'),
     path('coin-transfer/', CoinTransferAPIView.as_view(), name='coin-transfer'),
     path('order-gateway/', OrderGateWayAPIView.as_view(), name='order-gateway'),
-    path('gateways/', GatewayAPIView.as_view(), name='gateways-list')
+    path('gateways/', GatewayAPIView.as_view(), name='gateways-list'),
 
 ]
 
