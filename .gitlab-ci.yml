@@ -6,7 +6,7 @@ stages:
 variables:
   PROJECT_DIR: "insta_follow"
 
-build:
+.build:
   stage: build
   script:
     - virtualenv --prompt='($PROJECT_DIR)' -q venv
@@ -23,10 +23,18 @@ build:
       - master
     changes:
       - requirements.txt
-  tags:
-    - python
 
-test:
+build_staging:
+  extends: .build
+  tags:
+    - staging
+
+build_production:
+  extends: .build
+  tags:
+    - production
+
+.test:
   stage: test
   before_script:
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
@@ -43,10 +51,18 @@ test:
   only:
     - develop
     - master
-  tags:
-    - django
 
-staging:
+test_staging:
+  extends: .test
+  tags:
+    - staging
+
+test_production:
+  extends: .test
+  tags:
+    - production
+
+.deploy:
   stage: deploy
   before_script:
     - cd /var/www/$PROJECT_DIR/project/
@@ -62,8 +78,11 @@ staging:
     - supervisorctl restart $PROJECT_DIR:*
   only:
     - develop
+    - master
+
+deploy_staging:
+  extends: .deploy
   tags:
-    - django
     - staging
 
 production:
@@ -74,7 +93,6 @@ production:
   script:
     - git pull
     - pip install -r requirements.txt
-    - python manage.py makemigrations
     - python manage.py migrate
     - python manage.py collectstatic --noinput
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
@@ -86,4 +104,4 @@ production:
     # - branches
   tags:
     - django
-    - production
+    - release
