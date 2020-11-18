@@ -25,7 +25,6 @@ build:
       - requirements.txt
   tags:
     - python
-    - $CI_COMMIT_BRANCH
 
 test:
   stage: test
@@ -46,7 +45,6 @@ test:
     - master
   tags:
     - django
-    - $CI_COMMIT_BRANCH
 
 staging:
   stage: deploy
