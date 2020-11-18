@@ -85,4 +85,4 @@ production:
     # - branches
   tags:
     - django
-    - release
+    - production
