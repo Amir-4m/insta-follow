@@ -93,7 +93,7 @@ deploy_staging:
 deploy_production:
   extends:
     - .deploy
-    only:
-      - master
-    tags:
-      - production
+  only:
+    - master
+  tags:
+    - production
