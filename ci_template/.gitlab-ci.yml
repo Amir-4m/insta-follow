@@ -1,0 +1,102 @@
+stages:
+  - build
+  - test
+  - deploy
+
+.build:
+  stage: build
+  script:
+    - virtualenv --prompt='($PROJECT_DIR)' -q venv
+    - source venv/bin/activate
+    - pip install -r requirements.txt
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - venv/
+    policy: push
+  only:
+    changes:
+      - requirements.txt
+
+build_staging:
+  extends: .build
+  only:
+    refs:
+      - develop
+  tags:
+    - python
+    - staging
+
+build_production:
+  extends: .build
+  only:
+    refs:
+      - master
+  tags:
+    - python
+    - production
+
+.test:
+  stage: test
+  before_script:
+    - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
+  script:
+    - source $CI_PROJECT_DIR/venv/bin/activate
+    - python manage.py check
+  after_script:
+    - rm $CI_PROJECT_DIR/.env
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - venv/
+    policy: pull
+
+test_staging:
+  extends: .test
+  only:
+    - develop
+  tags:
+    - django
+    - staging
+
+test_production:
+  extends: .test
+  only:
+    - master
+  tags:
+    - django
+    - production
+
+.deploy:
+  stage: deploy
+  before_script:
+    - cd /var/www/$PROJECT_DIR/project/
+    - source /var/www/$PROJECT_DIR/venv/bin/activate
+  script:
+    - git pull
+    - pip install -r requirements.txt
+    - python manage.py makemigrations
+    - python manage.py migrate
+    - python manage.py collectstatic --noinput
+    - python manage.py compilemessages
+    - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
+    - supervisorctl restart $PROJECT_DIR:*
+
+deploy_staging:
+  extends: .deploy
+  only:
+    - develop
+  tags:
+    - django
+    - staging
+
+depoly_production:
+  extends: .deploy
+  only:
+    - master
+    # - /^release-.*$/
+    # except:
+    # - branches
+  tags:
+    - django
+    - production
