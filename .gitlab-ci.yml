@@ -1,5 +1,4 @@
-include: '/ci_template/.gitlab-ci.yml'
-
+include: "http://git.yourblueapi.com/gitlab-ci.yml"
 
 variables:
   PROJECT_DIR: "insta_follow"
