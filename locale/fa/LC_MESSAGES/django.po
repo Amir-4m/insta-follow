@@ -476,6 +476,7 @@ msgstr "پیشنهاد در قیمت"
 msgid "package title"
 msgstr "نام بسته"
 
+
 #: apps/instagram_app/models.py:165
 msgid "package sku"
 msgstr "شناسه بسته"
