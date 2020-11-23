@@ -3,6 +3,8 @@ stages:
   - test
   - compilemessages
   - deploy
+variables:
+  PROJECT_DIR: "insta_follow"
 
 .build:
   stage: build
