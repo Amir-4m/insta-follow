@@ -5,13 +5,11 @@ stages:
 
 variables:
   PROJECT_DIR: "insta_follow"
-  PROJECT_ABR: "instaflw"
 
-build:
+.build:
   stage: build
   script:
     - virtualenv --prompt='($PROJECT_DIR)' -q venv
-    - virtualenv --relocatable venv
     - source venv/bin/activate
     - pip install -r requirements.txt
   cache:
@@ -25,13 +23,20 @@ build:
       - master
     changes:
       - requirements.txt
-  tags:
-    - python
 
-test:
+build_staging:
+  extends: .build
+  tags:
+    - staging
+
+build_production:
+  extends: .build
+  tags:
+    - production
+
+.test:
   stage: test
   before_script:
-    - mkdir $CI_PROJECT_DIR/logs
     - cp /var/www/$PROJECT_DIR/project/.env $CI_PROJECT_DIR/
   script:
     - source $CI_PROJECT_DIR/venv/bin/activate
@@ -46,10 +51,18 @@ test:
   only:
     - develop
     - master
-  tags:
-    - django
 
-staging:
+test_staging:
+  extends: .test
+  tags:
+    - staging
+
+test_production:
+  extends: .test
+  tags:
+    - production
+
+.deploy:
   stage: deploy
   before_script:
     - cd /var/www/$PROJECT_DIR/project/
@@ -60,35 +73,23 @@ staging:
     - python manage.py makemigrations
     - python manage.py migrate
     - python manage.py collectstatic --noinput
-    - python manage.py compilemessages -l fa
+    - python manage.py compilemessages
     - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
-    - supervisorctl restart $PROJECT_ABR:*
+    - supervisorctl restart $PROJECT_DIR:*
   only:
     - develop
-  #    - /^staging-.*$/
-  #  except:
-  #    - branches
+    - master
+
+deploy_staging:
+  extends: .deploy
   tags:
-    - django
     - staging
 
-production:
-  stage: deploy
-  #  extends: .deploy
-  before_script:
-    - cd /var/www/$PROJECT_DIR/project/
-    - source /var/www/$PROJECT_DIR/venv/bin/activate
-  script:
-    - git pull
-    - pip install -r requirements.txt
-    - python manage.py migrate
-    - python manage.py collectstatic --noinput
-    - uwsgi --reload /tmp/$PROJECT_DIR-master.pid
-    - supervisorctl restart $PROJECT_ABR:*
-  only:
-    - /^release-.*$/
-  except:
-    - branches
+deploy_production:
+  extends: .deploy
   tags:
-    - django
-    - release
+    - production
+#  only:
+#    - /^release-.*$/
+#    except:
+#      - branches
