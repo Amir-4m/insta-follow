@@ -55,7 +55,7 @@ class InstagramAppService(object):
 
             instagram_account = InstagramAccount.objects.filter(is_enable=True).order_by('login_attempt').first()
             if instagram_account is None:
-                logger.error(f"no instagram account found")
+                logger.critical(f"no instagram account found")
                 return
             instagram_account.login_attempt += 1
             instagram_account.save()
@@ -71,7 +71,7 @@ class InstagramAppService(object):
             except Exception as e:
                 instagram_account.is_enable = False
                 instagram_account.save()
-                logger.error(f"logging in to instagram with account {instagram_account.username} got error: {e}")
+                logger.critical(f"logging in to instagram with account {instagram_account.username} got error: {e}")
         raise Exception("instagram login reached max retries !")
 
     @staticmethod

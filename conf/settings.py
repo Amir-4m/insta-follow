@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/3.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
+import logging
 from datetime import timedelta
 
 from decouple import config, Csv
@@ -278,7 +279,7 @@ if DEVEL is False:
 
     sentry_sdk.init(
         dsn=f"https://{SENTRY_KEY}@{SENTRY_HOST}/{SENTRY_PROJECT_ID}",
-        integrations=[DjangoIntegration(), CeleryIntegration(), LoggingIntegration()],
+        integrations=[DjangoIntegration(), CeleryIntegration(), LoggingIntegration(event_level=logging.CRITICAL)],
         default_integrations=False,
 
         # If you wish to associate users to errors (assuming you are using
