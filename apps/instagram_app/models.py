@@ -141,7 +141,7 @@ class UserInquiry(models.Model):
                                               db_index=True)
     validated_time = models.DateTimeField(_("validated time"), null=True, blank=True, db_index=True)
 
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='user_inquiries')
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='user_inquiries')
     page = models.ForeignKey(InstaPage, on_delete=models.CASCADE)
 
     class Meta:
@@ -216,8 +216,8 @@ class CoinTransaction(models.Model):
     page = models.ForeignKey(InstaPage, related_name='coin_transactions', on_delete=models.CASCADE)
     amount = models.IntegerField(_('amount'))
     description = models.TextField(_("description"), blank=True)
-    inquiry = models.ForeignKey(UserInquiry, on_delete=models.PROTECT, null=True, blank=True)
-    order = models.ForeignKey(Order, on_delete=models.PROTECT, null=True, blank=True)
+    inquiry = models.ForeignKey(UserInquiry, on_delete=models.CASCADE, null=True, blank=True)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True)
     package = models.ForeignKey(CoinPackageOrder, on_delete=models.PROTECT, null=True, blank=True)
     from_page = models.ForeignKey(InstaPage, related_name='senders', on_delete=models.PROTECT, null=True, blank=True)
     to_page = models.ForeignKey(InstaPage, related_name='receivers', on_delete=models.PROTECT, null=True, blank=True)

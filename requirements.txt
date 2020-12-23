@@ -14,7 +14,7 @@ django-celery-beat
 drf-yasg==1.17.1
 coverage==5.1
 mock==4.0.2
-sentry-sdk==0.14.2
+sentry-sdk==0.19.1
 pycrypto==2.6.1
 django-picklefield==3.0.1
 PyJWT
