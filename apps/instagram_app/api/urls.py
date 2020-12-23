@@ -8,7 +8,7 @@ from .views import (
     PurchaseVerificationAPIView, CoinPackageOrderViewSet,
     LoginVerification, CommentViewSet, CoinTransferAPIView,
     ReportAbuseViewSet, CoinPackageViewSet, OrderGateWayAPIView,
-    GatewayAPIView, DailyRewardAPIView
+    GatewayAPIView
 )
 
 urlpatterns = [
@@ -18,7 +18,6 @@ urlpatterns = [
     path('coin-transfer/', CoinTransferAPIView.as_view(), name='coin-transfer'),
     path('order-gateway/', OrderGateWayAPIView.as_view(), name='order-gateway'),
     path('gateways/', GatewayAPIView.as_view(), name='gateways-list'),
-    path('daily-reward/', DailyRewardAPIView.as_view(), name='daily-reward')
 
 ]
 

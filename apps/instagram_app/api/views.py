@@ -201,15 +201,14 @@ class CoinPackageViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.
 
 @method_decorator(name='list', decorator=swagger_auto_schema(
     operation_description="Get a list of user created package orders",
-    responses={"200": 'Successful'}
 ))
 @method_decorator(name='retrieve', decorator=swagger_auto_schema(
     operation_description="Get a single package order object by passing its ID",
-    responses={"200": 'Successful'}
 ))
 @method_decorator(name='create', decorator=swagger_auto_schema(
     operation_description="Create an order with a chosen coin package for the page requested",
-    request_body=PackageOrder_DOC
+    request_body=PackageOrder_DOC,
+    responses={"201": PackageOrder_DOCS_RESPONSE}
 ))
 class CoinPackageOrderViewSet(
     viewsets.GenericViewSet,
@@ -333,7 +332,8 @@ class OrderGateWayAPIView(views.APIView):
 
     @swagger_auto_schema(
         operation_description='Set an gateway for a package order to get the payment url',
-        request_body=Order_GateWay_DOC
+        request_body=Order_GateWay_DOC,
+        responses={"200": ORDER_POST_DOCS_RESPONSE}
 
     )
     def post(self, request, *args, **kwargs):
@@ -361,7 +361,6 @@ class OrderGateWayAPIView(views.APIView):
                     }
                 }
             )
-            CoinPackageOrder.objects.select_for_update(of=('self',))
             transaction_id = order_response.json().get('transaction_id')
             package_order.transaction_id = transaction_id
             package_order.save()
@@ -376,7 +375,7 @@ class OrderGateWayAPIView(views.APIView):
                 data={'order': str(package_order.invoice_number), 'gateway': gateway}
             )
         except Exception as e:
-            logger.error(f"error calling payment with endpoint orders and action post: {e}")
+            logger.error(f"error calling payment with endpoint purchase/gateway and action post: {e}")
             raise ValidationError(detail={'detail': _('error in getting order gateway')})
 
         return Response(data=response.json())
@@ -409,32 +408,3 @@ class GatewayAPIView(views.APIView):
             gateways_list.clear()
             raise ValidationError(detail={'detail': _('error in getting gateway')})
         return Response(gateways_list)
-
-
-class DailyRewardAPIView(views.APIView):
-    authentication_classes = (PageAuthentication,)
-    permission_classes = (PagePermission,)
-
-    @swagger_auto_schema(
-        operation_description='Reward page daily with a specific amount of coins',
-        responses={200: DAILY_REWARD_DOCS_RESPONSE}
-    )
-    def get(self, request, *args, **kwargs):
-        page = request.auth['page']
-        reward_amount = settings.COIN_DAILY_REWARD_AMOUNT
-        if CoinTransaction.objects.filter(
-                created_time__gte=timezone.now().replace(hour=0, minute=0, second=0),
-                description=_("daily reward"),
-                page=page
-        ).exists():
-            rewarded = False
-        else:
-            CoinTransaction.objects.filter(
-            )
-            CoinTransaction.objects.create(
-                page=page,
-                description=_("daily reward"),
-                amount=reward_amount
-            )
-            rewarded = True
-        return Response({'page': page.instagram_username, 'amount': reward_amount, 'rewarded': rewarded})

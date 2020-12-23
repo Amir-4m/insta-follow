@@ -32,6 +32,7 @@ SECRET_KEY = config("SECRET_KEY")
 SITE_ID = 1
 # Application definition
 INSTALLED_APPS = [
+    'apps.reward',
     'apps.contents',
     'apps.config',
     'apps.instagram_app',
@@ -225,6 +226,10 @@ LOGGING = ({
             'level': 'DEBUG',
             'handlers': ['file', 'console']
         },
+        'apps.reward': {
+            'level': 'DEBUG',
+            'handlers': ['file', 'console']
+        },
 
     },
 })
@@ -251,6 +256,9 @@ TINYMCE_COMPRESSOR = config('TINYMCE_COMPRESSOR', default=False, cast=bool)
 
 CAFE_BAZAAR_PACKAGE_NAME = config('CAFE_BAZAAR_PACKAGE_NAME')
 COIN_DAILY_REWARD_AMOUNT = config('COIN_DAILY_REWARD_AMOUNT', default=10, cast=int)
+
+COIN_AD_VIEW_REWARD_AMOUNT = config('COIN_AD_VIEW_REWARD_AMOUNT', default=2, cast=int)
+COIN_AD_CLICKED_REWARD_AMOUNT = config('COIN_AD_CLICKED_REWARD_AMOUNT', default=5, cast=int)
 
 if DEVEL is False:
     import sentry_sdk

@@ -56,11 +56,51 @@ PackageOrder_DOC = openapi.Schema(
         ),
     }
 )
+PackageOrder_DOCS_RESPONSE = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    properties={
+
+        'id': openapi.Schema(
+            type=openapi.TYPE_INTEGER,
+            description='id of the object'
+        ),
+        'invoice_number': openapi.Schema(
+            type=openapi.TYPE_STRING,
+            description='invoice_number of the object'
+        ),
+        'coin_package': openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            description='id of the selected coin package'
+        ),
+        'is_paid': openapi.Schema(
+            type=openapi.TYPE_BOOLEAN,
+            description='status of the order'
+        ),
+        'price': openapi.Schema(
+            type=openapi.TYPE_INTEGER,
+            description='price of the package'
+        ),
+        'package_detail': openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            description='detail of the package'
+        ),
+        'gateways': openapi.Schema(
+            type=openapi.TYPE_ARRAY,
+            items=openapi.Schema(type=openapi.TYPE_OBJECT),
+            description='allowed gateways for order'
+        ),
+        'redirect_url': openapi.Schema(
+            type=openapi.TYPE_STRING,
+            description='redirect url after the payment is done'
+        )
+    }
+)
+
 PURCHASE_DOC = openapi.Schema(
     required=['gateway_code', 'package_order'],
     type=openapi.TYPE_OBJECT,
     properties={
-        'coin_package': openapi.Schema(
+        'package_order': openapi.Schema(
             type=openapi.TYPE_OBJECT,
             description='ID of the chosen package order',
 
@@ -75,7 +115,17 @@ PURCHASE_DOC = openapi.Schema(
         ),
     }
 )
+PURCHASE_DOCS_RESPONSE = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    properties={
 
+        'purcahse_verified': openapi.Schema(
+            type=openapi.TYPE_BOOLEAN,
+            description='status of the purchase'
+        ),
+
+    }
+)
 TRANSFER_COIN_DOC = openapi.Schema(
     required=['to_page', 'amount'],
     type=openapi.TYPE_OBJECT,
@@ -122,22 +172,13 @@ Order_GateWay_DOC = openapi.Schema(
         ),
     }
 )
-
-DAILY_REWARD_DOCS_RESPONSE = openapi.Schema(
+ORDER_POST_DOCS_RESPONSE = openapi.Schema(
     type=openapi.TYPE_OBJECT,
     properties={
-        'page': openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            description='username of the page which got the reward'
 
-        ),
-        'amount': openapi.Schema(
-            type=openapi.TYPE_INTEGER,
-            description='amount of the coins that rewarded to the page.'
-        ),
-        'rewarded': openapi.Schema(
-            type=openapi.TYPE_BOOLEAN,
-            description='status of the reward operation. this is true if page gets the reward successfully'
+        'gateway_url': openapi.Schema(
+            type=openapi.TYPE_STRING,
+            description='the url of the bank gateway'
         ),
 
     }
