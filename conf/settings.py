@@ -254,7 +254,9 @@ DAILY_TRANSFER_LIMIT = config('DAILY_TRANSFER_LIMIT', default=2, cast=int)
 COIN_TRANSFER_FEE = config('COIN_TRANSFER_FEE', default=5, cast=int)
 
 TINYMCE_COMPRESSOR = config('TINYMCE_COMPRESSOR', default=False, cast=bool)
-
+TINYMCE_DEFAULT_CONFIG = {
+    "language": "fa",  # To force a specific language instead of the Django current language.
+}
 CAFE_BAZAAR_PACKAGE_NAME = config('CAFE_BAZAAR_PACKAGE_NAME')
 COIN_DAILY_REWARD_AMOUNT = config('COIN_DAILY_REWARD_AMOUNT', default=10, cast=int)
 
