@@ -204,7 +204,7 @@ class InstaActionAPIView(generics.ListAPIView):
 @method_decorator(name='retrieve', decorator=cache_page(60 * 60 * 5))  # 5 hours cache
 class CoinPackageViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
     """Get a list of coin packages"""
-    queryset = CoinPackage.objects.filter(is_enable=True)
+    queryset = CoinPackage.objects.filter(is_enable=True).order_by('price')
     serializer_class = CoinPackageSerializer
 
 
