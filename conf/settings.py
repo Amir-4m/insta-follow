@@ -245,7 +245,7 @@ PUSH_API_URL = config('PUSH_API_URL', default='')
 PAYMENT_API_URL = config('PAYMENT_API_URL', default='')
 PAYMENT_SERVICE_SECRET = config('PAYMENT_SERVICE_SECRET', default='')
 MONITOR_TOKEN = config('MONITOR_TOKEN', default='')
-USER_PENALTY_AMOUNT = config('USER_PENALTY_AMOUNT', default=1.5, cast=float)
+USER_PENALTY_AMOUNT = config('USER_PENALTY_AMOUNT', default=2, cast=int)
 
 FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=100000, cast=int)
 
