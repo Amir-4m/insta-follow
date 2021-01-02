@@ -39,8 +39,6 @@ class DailyRewardAPIView(views.APIView):
         ).exists():
             rewarded = False
         else:
-            CoinTransaction.objects.filter(
-            )
             CoinTransaction.objects.create(
                 page=page,
                 description=_("daily reward"),
