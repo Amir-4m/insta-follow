@@ -148,11 +148,14 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
                 page=page
         ).exists():
             raise ValidationError(detail={'detail': _('order with this id already has been done by this page !')})
-
-        user_inquiry = UserInquiry.objects.create(
-            order=order,
-            page=page,
-        )
+        try:
+            user_inquiry = UserInquiry.objects.create(
+                order=order,
+                page=page,
+            )
+        except Exception as e:
+            logger.error(f'error in creating inquiry for page {page.id} with order {order.id}: {e}')
+            raise ValidationError(detail={'detail': _(f'error occurred while creating inquiry. try again later.')})
 
         if order.owner != page and order.instagram_username != page.instagram_username:
             CoinTransaction.objects.create(
