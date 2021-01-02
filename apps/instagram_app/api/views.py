@@ -159,7 +159,9 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
                 page=user_inquiry.page,
                 inquiry=user_inquiry,
                 amount=user_inquiry.order.action.action_value,
-                description=_("%s") % user_inquiry.order.action.get_action_type_display())
+                description=_("%s") % user_inquiry.order.action.get_action_type_display(),
+                transaction_type=CoinTransaction.TYPE_INQUIRY
+            )
 
             if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
                 user_inquiry.validated_time = timezone.now()
@@ -280,6 +282,7 @@ class PurchaseVerificationAPIView(views.APIView):
                 page=page,
                 amount=ct_amount,
                 package=order,
+                transaction_type=CoinTransaction.TYPE_PURCHASE,
                 description=_("coin package has been purchased.")
             )
         return Response({'purchase_verified': purchase_verified})

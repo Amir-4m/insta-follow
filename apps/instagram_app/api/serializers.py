@@ -154,7 +154,11 @@ class OrderSerializer(serializers.ModelSerializer):
             )['wallet'] < insta_action.buy_value * target_no:
                 raise ValidationError(detail={'detail': _("You do not have enough coin to create order")})
 
-            ct = CoinTransaction.objects.create(page=page, amount=-(insta_action.buy_value * target_no))
+            ct = CoinTransaction.objects.create(
+                page=page,
+                amount=-(insta_action.buy_value * target_no),
+                transaction_type=CoinTransaction.TYPE_ORDER
+            )
 
             if Order.objects.filter(owner=page, entity_id=entity_id, is_enable=True, action=insta_action).exists():
                 order = Order.objects.select_related('owner', 'action').select_for_update().filter(
@@ -323,13 +327,16 @@ class CoinTransferSerializer(serializers.ModelSerializer):
                 page=sender_page,
                 amount=-fee_amount,
                 description=_("transfer to page %s") % target_page,
-                to_page=target_page
+                to_page=target_page,
+                transaction_type=CoinTransaction.TYPE_TRANSFER
             )
             CoinTransaction.objects.create(
                 page=target_page,
                 amount=real_amount,
                 description=_("transfer from page %s") % sender_page,
-                from_page=sender_page
+                from_page=sender_page,
+                transaction_type=CoinTransaction.TYPE_TRANSFER
+
             )
             return sender_transaction
 

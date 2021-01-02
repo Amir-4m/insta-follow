@@ -38,22 +38,22 @@ def final_validate_user_inquiries():
         followers_username = [follower.username for follower in followers['accounts']]
 
         for inquiry in order_inquiries:
-            if inquiry.page.instagram_username in followers_username:
-                inquiry.validated_time = timezone.now()
-                amount = inquiry.order.action.action_value
-                description = _("%s") % inquiry.order.action.get_action_type_display()
-            else:
+            if inquiry.page.instagram_username not in followers_username:
                 inquiry.status = UserInquiry.STATUS_REJECTED
                 amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
                 description = _("penalty")
+                transaction_type = CoinTransaction.TYPE_PENALTY
+                CoinTransaction.objects.create(
+                    page=inquiry.page,
+                    inquiry=inquiry,
+                    amount=amount,
+                    description=description,
+                    transaction_type=transaction_type
+                )
+            else:
+                inquiry.validated_time = timezone.now()
 
             inquiry.save()
-            CoinTransaction.objects.create(
-                page=inquiry.page,
-                inquiry=inquiry,
-                amount=amount,
-                description=description
-            )
 
 
 # PERIODIC TASK

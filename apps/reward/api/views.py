@@ -34,7 +34,7 @@ class DailyRewardAPIView(views.APIView):
         reward_amount = settings.COIN_DAILY_REWARD_AMOUNT
         if CoinTransaction.objects.filter(
                 created_time__gte=timezone.now().replace(hour=0, minute=0, second=0),
-                description=_("daily reward"),
+                transaction_type=CoinTransaction.TYPE_DAILY_REWARD,
                 page=page
         ).exists():
             rewarded = False
@@ -42,7 +42,8 @@ class DailyRewardAPIView(views.APIView):
             CoinTransaction.objects.create(
                 page=page,
                 description=_("daily reward"),
-                amount=reward_amount
+                amount=reward_amount,
+                transaction_type=CoinTransaction.TYPE_DAILY_REWARD
             )
             rewarded = True
         return Response({'page': page.instagram_username, 'amount': reward_amount, 'rewarded': rewarded})
@@ -75,7 +76,8 @@ class TapsellRewardAPIView(views.APIView):
             CoinTransaction.objects.create(
                 page=page,
                 amount=reward,
-                description=_('ad reward')
+                description=_('ad reward'),
+                transaction_type=CoinTransaction.TYPE_AD_REWARD
             )
             AdReward.objects.create(
                 reward_amount=reward,
@@ -107,7 +109,8 @@ class AdViewVerificationViewsSet(viewsets.ViewSet):
         CoinTransaction.objects.create(
             page=page,
             amount=settings.COIN_AD_VIEW_REWARD_AMOUNT,
-            description=_('ad reward')
+            description=_('ad reward'),
+            transaction_type=CoinTransaction.TYPE_AD_REWARD
         )
         AdReward.objects.create(
             reward_amount=settings.COIN_AD_VIEW_REWARD_AMOUNT,

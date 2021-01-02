@@ -43,6 +43,7 @@ class PaymentView(View):
                 page=order.page,
                 amount=ct_amount,
                 package=order,
+                transaction_type=CoinTransaction.TYPE_PURCHASE,
                 description=_("coin package has been purchased.")
             )
         context = {
