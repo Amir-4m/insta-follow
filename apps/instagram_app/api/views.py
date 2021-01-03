@@ -117,14 +117,12 @@ class OrderViewSet(viewsets.GenericViewSet,
         return self.get_orders(request, InstaAction.ACTION_FOLLOW)
 
 
-class UserInquiryViewSet(viewsets.GenericViewSet):
+class UserInquiryViewSet(viewsets.GenericViewSet,
+                         mixins.CreateModelMixin):
     authentication_classes = (PageAuthentication,)
     permission_classes = (PagePermission,)
     queryset = UserInquiry.objects.all()
     serializer_class = UserInquirySerializer
-    pagination_class = InquiryPagination
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ['status', 'order__action']
 
     @swagger_auto_schema(
         operation_description='Check whether or not the user did the action properly for the order such as (like, comment or follow).',

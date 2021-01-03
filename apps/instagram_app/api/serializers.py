@@ -187,31 +187,20 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class UserInquirySerializer(serializers.ModelSerializer):
-    link = serializers.ReadOnlyField(source="order.link")
-    media_properties = serializers.ReadOnlyField(source="order.media_properties")
-    entity_id = serializers.ReadOnlyField(source="order.entity_id")
-    instagram_username = serializers.ReadOnlyField(source='order.instagram_username')
     page = serializers.ReadOnlyField(source='page.instagram_username')
-    action = serializers.ReadOnlyField(source='order.action.action_type')
-    done_id = serializers.IntegerField(write_only=True, required=True)
+    done_id = serializers.PrimaryKeyRelatedField(queryset=Order.objects.all(), source='order', required=False)
 
     class Meta:
         model = UserInquiry
-        fields = (
-            'id', 'instagram_username', 'media_properties',
-            'link', 'entity_id', 'done_id',
-            'status', 'page', 'action'
-        )
+        fields = '__all__'
+        extra_kwargs = {'order': {'required': False}}
 
     def validate(self, attrs):
+        order = attrs.pop('done_id', attrs.get('order'))
+        if order is None:
+            raise ValidationError(detail={'detail': _('done_id or order field must be filled!')})
 
-        done_id = attrs.pop('done_id')
         page = self.context['request'].auth['page']
-        try:
-            order = Order.objects.get(id=done_id)
-        except Order.DoesNotExist:
-            raise ValidationError(detail={'detail': _('order with this id does not exist !')})
-
         if UserInquiry.objects.filter(
                 order__action=order.action.action_type,
                 order__entity_id=order.entity_id,
