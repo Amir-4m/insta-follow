@@ -193,7 +193,7 @@ class UserInquirySerializer(serializers.ModelSerializer):
     instagram_username = serializers.ReadOnlyField(source='order.instagram_username')
     page = serializers.ReadOnlyField(source='page.instagram_username')
     action = serializers.ReadOnlyField(source='order.action.action_type')
-    done_id = serializers.IntegerField(write_only=True)
+    done_id = serializers.IntegerField(write_only=True, required=True)
 
     class Meta:
         model = UserInquiry
@@ -203,10 +203,48 @@ class UserInquirySerializer(serializers.ModelSerializer):
             'status', 'page', 'action'
         )
 
-    def validate_done_id(self, value):
-        if not Order.objects.filter(id=value).exists():
-            raise ParseError(_('id is not valid!'))
-        return value
+    def validate(self, attrs):
+
+        done_id = attrs.pop('done_id')
+        page = self.context['request'].auth['page']
+        try:
+            order = Order.objects.get(id=done_id)
+        except Order.DoesNotExist:
+            raise ValidationError(detail={'detail': _('order with this id does not exist !')})
+
+        if UserInquiry.objects.filter(
+                order__action=order.action.action_type,
+                order__entity_id=order.entity_id,
+                page=page
+        ).exists():
+            raise ValidationError(detail={'detail': _('order with this id already has been done by this page !')})
+        attrs.update({'order': order, 'page_id': page.id})
+        return attrs
+
+    def create(self, validated_data):
+        page = self.context['request'].auth['page']
+        order = validated_data['order']
+
+        try:
+            user_inquiry = super(UserInquirySerializer, self).create(validated_data)
+        except Exception as e:
+            logger.error(f'error in creating inquiry for page {page.id} with order {order.id}: {e}')
+            raise ValidationError(detail={'detail': _(f'error occurred while creating inquiry. try again later.')})
+
+        if order.owner != page and order.instagram_username != page.instagram_username:
+            CoinTransaction.objects.create(
+                page=user_inquiry.page,
+                inquiry=user_inquiry,
+                amount=user_inquiry.order.action.action_value,
+                description=_("%s") % user_inquiry.order.action.get_action_type_display(),
+                transaction_type=CoinTransaction.TYPE_INQUIRY
+            )
+
+            if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
+                user_inquiry.validated_time = timezone.now()
+                user_inquiry.save()
+
+        return user_inquiry
 
 
 class CoinTransactionSerializer(serializers.ModelSerializer):

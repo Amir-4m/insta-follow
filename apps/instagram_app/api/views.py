@@ -136,43 +136,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
     def done(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        inquiry_status = serializer.validated_data.get('status', UserInquiry.STATUS_VALIDATED)
-        page = self.request.auth['page']
-        try:
-            order = Order.objects.get(id=serializer.validated_data['done_id'])
-        except Order.DoesNotExist:
-            raise ValidationError(detail={'detail': _('order with this id does not exist !')})
-
-        if UserInquiry.objects.filter(
-                order__action=order.action.action_type,
-                order__entity_id=order.entity_id,
-                page=page
-        ).exists():
-            raise ValidationError(detail={'detail': _('order with this id already has been done by this page !')})
-        try:
-            user_inquiry = UserInquiry.objects.create(
-                order=order,
-                page=page,
-                status=inquiry_status
-            )
-        except Exception as e:
-            logger.error(f'error in creating inquiry for page {page.id} with order {order.id}: {e}')
-            raise ValidationError(detail={'detail': _(f'error occurred while creating inquiry. try again later.')})
-
-        if order.owner != page and order.instagram_username != page.instagram_username:
-            CoinTransaction.objects.create(
-                page=user_inquiry.page,
-                inquiry=user_inquiry,
-                amount=user_inquiry.order.action.action_value,
-                description=_("%s") % user_inquiry.order.action.get_action_type_display(),
-                transaction_type=CoinTransaction.TYPE_INQUIRY
-            )
-
-            if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
-                user_inquiry.validated_time = timezone.now()
-                user_inquiry.save()
-
-        serializer = self.get_serializer(user_inquiry)
+        serializer.save()
         return Response(serializer.data)
 
 
