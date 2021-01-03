@@ -18,42 +18,37 @@ logger = logging.getLogger(__name__)
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(minute='0', hour='16')), name="final_validate_user_inquiries", ignore_result=True)
 def final_validate_user_inquiries():
-    open_orders = Order.objects.filter(is_enable=True, action__action_type=InstaAction.ACTION_FOLLOW)
-    for order in open_orders:
-        order_inquiries = order.user_inquiries.filter(
-            updated_time__lt=timezone.now().replace(hour=0, minute=0, second=0),
-            validated_time__isnull=True,
-            status=UserInquiry.STATUS_VALIDATED,
-            order__action__action_type=InstaAction.ACTION_FOLLOW
-        )
-        if not order_inquiries:
-            continue
+    user_inquiries = UserInquiry.objects.select_related('order').filter(
+        updated_time__lt=timezone.now().replace(hour=0, minute=0, second=0),
+        validated_time__isnull=True,
+        status=UserInquiry.STATUS_VALIDATED,
+        order__action__action_type=InstaAction.ACTION_FOLLOW
+    )
 
+    for inquiry in user_inquiries:
         try:
-            followers = InstagramAppService.get_user_followers(order.instagram_username)
+            followers = InstagramAppService.get_user_followers(inquiry.order.instagram_username)
         except Exception as e:
-            logger.error(f"final inquiry validation for order {order.id} got exception: {e}")
+            logger.error(f"final inquiry validation for order {inquiry.order.id} got exception: {e}")
             continue
 
         followers_username = [follower.username for follower in followers['accounts']]
 
-        for inquiry in order_inquiries:
-            if inquiry.page.instagram_username not in followers_username:
-                inquiry.status = UserInquiry.STATUS_REJECTED
-                amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
-                description = _("penalty")
-                transaction_type = CoinTransaction.TYPE_PENALTY
-                CoinTransaction.objects.create(
-                    page=inquiry.page,
-                    inquiry=inquiry,
-                    amount=amount,
-                    description=description,
-                    transaction_type=transaction_type
-                )
-            else:
-                inquiry.validated_time = timezone.now()
-
-            inquiry.save()
+        if inquiry.page.instagram_username not in followers_username:
+            inquiry.status = UserInquiry.STATUS_REJECTED
+            amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
+            description = _("penalty")
+            transaction_type = CoinTransaction.TYPE_PENALTY
+            CoinTransaction.objects.create(
+                page=inquiry.page,
+                inquiry=inquiry,
+                amount=amount,
+                description=description,
+                transaction_type=transaction_type
+            )
+        else:
+            inquiry.validated_time = timezone.now()
+        inquiry.save()
 
 
 # PERIODIC TASK
