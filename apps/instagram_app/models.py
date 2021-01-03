@@ -129,7 +129,7 @@ class Order(models.Model):
 class UserInquiry(models.Model):
     STATUS_VALIDATED = 0
     STATUS_REJECTED = 1
-    STATUS_REFUSED = 3
+    STATUS_REFUSED = 2
 
     STATUS_CHOICES = [
         (STATUS_VALIDATED, _('Validated')),
