@@ -136,6 +136,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
     def done(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        inquiry_status = serializer.validated_data.get('status', UserInquiry.STATUS_VALIDATED)
         page = self.request.auth['page']
         try:
             order = Order.objects.get(id=serializer.validated_data['done_id'])
@@ -152,6 +153,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
             user_inquiry = UserInquiry.objects.create(
                 order=order,
                 page=page,
+                status=inquiry_status
             )
         except Exception as e:
             logger.error(f'error in creating inquiry for page {page.id} with order {order.id}: {e}')

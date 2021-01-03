@@ -129,10 +129,12 @@ class Order(models.Model):
 class UserInquiry(models.Model):
     STATUS_VALIDATED = 0
     STATUS_REJECTED = 1
+    STATUS_REFUSED = 3
 
     STATUS_CHOICES = [
         (STATUS_VALIDATED, _('Validated')),
         (STATUS_REJECTED, _('Rejected')),
+        (STATUS_REFUSED, _('Refused'))
     ]
     created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
@@ -239,7 +241,13 @@ class CoinTransaction(models.Model):
     package = models.ForeignKey(CoinPackageOrder, on_delete=models.PROTECT, null=True, blank=True)
     from_page = models.ForeignKey(InstaPage, related_name='senders', on_delete=models.PROTECT, null=True, blank=True)
     to_page = models.ForeignKey(InstaPage, related_name='receivers', on_delete=models.PROTECT, null=True, blank=True)
-    transaction_type = models.CharField(_('transaction type'), max_length=12, choices=TRANSACTION_TYPE_CHOICES,default=TYPE_INQUIRY)
+    transaction_type = models.CharField(
+        _('transaction type'),
+        max_length=12,
+        choices=TRANSACTION_TYPE_CHOICES,
+        default=TYPE_INQUIRY,
+        db_index=True
+    )
 
     class Meta:
         db_table = "insta_transactions"
