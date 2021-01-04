@@ -118,7 +118,7 @@ class Order(models.Model):
         return UserInquiry.objects.filter(
             order=self,
             status=UserInquiry.STATUS_VALIDATED,
-            validated_time__isnull=False,
+            # validated_time__isnull=False,
         ).count()
 
     def clean(self):
