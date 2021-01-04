@@ -197,7 +197,7 @@ class UserInquirySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserInquiry
-        fields = ('page', 'order', 'done_id')
+        fields = ('page', 'order', 'done_id', 'status')
         extra_kwargs = {'order': {'required': False}}
 
     def validate(self, attrs):
