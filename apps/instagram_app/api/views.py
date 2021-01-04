@@ -117,14 +117,12 @@ class OrderViewSet(viewsets.GenericViewSet,
         return self.get_orders(request, InstaAction.ACTION_FOLLOW)
 
 
-class UserInquiryViewSet(viewsets.GenericViewSet):
+class UserInquiryViewSet(viewsets.GenericViewSet,
+                         mixins.CreateModelMixin):
     authentication_classes = (PageAuthentication,)
     permission_classes = (PagePermission,)
     queryset = UserInquiry.objects.all()
     serializer_class = UserInquirySerializer
-    pagination_class = InquiryPagination
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ['status', 'order__action']
 
     @swagger_auto_schema(
         operation_description='Check whether or not the user did the action properly for the order such as (like, comment or follow).',
@@ -136,36 +134,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet):
     def done(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        page = self.request.auth['page']
-        try:
-            order = Order.objects.get(id=serializer.validated_data['done_id'])
-        except Order.DoesNotExist:
-            raise ValidationError(detail={'detail': _('order with this id does not exist !')})
-
-        if UserInquiry.objects.filter(
-                order__action=order.action.action_type,
-                order__entity_id=order.entity_id,
-                page=page
-        ).exists():
-            raise ValidationError(detail={'detail': _('order with this id already has been done by this page !')})
-
-        user_inquiry = UserInquiry.objects.create(
-            order=order,
-            page=page,
-        )
-
-        if order.owner != page and order.instagram_username != page.instagram_username:
-            CoinTransaction.objects.create(
-                page=user_inquiry.page,
-                inquiry=user_inquiry,
-                amount=user_inquiry.order.action.action_value,
-                description=_("%s") % user_inquiry.order.action.get_action_type_display())
-
-            if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
-                user_inquiry.validated_time = timezone.now()
-                user_inquiry.save()
-
-        serializer = self.get_serializer(user_inquiry)
+        serializer.save()
         return Response(serializer.data)
 
 
@@ -280,6 +249,7 @@ class PurchaseVerificationAPIView(views.APIView):
                 page=page,
                 amount=ct_amount,
                 package=order,
+                transaction_type=CoinTransaction.TYPE_PURCHASE,
                 description=_("coin package has been purchased.")
             )
         return Response({'purchase_verified': purchase_verified})
