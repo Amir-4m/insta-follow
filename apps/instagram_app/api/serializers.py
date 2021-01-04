@@ -188,15 +188,20 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class UserInquirySerializer(serializers.ModelSerializer):
     page = serializers.ReadOnlyField(source='page.instagram_username')
-    done_id = serializers.PrimaryKeyRelatedField(queryset=Order.objects.all(), source='order', required=False)
+    done_id = serializers.PrimaryKeyRelatedField(
+        write_only=True,
+        queryset=Order.objects.all(),
+        source='order',
+        required=False
+    )
 
     class Meta:
         model = UserInquiry
-        fields = '__all__'
+        fields = ('page', 'order', 'done_id')
         extra_kwargs = {'order': {'required': False}}
 
     def validate(self, attrs):
-        order = attrs.pop('done_id', attrs.get('order'))
+        order = attrs.get('order', attrs.pop('done_id', None))
         if order is None:
             raise ValidationError(detail={'detail': _('done_id or order field must be filled!')})
 
