@@ -28,7 +28,7 @@ class OrderModelAdmin(admin.ModelAdmin):
     list_filter = ('action',)
     readonly_fields = ('media_properties', 'instagram_username', 'entity_id', 'achieved_number_approved')
     sortable_by = ('-created_time',)
-    search_fields = ('owner__username', 'owner__email')
+    search_fields = ('owner__instagram_username',)
 
     def has_change_permission(self, request, obj=None):
         return True if request.user.is_superuser else False
