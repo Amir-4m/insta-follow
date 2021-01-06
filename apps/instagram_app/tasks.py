@@ -3,6 +3,7 @@ import requests
 from celery.schedules import crontab
 from celery.task import periodic_task
 from django.core.cache import cache
+from django.utils.translation import ugettext_lazy as _
 from django.db.models import F, Sum, Case, When, IntegerField
 from django.utils import timezone
 from django.conf import settings
@@ -23,33 +24,31 @@ def final_validate_user_inquiries():
         status=UserInquiry.STATUS_VALIDATED,
         order__action__action_type=InstaAction.ACTION_FOLLOW
     )
-    order_usernames = {}
-    for username in user_inquiries.order_by('order__instagram_username').distinct('order__instagram_username').values('order__instagram_username'):
-        try:
-            order_usernames[username] = [follower.username for follower in InstagramAppService.get_user_followers(username)]
-        except Exception as e:
-            logger.error(f"final inquiry validation for order {username} got exception: {e}")
-            continue
 
     for inquiry in user_inquiries:
         try:
-            if inquiry.page.instagram_username not in order_usernames[inquiry.order.instagram_username]:
-                inquiry.status = UserInquiry.STATUS_REJECTED
-                amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
-                description = _("penalty")
-                transaction_type = CoinTransaction.TYPE_PENALTY
-                CoinTransaction.objects.create(
-                    page=inquiry.page,
-                    inquiry=inquiry,
-                    amount=amount,
-                    description=description,
-                    transaction_type=transaction_type
-                )
-            else:
-                inquiry.validated_time = timezone.now()
-            inquiry.save()
+            followers = InstagramAppService.get_user_followers(inquiry.order.instagram_username)
         except Exception as e:
-            logger.error(f"validating inquiry {inquiry.id} failed due to : {e}")
+            logger.error(f"final inquiry validation for order {inquiry.order.id} got exception: {e}")
+            continue
+
+        followers_username = [follower.username for follower in followers['accounts']]
+
+        if inquiry.page.instagram_username not in followers_username:
+            inquiry.status = UserInquiry.STATUS_REJECTED
+            amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
+            description = _("penalty")
+            transaction_type = CoinTransaction.TYPE_PENALTY
+            CoinTransaction.objects.create(
+                page=inquiry.page,
+                inquiry=inquiry,
+                amount=amount,
+                description=description,
+                transaction_type=transaction_type
+            )
+        else:
+            inquiry.validated_time = timezone.now()
+        inquiry.save()
 
 
 # PERIODIC TASK
