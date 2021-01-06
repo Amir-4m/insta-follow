@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(minute='0', hour='16')), name="final_validate_user_inquiries", ignore_result=True)
+@periodic_task(run_every=(crontab(minute='*/17')))
 def final_validate_user_inquiries():
     user_inquiries = UserInquiry.objects.select_related('order').filter(
         created_time__lte=timezone.now().replace(hour=0, minute=0, second=0) - timedelta(
@@ -79,7 +79,7 @@ def final_validate_user_inquiries():
 
 
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(minute='*/5')), name="update_orders_achieved_number")
+@periodic_task(run_every=(crontab(minute='*/5')))
 def update_orders_achieved_number():
     try:
         Order.objects.filter(is_enable=True).annotate(
@@ -102,7 +102,7 @@ def update_orders_achieved_number():
 
 
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(minute='*/5')), name="update_expired_featured_packages")
+@periodic_task(run_every=(crontab(minute='*/5')))
 def update_expired_featured_packages():
     try:
         CoinPackage.objects.filter(
@@ -115,7 +115,7 @@ def update_expired_featured_packages():
 
 
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(minute='*/30')), name="cache_gateways")
+@periodic_task(run_every=(crontab(minute='*/30')))
 def cache_gateways():
     codes = []
     response = CustomService.payment_request('gateways', 'get')
