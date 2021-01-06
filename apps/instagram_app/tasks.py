@@ -19,15 +19,18 @@ logger = logging.getLogger(__name__)
 @periodic_task(run_every=(crontab(minute='0', hour='16')), name="final_validate_user_inquiries", ignore_result=True)
 def final_validate_user_inquiries():
     user_inquiries = UserInquiry.objects.select_related('order').filter(
-        created_time__lte=timezone.now().replace(hour=0, minute=0, second=0) - timedelta(hours=settings.PENALTY_CHECK_HOUR),
+        created_time__lte=timezone.now().replace(hour=0, minute=0, second=0) - timedelta(
+            hours=settings.PENALTY_CHECK_HOUR),
         validated_time__isnull=True,
         status=UserInquiry.STATUS_VALIDATED,
         order__action__action_type=InstaAction.ACTION_FOLLOW
     )
     order_usernames = {}
-    for username in user_inquiries.order_by('order__instagram_username').distinct('order__instagram_username').values('order__instagram_username'):
+    for username in user_inquiries.order_by('order__instagram_username').distinct('order__instagram_username').values(
+            'order__instagram_username'):
         try:
-            order_usernames[username] = [follower.username for follower in InstagramAppService.get_user_followers(username)]
+            order_usernames[username] = [follower.username for follower in
+                                         InstagramAppService.get_user_followers(username)]
         except Exception as e:
             logger.error(f"final inquiry validation for order {username} got exception: {e}")
             continue
@@ -51,6 +54,28 @@ def final_validate_user_inquiries():
             inquiry.save()
         except Exception as e:
             logger.error(f"validating inquiry {inquiry.id} failed due to : {e}")
+
+    # reactivating orders, which lost their achieved followers
+    Order.objects.annotate(
+        achived_no=Sum(
+            Case(
+                When(
+                    user_inquiries__status=UserInquiry.STATUS_VALIDATED, then=1
+                )
+            ),
+            output_field=IntegerField()
+        ),
+    ).filter(
+        achived_no__lt=F('target_no') * settings.ORDER_TARGET_RATIO / 100,
+        is_enable=False,
+        action=InstaAction.ACTION_FOLLOW,
+        updated_time__lte=timezone.now().replace(hour=0, minute=0, second=0) - timedelta(
+            hours=settings.PENALTY_CHECK_HOUR
+        ),
+    ).update(
+        is_enable=True,
+        description=_('order enabled properly.')
+    )
 
 
 # PERIODIC TASK
