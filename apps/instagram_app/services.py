@@ -80,7 +80,7 @@ class InstagramAppService(object):
         username = instagram_username
         account = instagram.get_account(username)
         followers = instagram.get_followers(account.identifier, settings.FOLLOWER_LIMIT, 100, delayed=True)
-        return followers
+        return followers['accounts']
 
 
 class CustomService(object):
