@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 @periodic_task(run_every=(crontab(minute='*/17')))
 def final_validate_user_inquiries():
     user_inquiries = UserInquiry.objects.select_related('order').filter(
-        created_time__lte=timezone.now().replace(hour=0, minute=0, second=0) - timedelta(
-            hours=settings.PENALTY_CHECK_HOUR),
+        created_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
         validated_time__isnull=True,
         status=UserInquiry.STATUS_VALIDATED,
         order__action__action_type=InstaAction.ACTION_FOLLOW
@@ -69,9 +68,7 @@ def final_validate_user_inquiries():
         achived_no__lt=F('target_no') * settings.ORDER_TARGET_RATIO / 100,
         is_enable=False,
         action=InstaAction.ACTION_FOLLOW,
-        updated_time__lte=timezone.now().replace(hour=0, minute=0, second=0) - timedelta(
-            hours=settings.PENALTY_CHECK_HOUR
-        ),
+        updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
     ).update(
         is_enable=True,
         description=_('order enabled properly.')
