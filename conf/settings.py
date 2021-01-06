@@ -246,9 +246,9 @@ PAYMENT_API_URL = config('PAYMENT_API_URL', default='')
 PAYMENT_SERVICE_SECRET = config('PAYMENT_SERVICE_SECRET', default='')
 MONITOR_TOKEN = config('MONITOR_TOKEN', default='')
 USER_PENALTY_AMOUNT = config('USER_PENALTY_AMOUNT', default=2, cast=int)
+PENALTY_CHECK_HOUR = config('PENALTY_CHECK_HOUR', default=48, cast=int)
 
-FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=100000, cast=int)
-
+FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=1000, cast=int)
 MAXIMUM_COIN_TRANSFER = config('MAXIMUM_COIN_TRANSFER', default=1000, cast=int)
 DAILY_TRANSFER_LIMIT = config('DAILY_TRANSFER_LIMIT', default=2, cast=int)
 COIN_TRANSFER_FEE = config('COIN_TRANSFER_FEE', default=5, cast=int)

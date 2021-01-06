@@ -1,9 +1,9 @@
 import logging
-import requests
+from datetime import timedelta
+
 from celery.schedules import crontab
 from celery.task import periodic_task
 from django.core.cache import cache
-from django.utils.translation import ugettext_lazy as _
 from django.db.models import F, Sum, Case, When, IntegerField
 from django.utils import timezone
 from django.conf import settings
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 @periodic_task(run_every=(crontab(minute='0', hour='16')), name="final_validate_user_inquiries", ignore_result=True)
 def final_validate_user_inquiries():
     user_inquiries = UserInquiry.objects.select_related('order').filter(
-        updated_time__lt=timezone.now().replace(hour=0, minute=0, second=0),
+        created_time__lte=timezone.now().replace(hour=0, minute=0, second=0) - timedelta(hours=settings.PENALTY_CHECK_HOUR),
         validated_time__isnull=True,
         status=UserInquiry.STATUS_VALIDATED,
         order__action__action_type=InstaAction.ACTION_FOLLOW
