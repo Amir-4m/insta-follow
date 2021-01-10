@@ -53,6 +53,7 @@ coverage.xml
 # Django stuff:
 *.log
 logs/*
+
 local_*.py
 media/*
 */django.mo
