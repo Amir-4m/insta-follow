@@ -1,5 +1,5 @@
 from functools import lru_cache
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.contrib.auth.models import AnonymousUser
 from django.utils.encoding import smart_text
@@ -45,11 +45,19 @@ class PageAuthentication(authentication.BaseAuthentication):
         token = self.get_page_token_value(request)
         if not token:  # no id passed in request headers
             raise exceptions.AuthenticationFailed(_('No such page'))  # authentication did not succeed
-        try:
-            dt = datetime.utcnow().strftime("%d%m%y%H")
-            uuid = CryptoService(dt + dt).decrypt(token)
-        except UnicodeDecodeError:
+        dt = datetime.utcnow()
+        uuid = None
+        for hour in [0, -1, 1]:
+            try:
+                new_dt = dt + timedelta(hours=hour)
+                uuid = CryptoService(new_dt.strftime("%d%m%y%H") + new_dt.strftime("%d%m%y%H")).decrypt(token)
+                break
+            except UnicodeDecodeError:
+                continue
+
+        if uuid is None:
             raise exceptions.AuthenticationFailed('Token is expired!')
+
         try:
             page = self.authenticate_credentials(uuid)  # get the page
         except InstaPage.DoesNotExist:
