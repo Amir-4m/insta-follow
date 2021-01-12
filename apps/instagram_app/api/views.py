@@ -121,7 +121,7 @@ class UserInquiryViewSet(viewsets.GenericViewSet,
                          mixins.CreateModelMixin):
     authentication_classes = (PageAuthentication,)
     permission_classes = (PagePermission,)
-    queryset = UserInquiry.objects.all()
+    queryset = UserInquiry.objects.select_related('order', 'order__action').all()
     serializer_class = UserInquirySerializer
 
     @swagger_auto_schema(
