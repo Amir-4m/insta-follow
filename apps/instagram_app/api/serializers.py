@@ -188,6 +188,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class UserInquirySerializer(serializers.ModelSerializer):
     page = serializers.ReadOnlyField(source='page.instagram_username')
+    earned_coin = serializers.IntegerField(source='order.action.action_value')
     done_id = serializers.PrimaryKeyRelatedField(
         write_only=True,
         queryset=Order.objects.all(),
@@ -197,7 +198,7 @@ class UserInquirySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserInquiry
-        fields = ('page', 'order', 'done_id', 'status')
+        fields = ('page', 'order', 'done_id', 'status', 'earned_coin')
         extra_kwargs = {'order': {'required': False}}
 
     def validate(self, attrs):
