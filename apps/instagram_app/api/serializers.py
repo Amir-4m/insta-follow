@@ -188,7 +188,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class UserInquirySerializer(serializers.ModelSerializer):
     page = serializers.ReadOnlyField(source='page.instagram_username')
-    earned_coin = serializers.IntegerField(source='order.action.action_value')
+    earned_coin = serializers.ReadOnlyField(source='order.action.action_value')
     done_id = serializers.PrimaryKeyRelatedField(
         write_only=True,
         queryset=Order.objects.all(),
