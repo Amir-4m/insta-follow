@@ -24,11 +24,14 @@ class InstaPageModelAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderModelAdmin(admin.ModelAdmin):
-    list_display = ('action', 'link', 'instagram_username', 'is_enable', 'achieved_number_approved', 'created_time')
+    list_display = (
+        'instagram_username', 'id', 'action', 'link',
+        'is_enable', 'achieved_number_approved', 'created_time'
+    )
     list_filter = ('action',)
-    readonly_fields = ('media_properties', 'instagram_username', 'entity_id', 'achieved_number_approved')
+    readonly_fields = ('media_properties', 'instagram_username', 'entity_id', 'achieved_number_approved', 'link')
     sortable_by = ('-created_time',)
-    search_fields = ('owner__instagram_username',)
+    search_fields = ('owner__instagram_username', 'id')
 
     def has_change_permission(self, request, obj=None):
         return True if request.user.is_superuser else False
@@ -38,6 +41,7 @@ class OrderModelAdmin(admin.ModelAdmin):
 class UserInquiryModelAdmin(admin.ModelAdmin):
     list_display = ('order', 'page', 'status', 'validated_time', 'updated_time', 'created_time')
     list_select_related = ['order', 'page']
+    readonly_fields = ('validated_time', 'page', 'order')
     list_filter = ('status', 'order__action')
     sortable_by = ('-created_time',)
     search_fields = ('page__instagram_username',)
