@@ -116,4 +116,5 @@ class AdViewVerificationViewsSet(viewsets.ViewSet):
             page=page,
             transaction_id=serializer.validated_data['data']
         )
+        cache.delete(f'{page.uuid}-ad')
         return Response({'valid': True})

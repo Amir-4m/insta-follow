@@ -25,7 +25,6 @@ class AdViewVerificationSerializer(serializers.Serializer):
 
         uuid, ts, _string = text.split('-%25')
         cached_value = cache.get(f'{uuid}-ad')
-        cache.delete(f'{uuid}-ad')
 
         if cached_value != encrypted:
             raise ValidationError(detail={'detail': _('token expired!')})
