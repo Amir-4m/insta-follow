@@ -58,7 +58,7 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        username = validated_data['instagram_username']
+        username = validated_data['instagram_username'].lower()
         user_id = validated_data['instagram_user_id']
         session_id = validated_data['session_id']
         page, _created = InstaPage.objects.get_or_create(
