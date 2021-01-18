@@ -58,7 +58,7 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        username = validated_data['instagram_username']
+        username = validated_data['instagram_username'].lower()
         user_id = validated_data['instagram_user_id']
         session_id = validated_data['session_id']
         page, _created = InstaPage.objects.get_or_create(
@@ -138,7 +138,7 @@ class OrderSerializer(serializers.ModelSerializer):
         insta_action = validated_data.get('action')
         target_no = validated_data.get('target_no')
         comments = validated_data.get('comments')
-        instagram_username = validated_data.get('instagram_username')
+        instagram_username = validated_data['instagram_username'].lower()
         media_properties = validated_data.get('media_properties')
 
         if insta_action.pk == InstaAction.ACTION_FOLLOW:
@@ -339,14 +339,14 @@ class CoinTransferSerializer(serializers.ModelSerializer):
             raise ValidationError(detail={'detail': _("you've reached today's transfer limit!")})
         if amount > settings.MAXIMUM_COIN_TRANSFER or amount <= 0:
             raise ValidationError(detail={'detail': _("Transfer amount is invalid!")})
-        if not InstaPage.objects.filter(instagram_username=username).exists():
+        if not InstaPage.objects.filter(instagram_username__iexact=username).exists():
             raise ValidationError(detail={'detail': _('Target page does not exists')})
         return attrs
 
     def create(self, validated_data):
         sender = validated_data.get('sender')
         real_amount = validated_data['amount']
-        target = validated_data['to_page']
+        target = validated_data['to_page'].lower()
         fee_amount = real_amount + settings.COIN_TRANSFER_FEE
         if sender.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet'] < fee_amount:
             raise ValidationError(detail={'detail': _("Transfer amount is higher than your coin balance!")})
