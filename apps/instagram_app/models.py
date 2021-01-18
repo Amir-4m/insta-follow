@@ -162,7 +162,7 @@ class CoinPackage(models.Model):
     amount_offer = models.PositiveIntegerField(_('amount offer'), null=True, blank=True)
     price = models.PositiveIntegerField(_('price'))
     price_offer = models.PositiveIntegerField(_('price offer'), null=True, blank=True)
-    name = models.CharField(_('package title'), max_length=100, blank=True)
+    name = models.CharField(_('package title'), max_length=100)
     sku = models.CharField(_('package sku'), max_length=40, unique=True, null=True)
     featured = models.DateTimeField(null=True, blank=True)
     is_enable = models.BooleanField(default=True)
@@ -174,6 +174,11 @@ class CoinPackage(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.id}"
+
+    def is_featured(self):
+        return self.featured is not None
+
+    is_featured.boolean = True
 
     @property
     def package_price(self):
