@@ -276,6 +276,7 @@ COIN_DAILY_REWARD_AMOUNT = config('COIN_DAILY_REWARD_AMOUNT', default=10, cast=i
 
 COIN_AD_VIEW_REWARD_AMOUNT = config('COIN_AD_VIEW_REWARD_AMOUNT', default=2, cast=int)
 COIN_AD_CLICKED_REWARD_AMOUNT = config('COIN_AD_CLICKED_REWARD_AMOUNT', default=5, cast=int)
+AD_CACHE_EXPIRY = config('AD_CACHE_EXPIRY', default=120, cast=int)
 
 if DEVEL is False:
     import sentry_sdk

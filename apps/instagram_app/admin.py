@@ -54,7 +54,7 @@ class InstaActionModelAdmin(admin.ModelAdmin):
 
 @admin.register(CoinPackage)
 class CoinPackageModelAdmin(admin.ModelAdmin):
-    list_display = ('name', 'amount', 'price', 'updated_time', 'created_time')
+    list_display = ('name', 'amount', 'price', 'is_featured', 'updated_time', 'created_time')
     sortable_by = ('-created_time', 'price')
 
 
