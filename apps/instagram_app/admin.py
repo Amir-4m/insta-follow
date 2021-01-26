@@ -30,7 +30,6 @@ class OrderModelAdmin(admin.ModelAdmin):
     )
     list_filter = ('action',)
     readonly_fields = ('media_properties', 'instagram_username', 'entity_id', 'achieved_number_approved', 'link')
-    sortable_by = ('-created_time',)
     search_fields = ('owner__instagram_username', 'id')
 
     def has_change_permission(self, request, obj=None):
