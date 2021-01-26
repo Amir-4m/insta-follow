@@ -154,7 +154,11 @@ class OrderSerializer(serializers.ModelSerializer):
             )['wallet'] < insta_action.buy_value * target_no:
                 raise ValidationError(detail={'detail': _("You do not have enough coin to create order")})
 
-            ct = CoinTransaction.objects.create(page=page, amount=-(insta_action.buy_value * target_no))
+            ct = CoinTransaction.objects.create(
+                page=page,
+                amount=-(insta_action.buy_value * target_no),
+                transaction_type=CoinTransaction.TYPE_ORDER
+            )
 
             if Order.objects.filter(owner=page, entity_id=entity_id, is_enable=True, action=insta_action).exists():
                 order = Order.objects.select_related('owner', 'action').select_for_update().filter(
@@ -183,26 +187,59 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class UserInquirySerializer(serializers.ModelSerializer):
-    link = serializers.ReadOnlyField(source="order.link")
-    media_properties = serializers.ReadOnlyField(source="order.media_properties")
-    entity_id = serializers.ReadOnlyField(source="order.entity_id")
-    instagram_username = serializers.ReadOnlyField(source='order.instagram_username')
     page = serializers.ReadOnlyField(source='page.instagram_username')
-    action = serializers.ReadOnlyField(source='order.action.action_type')
-    done_id = serializers.IntegerField(write_only=True)
+    earned_coin = serializers.ReadOnlyField(source='order.action.action_value')
+    done_id = serializers.PrimaryKeyRelatedField(
+        write_only=True,
+        queryset=Order.objects.all(),
+        source='order',
+        required=False
+    )
 
     class Meta:
         model = UserInquiry
-        fields = (
-            'id', 'instagram_username', 'media_properties',
-            'link', 'entity_id', 'done_id',
-            'status', 'page', 'action'
-        )
+        fields = ('page', 'order', 'done_id', 'status', 'earned_coin')
+        extra_kwargs = {'order': {'required': False}}
 
-    def validate_done_id(self, value):
-        if not Order.objects.filter(id=value).exists():
-            raise ParseError(_('id is not valid!'))
-        return value
+    def validate(self, attrs):
+        order = attrs.get('order', attrs.pop('done_id', None))
+        if order is None:
+            raise ValidationError(detail={'detail': _('done_id or order field must be filled!')})
+
+        page = self.context['request'].auth['page']
+        if UserInquiry.objects.filter(
+                order__action=order.action.action_type,
+                order__entity_id=order.entity_id,
+                page=page
+        ).exists():
+            raise ValidationError(detail={'detail': _('order with this id already has been done by this page !')})
+        attrs.update({'order': order, 'page_id': page.id})
+        return attrs
+
+    def create(self, validated_data):
+        page = self.context['request'].auth['page']
+        order = validated_data['order']
+
+        try:
+            user_inquiry = super(UserInquirySerializer, self).create(validated_data)
+        except Exception as e:
+            logger.error(f'error in creating inquiry for page {page.id} with order {order.id}: {e}')
+            raise ValidationError(detail={'detail': _(f'error occurred while creating inquiry. try again later.')})
+
+        if order.owner != page and order.instagram_username != page.instagram_username:
+            CoinTransaction.objects.create(
+                page=user_inquiry.page,
+                inquiry=user_inquiry,
+                amount=user_inquiry.order.action.action_value,
+                description=_("%s") % user_inquiry.order.action.get_action_type_display(),
+                transaction_type=CoinTransaction.TYPE_INQUIRY
+            )
+
+            if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
+                user_inquiry.validated_time = timezone.now()
+                user_inquiry.save()
+
+        return user_inquiry
 
 
 class CoinTransactionSerializer(serializers.ModelSerializer):
@@ -323,13 +360,16 @@ class CoinTransferSerializer(serializers.ModelSerializer):
                 page=sender_page,
                 amount=-fee_amount,
                 description=_("transfer to page %s") % target_page,
-                to_page=target_page
+                to_page=target_page,
+                transaction_type=CoinTransaction.TYPE_TRANSFER
             )
             CoinTransaction.objects.create(
                 page=target_page,
                 amount=real_amount,
                 description=_("transfer from page %s") % sender_page,
-                from_page=sender_page
+                from_page=sender_page,
+                transaction_type=CoinTransaction.TYPE_TRANSFER
+
             )
             return sender_transaction
 
