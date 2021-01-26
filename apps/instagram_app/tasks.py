@@ -1,4 +1,6 @@
 import logging
+import requests
+
 from datetime import timedelta
 
 from celery.schedules import crontab
@@ -120,3 +122,29 @@ def cache_gateways():
     for gateway in data:
         codes.append(gateway['code'])
     cache.set("gateway_codes", codes, None)
+
+
+# PERIODIC TASK
+@periodic_task(run_every=(crontab(hour='6')))
+def check_orders_posts_existence():
+    orders = Order.objects.filter(is_enable=True)
+    for order in orders:
+        # checking post image signature
+        post_url = order.media_properties.get('media_url')
+        if post_url is not None:
+            sign_res = requests.get(post_url)
+            try:
+                sign_res.raise_for_status()
+            except requests.exceptions.HTTPError as e:
+                logger.warning(
+                    f'[making request failed]-[response err: {e.response.text}]-[status code: {e.response.status_code}]'
+                    f'-[URL: {post_url}]-[exc: {e}]'
+                )
+                res = requests.get(f"{order.link}?__a=1").json()
+                if res.status_code != 200:
+                    order.is_enable = False
+
+                else:
+                    order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
+
+                order.save()
