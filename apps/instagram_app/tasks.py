@@ -131,20 +131,29 @@ def check_orders_posts_existence():
     for order in orders:
         # checking post image signature
         post_url = order.media_properties.get('media_url')
-        if post_url is not None:
-            sign_res = requests.get(post_url)
+        if not post_url:
             try:
-                sign_res.raise_for_status()
+                r = requests.get(post_url, timeout=(3.05, 9))
+                r.raise_for_status()
             except requests.exceptions.HTTPError as e:
-                logger.warning(
-                    f'[making request failed]-[response err: {e.response.text}]-[status code: {e.response.status_code}]'
-                    f'-[URL: {post_url}]-[exc: {e}]'
-                )
-                res = requests.get(f"{order.link}?__a=1").json()
-                if res.status_code != 200:
-                    order.is_enable = False
+                logger.warning(f'[order media invalid]-[{post_url}]-[status code: {e.response.status_code}]')
+            except Exception as e:
+                logger.error(f'[order media check failed]-[{post_url}]-[exc: {e}]')
+            else:
+                continue
 
-                else:
-                    order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
+            try:
+                _l = f"{order.link}?__a=1"
+                r = requests.get(_l, timeout=(3.05, 9))
+                r.raise_for_status()
+                res = r.json()
+            except requests.exceptions.HTTPError as e:
+                logger.warning(f'[order invalid]-[id: {order.id}, url: {_l}]-[status code: {e.response.status_code}]')
+                order.is_enable = False
+            except Exception as e:
+                logger.error(f'[order check failed]-[id: {order.id}, url: {_l}]-[exc: {e}]')
+                continue
+            else:
+                order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
 
-                order.save()
+            order.save()
