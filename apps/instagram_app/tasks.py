@@ -1,4 +1,6 @@
 import logging
+import requests
+
 from datetime import timedelta
 
 from celery.schedules import crontab
@@ -120,3 +122,38 @@ def cache_gateways():
     for gateway in data:
         codes.append(gateway['code'])
     cache.set("gateway_codes", codes, None)
+
+
+# PERIODIC TASK
+@periodic_task(run_every=(crontab(hour='6')))
+def check_orders_posts_existence():
+    orders = Order.objects.filter(is_enable=True)
+    for order in orders:
+        # checking post image signature
+        post_url = order.media_properties.get('media_url')
+        if not post_url:
+            try:
+                r = requests.get(post_url, timeout=(3.05, 9))
+                r.raise_for_status()
+            except requests.exceptions.HTTPError as e:
+                logger.warning(f'[order media invalid]-[{post_url}]-[status code: {e.response.status_code}]')
+            except Exception as e:
+                logger.error(f'[order media check failed]-[{post_url}]-[exc: {e}]')
+            else:
+                continue
+
+            try:
+                _l = f"{order.link}?__a=1"
+                r = requests.get(_l, timeout=(3.05, 9))
+                r.raise_for_status()
+                res = r.json()
+            except requests.exceptions.HTTPError as e:
+                logger.warning(f'[order invalid]-[id: {order.id}, url: {_l}]-[status code: {e.response.status_code}]')
+                order.is_enable = False
+            except Exception as e:
+                logger.error(f'[order check failed]-[id: {order.id}, url: {_l}]-[exc: {e}]')
+                continue
+            else:
+                order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
+
+            order.save()
