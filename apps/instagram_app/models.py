@@ -94,6 +94,7 @@ class Comment(models.Model):
 # Inventory
 class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
+    updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
     target_no = models.IntegerField(_("target number"), validators=[MinValueValidator(1)])
     link = models.URLField(_("link"))
@@ -129,10 +130,12 @@ class Order(models.Model):
 class UserInquiry(models.Model):
     STATUS_VALIDATED = 0
     STATUS_REJECTED = 1
+    STATUS_REFUSED = 2
 
     STATUS_CHOICES = [
         (STATUS_VALIDATED, _('Validated')),
         (STATUS_REJECTED, _('Rejected')),
+        (STATUS_REFUSED, _('Refused'))
     ]
     created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
@@ -161,7 +164,7 @@ class CoinPackage(models.Model):
     amount_offer = models.PositiveIntegerField(_('amount offer'), null=True, blank=True)
     price = models.PositiveIntegerField(_('price'))
     price_offer = models.PositiveIntegerField(_('price offer'), null=True, blank=True)
-    name = models.CharField(_('package title'), max_length=100, blank=True)
+    name = models.CharField(_('package title'), max_length=100)
     sku = models.CharField(_('package sku'), max_length=40, unique=True, null=True)
     featured = models.DateTimeField(null=True, blank=True)
     is_enable = models.BooleanField(default=True)
@@ -173,6 +176,11 @@ class CoinPackage(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.id}"
+
+    def is_featured(self):
+        return self.featured is not None
+
+    is_featured.boolean = True
 
     @property
     def package_price(self):
@@ -212,6 +220,24 @@ class CoinPackageOrder(models.Model):
 
 
 class CoinTransaction(models.Model):
+    TYPE_ORDER = 'ORDER'
+    TYPE_INQUIRY = 'INQUIRY'
+    TYPE_PURCHASE = 'PURCHASE'
+    TYPE_PENALTY = 'PENALTY'
+    TYPE_DAILY_REWARD = 'DAILY_REWARD'
+    TYPE_AD_REWARD = 'AD_REWARD'
+    TYPE_TRANSFER = 'TRANSFER'
+
+    TRANSACTION_TYPE_CHOICES = [
+        (TYPE_ORDER, _('Order')),
+        (TYPE_INQUIRY, _('Inquiry')),
+        (TYPE_PURCHASE, _('Purchase')),
+        (TYPE_TRANSFER, _('Transfer')),
+        (TYPE_PENALTY, _('Penalty')),
+        (TYPE_DAILY_REWARD, _('Daily reward')),
+        (TYPE_AD_REWARD, _('Ad reward'))
+    ]
+
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     page = models.ForeignKey(InstaPage, related_name='coin_transactions', on_delete=models.CASCADE)
     amount = models.IntegerField(_('amount'))
@@ -221,6 +247,13 @@ class CoinTransaction(models.Model):
     package = models.ForeignKey(CoinPackageOrder, on_delete=models.PROTECT, null=True, blank=True)
     from_page = models.ForeignKey(InstaPage, related_name='senders', on_delete=models.PROTECT, null=True, blank=True)
     to_page = models.ForeignKey(InstaPage, related_name='receivers', on_delete=models.PROTECT, null=True, blank=True)
+    transaction_type = models.CharField(
+        _('transaction type'),
+        max_length=12,
+        choices=TRANSACTION_TYPE_CHOICES,
+        default=TYPE_INQUIRY,
+        db_index=True
+    )
 
     class Meta:
         db_table = "insta_transactions"

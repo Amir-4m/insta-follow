@@ -34,17 +34,16 @@ class DailyRewardAPIView(views.APIView):
         reward_amount = settings.COIN_DAILY_REWARD_AMOUNT
         if CoinTransaction.objects.filter(
                 created_time__gte=timezone.now().replace(hour=0, minute=0, second=0),
-                description=_("daily reward"),
+                transaction_type=CoinTransaction.TYPE_DAILY_REWARD,
                 page=page
         ).exists():
             rewarded = False
         else:
-            CoinTransaction.objects.filter(
-            )
             CoinTransaction.objects.create(
                 page=page,
                 description=_("daily reward"),
-                amount=reward_amount
+                amount=reward_amount,
+                transaction_type=CoinTransaction.TYPE_DAILY_REWARD
             )
             rewarded = True
         return Response({'page': page.instagram_username, 'amount': reward_amount, 'rewarded': rewarded})
@@ -77,7 +76,8 @@ class TapsellRewardAPIView(views.APIView):
             CoinTransaction.objects.create(
                 page=page,
                 amount=reward,
-                description=_('ad reward')
+                description=_('ad reward'),
+                transaction_type=CoinTransaction.TYPE_AD_REWARD
             )
             AdReward.objects.create(
                 reward_amount=reward,
@@ -98,7 +98,7 @@ class AdViewVerificationViewsSet(viewsets.ViewSet):
         text = f'{page.uuid}-%25{timezone.now().timestamp()}-%25'
         text += str(get_random_string(64 - len(text)))
         encrypted_text = CryptoService(dt + dt).encrypt(text)
-        cache.set(f'{page.uuid}-ad', encrypted_text.decode('utf-8'), 70)
+        cache.set(f'{page.uuid}-ad-{encrypted_text}', encrypted_text.decode('utf-8'), settings.AD_CACHE_EXPIRY)
         return Response({'data': encrypted_text})
 
     @action(methods=['post'], detail=False, url_path='verify')
@@ -109,11 +109,13 @@ class AdViewVerificationViewsSet(viewsets.ViewSet):
         CoinTransaction.objects.create(
             page=page,
             amount=settings.COIN_AD_VIEW_REWARD_AMOUNT,
-            description=_('ad reward')
+            description=_('ad reward'),
+            transaction_type=CoinTransaction.TYPE_AD_REWARD
         )
         AdReward.objects.create(
             reward_amount=settings.COIN_AD_VIEW_REWARD_AMOUNT,
             page=page,
             transaction_id=serializer.validated_data['data']
         )
+        cache.delete(f'{page.uuid}-ad-{serializer.validated_data["data"]}')
         return Response({'valid': True})

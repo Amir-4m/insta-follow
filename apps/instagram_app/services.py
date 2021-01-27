@@ -80,7 +80,7 @@ class InstagramAppService(object):
         username = instagram_username
         account = instagram.get_account(username)
         followers = instagram.get_followers(account.identifier, settings.FOLLOWER_LIMIT, 100, delayed=True)
-        return followers
+        return followers['accounts']
 
 
 class CustomService(object):
@@ -114,7 +114,7 @@ class CustomService(object):
         ).filter(
             remaining__lte=F('remaining')
         ).exclude(
-            Q(owner=page) | Q(instagram_username=page.instagram_username),
+            Q(owner=page) | Q(instagram_username__iexact=page.instagram_username),
 
         ).exclude(
             entity_id__in=UserInquiry.objects.filter(page=page, order__action=action_type).values_list(

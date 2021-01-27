@@ -24,11 +24,10 @@ class AdViewVerificationSerializer(serializers.Serializer):
             raise ValidationError(detail={'detail': _('invalid data!')})
 
         uuid, ts, _string = text.split('-%25')
-        cached_value = cache.get(f'{uuid}-ad')
-        cache.delete(f'{uuid}-ad')
+        cached_value = cache.get(f'{uuid}-ad-{encrypted}')
 
         if cached_value != encrypted:
-            raise ValidationError(detail={'detail': _('invalid data!')})
+            raise ValidationError(detail={'detail': _('token expired!')})
 
         if not InstaPage.objects.filter(uuid=uuid).exists():
             raise ValidationError(detail={'detail': _('invalid page!')})
