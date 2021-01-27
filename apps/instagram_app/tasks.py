@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # TODO: Review
 """
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(hour='*/17',)))
+@periodic_task(run_every=(crontab(hour='*/17', minute='0')))
 def final_validate_user_inquiries():
     user_inquiries = UserInquiry.objects.select_related('order').filter(
         created_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
@@ -129,7 +129,7 @@ def cache_gateways():
 
 
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(hour='*/4')))
+@periodic_task(run_every=(crontab(hour='*/4', minute='11')))
 def check_orders_posts_existence():
     orders = Order.objects.filter(is_enable=True).order_by('updated_time')
     for order in orders:
