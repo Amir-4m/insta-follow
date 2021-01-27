@@ -127,7 +127,7 @@ def cache_gateways():
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(hour='*/6')))
 def check_orders_posts_existence():
-    orders = Order.objects.filter(is_enable=True)
+    orders = Order.objects.filter(is_enable=True).order_by('-pk')
     for order in orders:
         # checking post image signature
         post_url = order.media_properties.get('media_url', '')
@@ -137,6 +137,8 @@ def check_orders_posts_existence():
             r.raise_for_status()
         except requests.exceptions.HTTPError as e:
             logger.warning(f'[order media invalid]-[{post_url}]-[status code: {e.response.status_code}]')
+            if e.response.status_code == 429:
+                break
         except Exception as e:
             logger.error(f'[order media check failed]-[{post_url}]-[exc: {e}]')
         else:
@@ -149,11 +151,13 @@ def check_orders_posts_existence():
             res = r.json()
         except requests.exceptions.HTTPError as e:
             logger.warning(f'[order invalid]-[id: {order.id}, url: {_l}]-[status code: {e.response.status_code}]')
-            order.is_enable = False
+            if e.response.status_code == 404:
+                order.is_enable = False
+                order.save()
+            if e.response.status_code == 429:
+                break
         except Exception as e:
             logger.error(f'[order check failed]-[id: {order.id}, url: {_l}]-[exc: {e}]')
-            continue
         else:
             order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
-
-        order.save()
+            order.save()
