@@ -17,21 +17,22 @@ from .models import Order, UserInquiry, InstaAction, CoinTransaction, CoinPackag
 logger = logging.getLogger(__name__)
 
 
+# TODO: Review
+"""
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(minute='*/17')))
+@periodic_task(run_every=(crontab(hour='*/17',)))
 def final_validate_user_inquiries():
     user_inquiries = UserInquiry.objects.select_related('order').filter(
         created_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
         validated_time__isnull=True,
         status=UserInquiry.STATUS_VALIDATED,
-        order__action__action_type=InstaAction.ACTION_FOLLOW
+        order__action__action_type=InstaAction.ACTION_FOLLOW,
+        order__is_enable = True
     )
     order_usernames = {}
-    for username in user_inquiries.order_by('order__instagram_username').distinct('order__instagram_username').values(
-            'order__instagram_username'):
+    for username in user_inquiries.order_by('order__instagram_username').distinct('order__instagram_username').values('order__instagram_username'):
         try:
-            order_usernames[username] = [follower.username for follower in
-                                         InstagramAppService.get_user_followers(username)]
+            order_usernames[username] = [follower.username for follower in InstagramAppService.get_user_followers(username)]
         except Exception as e:
             logger.error(f"final inquiry validation for order {username} got exception: {e}")
             continue
@@ -75,7 +76,7 @@ def final_validate_user_inquiries():
         is_enable=True,
         description=_('order enabled properly.')
     )
-
+"""
 
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(minute='*/5')))
@@ -100,6 +101,8 @@ def update_orders_achieved_number():
         logger.error(f"updating orders achieved number got exception: {e}")
 
 
+# TODO: Review
+"""
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(minute='*/5')))
 def update_expired_featured_packages():
@@ -111,6 +114,7 @@ def update_expired_featured_packages():
         )
     except Exception as e:
         logger.error(f"updating expired featured packages got error: {e}")
+"""
 
 
 # PERIODIC TASK
@@ -125,39 +129,23 @@ def cache_gateways():
 
 
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(hour='*/6')))
+@periodic_task(run_every=(crontab(hour='*/4')))
 def check_orders_posts_existence():
-    orders = Order.objects.filter(is_enable=True).order_by('-pk')
+    orders = Order.objects.filter(is_enable=True).order_by('updated_time')
     for order in orders:
-        # checking post image signature
-        post_url = order.media_properties.get('media_url', '')
-
         try:
-            r = requests.get(post_url, timeout=(3.05, 9))
-            r.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            logger.warning(f'[order media invalid]-[{post_url}]-[status code: {e.response.status_code}]')
-            if e.response.status_code == 429:
-                break
-        except Exception as e:
-            logger.error(f'[order media check failed]-[{post_url}]-[exc: {e}]')
-        else:
-            continue
-
-        try:
-            _l = f"{order.link}?__a=1"
-            r = requests.get(_l, timeout=(3.05, 9))
+            r = requests.get(f"{order.link}?__a=1", headers={"User-Agent": f"{timezone.now().isoformat()}"}, timeout=(3.05, 9))
             r.raise_for_status()
             res = r.json()
         except requests.exceptions.HTTPError as e:
-            logger.warning(f'[order invalid]-[id: {order.id}, url: {_l}]-[status code: {e.response.status_code}]')
+            logger.warning(f'[order invalid]-[id: {order.id}, url: {order.link}]-[status code: {e.response.status_code}]')
             if e.response.status_code == 404:
                 order.is_enable = False
                 order.save()
             if e.response.status_code == 429:
                 break
         except Exception as e:
-            logger.error(f'[order check failed]-[id: {order.id}, url: {_l}]-[exc: {e}]')
+            logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {e}]')
         else:
             order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
             order.save()
