@@ -3,6 +3,7 @@ import uuid
 
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -178,8 +179,7 @@ class CoinPackage(models.Model):
         return f"{self.name} - {self.id}"
 
     def is_featured(self):
-        return self.featured is not None
-
+        return self.featured is not None and self.featured > timezone.now()
     is_featured.boolean = True
 
     @property
