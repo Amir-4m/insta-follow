@@ -98,7 +98,7 @@ class AdViewVerificationViewsSet(viewsets.ViewSet):
         text = f'{page.uuid}-%25{timezone.now().timestamp()}-%25'
         text += str(get_random_string(64 - len(text)))
         encrypted_text = CryptoService(dt + dt).encrypt(text)
-        cache.set(f'{page.uuid}-ad-{encrypted_text}', encrypted_text.decode('utf-8'), settings.AD_CACHE_EXPIRY)
+        cache.set(f'{page.uuid}-ad-{encrypted_text.decode("utf-8")}', str(encrypted_text.decode('utf-8')), settings.AD_CACHE_EXPIRY)
         return Response({'data': encrypted_text})
 
     @action(methods=['post'], detail=False, url_path='verify')
