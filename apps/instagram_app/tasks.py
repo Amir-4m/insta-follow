@@ -130,7 +130,7 @@ def cache_gateways():
 
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(hour='*/4', minute='11')))
-def check_orders_posts_existence():
+def check_orders_validity():
     orders = Order.objects.filter(is_enable=True).order_by('updated_time')
     for order in orders:
         try:
@@ -145,7 +145,7 @@ def check_orders_posts_existence():
             if e.response.status_code == 429:
                 break
         except Exception as e:
-            logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {e}]')
+            logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {type(e)}, {str(e)}]')
         else:
             order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
             order.save()
