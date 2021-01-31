@@ -126,7 +126,7 @@ def cache_gateways():
 
 
 @shared_task()
-def check_orders_validity(order_id):
+def check_order_validity(order_id):
     try:
         order = Order.objects.get(pk=order_id)
     except Order.DoesNotExist:
@@ -142,6 +142,7 @@ def check_orders_validity(order_id):
         )
         r.raise_for_status()
         res = r.json()
+
     except requests.exceptions.HTTPError as e:
         logger.warning(
             f'[order invalid]-[id: {order.id}, url: {order.link}]-[status code: {e.response.status_code}]')
@@ -150,8 +151,9 @@ def check_orders_validity(order_id):
             order.save()
 
     except Exception as e:
-        logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {e}]')
-        check_orders_validity.delay(order_id)
+        logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {type(e)}, {str(e)}]')
+        check_order_validity.delay(order_id)
+
     else:
         if order.action.action_type == InstaAction.ACTION_FOLLOW:
             order.is_enable = not res['graphql']['user'].get('is_private', False)

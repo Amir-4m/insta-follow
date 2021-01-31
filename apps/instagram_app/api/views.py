@@ -69,7 +69,7 @@ class DeviceViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     operation_description="Create an order with a chosen action for the post or profile that user requested",
     request_body=ORDER_POST_DOCS
 ))
-@method_decorator(name='list', decorator=cache_page(60 * 60))  # 1 hour cache
+@method_decorator(name='list', decorator=cache_page(60 * 15))  # 15 minutes cache
 @method_decorator(name='list', decorator=vary_on_headers('Authorization'))
 class OrderViewSet(viewsets.GenericViewSet,
                    mixins.CreateModelMixin,
@@ -162,7 +162,7 @@ class CoinTransactionAPIView(viewsets.GenericViewSet, mixins.ListModelMixin):
         return Response({'wallet': wallet})
 
 
-@method_decorator(name='list', decorator=cache_page(60 * 60 * 3600))  # 3600 hours cache
+@method_decorator(name='list', decorator=cache_page(60 * 60 * 5))  # 5 hours cache
 class InstaActionAPIView(generics.ListAPIView):
     """Get a list of action types and their values"""
     queryset = InstaAction.objects.all()
