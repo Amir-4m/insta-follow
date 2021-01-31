@@ -12,6 +12,7 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, ParseError
 
+from apps.instagram_app.tasks import check_order_validity
 from apps.instagram_app.models import (
     UserInquiry, CoinTransaction, Order,
     InstaAction, Device, CoinPackage,
@@ -61,7 +62,7 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
         username = validated_data['instagram_username'].lower()
         user_id = validated_data['instagram_user_id']
         session_id = validated_data['session_id']
-        page, _created = InstaPage.objects.get_or_create(
+        page, _created = InstaPage.objects.update_or_create(
             instagram_user_id=user_id,
             defaults={
                 "instagram_username": username,
@@ -187,6 +188,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class UserInquirySerializer(serializers.ModelSerializer):
+    check = serializers.BooleanField(default=False, write_only=True)
     page = serializers.ReadOnlyField(source='page.instagram_username')
     earned_coin = serializers.ReadOnlyField(source='order.action.action_value')
     done_id = serializers.PrimaryKeyRelatedField(
@@ -198,8 +200,13 @@ class UserInquirySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserInquiry
-        fields = ('page', 'order', 'done_id', 'status', 'earned_coin')
+        fields = ('page', 'order', 'done_id', 'status', 'earned_coin', 'check')
         extra_kwargs = {'order': {'required': False}}
+
+    def validate_status(self, value):
+        if value not in (UserInquiry.STATUS_REFUSED, UserInquiry.STATUS_VALIDATED):
+            raise ValidationError(detail={'detail': _('status not correct!')})
+        return value
 
     def validate(self, attrs):
         order = attrs.get('order', attrs.pop('done_id', None))
@@ -212,21 +219,25 @@ class UserInquirySerializer(serializers.ModelSerializer):
                 order__entity_id=order.entity_id,
                 page=page
         ).exists():
-            raise ValidationError(detail={'detail': _('order with this id already has been done by this page !')})
+            raise ValidationError(detail={'detail': _('order with this id already has been done by this page!')})
         attrs.update({'order': order, 'page_id': page.id})
         return attrs
 
     def create(self, validated_data):
         page = self.context['request'].auth['page']
         order = validated_data['order']
+        check = validated_data.pop('check')
 
         try:
-            user_inquiry = super(UserInquirySerializer, self).create(validated_data)
+            user_inquiry = super().create(validated_data)
         except Exception as e:
             logger.error(f'error in creating inquiry for page {page.id} with order {order.id}: {e}')
             raise ValidationError(detail={'detail': _(f'error occurred while creating inquiry. try again later.')})
 
-        if order.owner != page and order.instagram_username != page.instagram_username:
+        if check is True:
+            check_order_validity.delay(order.pk)
+
+        if user_inquiry.status == UserInquiry.STATUS_VALIDATED and order.owner != page and order.instagram_username != page.instagram_username:
             CoinTransaction.objects.create(
                 page=user_inquiry.page,
                 inquiry=user_inquiry,
