@@ -1,8 +1,10 @@
 import logging
 import requests
+from random import choice
 
 from datetime import timedelta
 
+from celery import shared_task
 from celery.schedules import crontab
 from celery.task import periodic_task
 from django.core.cache import cache
@@ -12,10 +14,9 @@ from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 
 from .services import InstagramAppService, CustomService
-from .models import Order, UserInquiry, InstaAction, CoinTransaction, CoinPackage
+from .models import Order, UserInquiry, InstaAction, CoinTransaction, CoinPackage, InstaPage
 
 logger = logging.getLogger(__name__)
-
 
 # TODO: Review
 """
@@ -78,6 +79,7 @@ def final_validate_user_inquiries():
     )
 """
 
+
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(minute='*/5')))
 def update_orders_achieved_number():
@@ -128,24 +130,36 @@ def cache_gateways():
     cache.set("gateway_codes", codes, None)
 
 
-# PERIODIC TASK
-@periodic_task(run_every=(crontab(hour='*/4', minute='11')))
-def check_orders_validity():
-    orders = Order.objects.filter(is_enable=True).order_by('updated_time')
-    for order in orders:
-        try:
-            r = requests.get(f"{order.link}?__a=1", headers={"User-Agent": f"{timezone.now().isoformat()}"}, timeout=(3.05, 9))
-            r.raise_for_status()
-            res = r.json()
-        except requests.exceptions.HTTPError as e:
-            logger.warning(f'[order invalid]-[id: {order.id}, url: {order.link}]-[status code: {e.response.status_code}]')
-            if e.response.status_code == 404:
-                order.is_enable = False
-                order.save()
-            if e.response.status_code == 429:
-                break
-        except Exception as e:
-            logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {type(e)}, {str(e)}]')
+@shared_task()
+def check_orders_validity(order_id):
+    try:
+        order = Order.objects.get(pk=order_id)
+    except Order.DoesNotExist:
+        logger.error(f'[order check failed]-[id: {order_id}]-[exc: order does not exists!]')
+        return
+
+    page = choice(InstaPage.objects.order_by('-updated_time')[:10])
+    try:
+        r = requests.get(
+            f"{order.link}?__a=1", headers={"User-Agent": f"{timezone.now().isoformat()}"},
+            timeout=(3.05, 9),
+            cookies={'sessionid': page.session_id},
+        )
+        r.raise_for_status()
+        res = r.json()
+    except requests.exceptions.HTTPError as e:
+        logger.warning(
+            f'[order invalid]-[id: {order.id}, url: {order.link}]-[status code: {e.response.status_code}]')
+        if e.response.status_code == 404:
+            order.is_enable = False
+            order.save()
+
+    except Exception as e:
+        logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {e}]')
+        check_orders_validity.delay(order_id)
+    else:
+        if order.action.action_type == InstaAction.ACTION_FOLLOW:
+            order.is_enable = not res['graphql']['user'].get('is_private', False)
         else:
             order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
             order.save()
