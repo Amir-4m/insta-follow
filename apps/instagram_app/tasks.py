@@ -18,8 +18,7 @@ from .models import Order, UserInquiry, InstaAction, CoinTransaction, CoinPackag
 
 logger = logging.getLogger(__name__)
 
-# TODO: Review
-"""
+
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(hour='*/17', minute='0')))
 def final_validate_user_inquiries():
@@ -28,14 +27,19 @@ def final_validate_user_inquiries():
         validated_time__isnull=True,
         status=UserInquiry.STATUS_VALIDATED,
         order__action__action_type=InstaAction.ACTION_FOLLOW,
-        order__is_enable = True
+        order__is_enable=True
+    )
+    insta_pages = InstaPage.objects.filter(
+        instagram_user_id__in=user_inquiries.distinct('order__owner__instagram_user_id').values_list('order__owner__instagram_user_id', flat=True)
     )
     order_usernames = {}
-    for username in user_inquiries.order_by('order__instagram_username').distinct('order__instagram_username').values('order__instagram_username'):
+    for page in insta_pages:
         try:
-            order_usernames[username] = [follower.username for follower in InstagramAppService.get_user_followers(username)]
+            order_usernames[page.instagram_username] = [
+                follower.username for follower in InstagramAppService.get_user_followers(page.session_id, page.instagram_username)
+            ]
         except Exception as e:
-            logger.error(f"final inquiry validation for order {username} got exception: {e}")
+            logger.error(f"order followers `{page.username}` got exception: {type(e)} - {e}")
             continue
 
     for inquiry in user_inquiries:
@@ -58,8 +62,11 @@ def final_validate_user_inquiries():
         except Exception as e:
             logger.error(f"validating inquiry {inquiry.id} failed due to : {e}")
 
-    # reactivating orders, which lost their achieved followers
-    Order.objects.annotate(
+
+# PERIODIC TASK
+@periodic_task(run_every=(crontab(minute='*/5')))
+def update_orders_achieved_number():
+    q = Order.objects.filter(is_enable=True).annotate(
         achived_no=Sum(
             Case(
                 When(
@@ -68,36 +75,24 @@ def final_validate_user_inquiries():
             ),
             output_field=IntegerField()
         ),
-    ).filter(
-        achived_no__lt=F('target_no') * settings.ORDER_TARGET_RATIO / 100,
-        is_enable=False,
-        action=InstaAction.ACTION_FOLLOW,
-        updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
-    ).update(
-        is_enable=True,
-        description=_('order enabled properly.')
     )
-"""
-
-
-# PERIODIC TASK
-@periodic_task(run_every=(crontab(minute='*/5')))
-def update_orders_achieved_number():
     try:
-        Order.objects.filter(is_enable=True).annotate(
-            achived_no=Sum(
-                Case(
-                    When(
-                        user_inquiries__status=UserInquiry.STATUS_VALIDATED, then=1
-                    )
-                ),
-                output_field=IntegerField()
-            ),
-        ).filter(
+        q.filter(
             achived_no__gte=F('target_no')
         ).update(
             is_enable=False,
             description=_("order completed")
+        )
+
+        # reactivating orders, which lost their achieved followers
+        q.filter(
+            achived_no__lt=F('target_no') * settings.ORDER_TARGET_RATIO / 100,
+            is_enable=False,
+            action=InstaAction.ACTION_FOLLOW,
+            updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
+        ).update(
+            is_enable=True,
+            description=_('order enabled properly.')
         )
     except Exception as e:
         logger.error(f"updating orders achieved number got exception: {e}")
