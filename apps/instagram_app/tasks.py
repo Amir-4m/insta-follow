@@ -130,26 +130,8 @@ def cache_gateways():
     cache.set("gateway_codes", codes, None)
 
 
-# PERIODIC TASK
-@periodic_task(run_every=(crontab(hour='*/4', minute='11')))
-def check_orders_validity():
-    orders = Order.objects.filter(is_enable=True).order_by('updated_time')
-    for order in orders:
-        try:
-            r = requests.get(f"{order.link}?__a=1", headers={"User-Agent": f"{timezone.now().isoformat()}"}, timeout=(3.05, 9))
-            r.raise_for_status()
-            res = r.json()
-        except requests.exceptions.HTTPError as e:
-            logger.warning(f'[order invalid]-[id: {order.id}, url: {order.link}]-[status code: {e.response.status_code}]')
-            if e.response.status_code == 404:
-                order.is_enable = False
-                order.save()
-            if e.response.status_code == 429:
-                break
-        except Exception as e:
-            logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {type(e)}, {str(e)}]')
 @shared_task()
-def check_orders_posts_existence(order_id):
+def check_orders_validity(order_id):
     try:
         order = Order.objects.get(pk=order_id)
     except Order.DoesNotExist:
@@ -174,7 +156,7 @@ def check_orders_posts_existence(order_id):
 
     except Exception as e:
         logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {e}]')
-        check_orders_posts_existence.delay(order_id)
+        check_orders_validity.delay(order_id)
     else:
         if order.action.action_type == InstaAction.ACTION_FOLLOW:
             order.is_enable = not res['graphql']['user'].get('is_private', False)

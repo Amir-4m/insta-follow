@@ -12,7 +12,7 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, ParseError
 
-from apps.instagram_app.tasks import check_orders_posts_existence
+from apps.instagram_app.tasks import check_orders_validity
 from apps.instagram_app.models import (
     UserInquiry, CoinTransaction, Order,
     InstaAction, Device, CoinPackage,
@@ -229,7 +229,7 @@ class UserInquirySerializer(serializers.ModelSerializer):
             logger.error(f'error in creating inquiry for page {page.id} with order {order.id}: {e}')
             raise ValidationError(detail={'detail': _(f'error occurred while creating inquiry. try again later.')})
         if check is True:
-            check_orders_posts_existence.delay(order.pk)
+            check_orders_validity.delay(order.pk)
 
         if user_inquiry.status == UserInquiry.STATUS_VALIDATED and order.owner != page and order.instagram_username != page.instagram_username:
             CoinTransaction.objects.create(
