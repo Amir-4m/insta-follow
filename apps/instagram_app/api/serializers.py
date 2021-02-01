@@ -266,9 +266,15 @@ class InstaActionSerializer(serializers.ModelSerializer):
 
 
 class CoinPackageSerializer(serializers.ModelSerializer):
+    is_featured = serializers.BooleanField(read_only=True, source='is_featured')
+
     class Meta:
         model = CoinPackage
-        fields = ('id', 'name', 'sku', 'amount', 'price', 'is_enable', 'featured', 'price_offer', 'amount_offer')
+        fields = (
+            'id', 'name', 'sku', 'amount',
+            'price', 'is_enable', 'is_featured',
+            'featured', 'price_offer', 'amount_offer'
+        )
 
 
 class CoinPackageOrderSerializer(serializers.ModelSerializer):

@@ -178,6 +178,7 @@ class CoinPackage(models.Model):
     def __str__(self):
         return f"{self.name} - {self.id}"
 
+    @property
     def is_featured(self):
         return self.featured is not None and self.featured > timezone.now()
     is_featured.boolean = True
