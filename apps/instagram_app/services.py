@@ -1,14 +1,20 @@
+import json
 import logging
+import random
 import re
+import time
+
 import requests
 
 from django.conf import settings
 from django.db.models.functions import Coalesce
 from django.db.models import F, Sum, Case, When, IntegerField, Q
+from django.utils import timezone
 
 from igramscraper.instagram import Instagram
 from Crypto.Cipher import AES
 from Crypto import Random
+from urllib import parse
 from base64 import b64decode, b64encode
 
 from .models import UserInquiry, Order, InstagramAccount
@@ -24,9 +30,9 @@ class InstagramAppService(object):
         try:
             header = {'Authorization': settings.MONITOR_TOKEN}
             if method.lower() == 'get':
-                response = requests.get(url=url, headers=header, params=params)
+                response = requests.get(url=url, headers=header, params=params, timeout=(3.05, 9))
             elif method.lower() == 'post':
-                response = requests.post(url=url, headers=header, data=data)
+                response = requests.post(url=url, headers=header, data=data, timeout=(3.05, 9))
             else:
                 return None
             return response
@@ -75,12 +81,57 @@ class InstagramAppService(object):
         raise Exception("instagram login reached max retries !")
 
     @staticmethod
-    def get_user_followers(instagram_username):
-        instagram = InstagramAppService.instagram_login()
-        username = instagram_username
-        account = instagram.get_account(username)
-        followers = instagram.get_followers(account.identifier, settings.FOLLOWER_LIMIT, 100, delayed=True)
-        return followers
+    def get_user_followers(session_id, user_id, count=settings.FOLLOWER_LIMIT, end_cursor='', delayed=True):
+        next_page = end_cursor
+        accounts = []
+        for _i in range(count):
+            variables = {
+                'id': user_id,
+                'first': str(count),
+                'after': next_page
+            }
+            endpoint = "https://www.instagram.com/graphql/query/?query_hash=c76146de99bb02f6415203be841dd25a&variables=%s"
+            url = endpoint % parse.quote_plus(json.dumps(variables, separators=(',', ':')))
+
+            response = requests.get(
+                url,
+                cookies={'sessionid': session_id},
+                headers={'User-Agent': f"{timezone.now().isoformat()}"})
+
+            response.raise_for_status()
+            result = response.json()['data']['user']['edge_followed_by']
+
+            accounts += [_e['node']['username'] for _e in result['edges']]
+
+            if result['page_info']['has_next_page']:
+                next_page = result['page_info']['end_cursor']
+            else:
+                break
+
+            if delayed:
+                # Random wait between 1 and 3 sec to mimic browser
+                microsec = random.uniform(2.0, 6.0)
+                time.sleep(microsec)
+
+        return accounts
+
+    @staticmethod
+    def page_private(page):
+        url = f'https://www.instagram.com/{page.instagram_username}/?__a=1'
+        try:
+            response = requests.get(
+                url=url,
+                cookies={'sessionid': page.session_id},
+                headers={'User-Agent': f'{timezone.now().isoformat()}'},
+                timeout=(3.05, 9)
+            )
+            response.raise_for_status()
+            r_json = response.json()
+            result = r_json['graphql']['user']['is_private']
+        except Exception as e:
+            logger.error(f"getting page info failed {page.instagram_username}: {e}")
+            return None
+        return result
 
 
 class CustomService(object):
@@ -96,7 +147,7 @@ class CustomService(object):
             'post': requests.post
         }
 
-        response = methods[method](f"{settings.PAYMENT_API_URL}{endpoint}/", headers=headers, json=data)
+        response = methods[method](f"{settings.PAYMENT_API_URL}{endpoint}/", headers=headers, json=data, timeout=(3.05, 9))
         response.raise_for_status()
         return response
 
@@ -114,7 +165,7 @@ class CustomService(object):
         ).filter(
             remaining__lte=F('remaining')
         ).exclude(
-            Q(owner=page) | Q(instagram_username=page.instagram_username),
+            Q(owner=page) | Q(instagram_username__iexact=page.instagram_username),
 
         ).exclude(
             entity_id__in=UserInquiry.objects.filter(page=page, order__action=action_type).values_list(

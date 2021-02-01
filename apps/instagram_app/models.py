@@ -1,10 +1,13 @@
 import logging
+import re
 import uuid
 
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from django.core.validators import MinValueValidator
 
 logger = logging.getLogger(__name__)
@@ -94,6 +97,7 @@ class Comment(models.Model):
 # Inventory
 class Order(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
+    updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
     target_no = models.IntegerField(_("target number"), validators=[MinValueValidator(1)])
     link = models.URLField(_("link"))
@@ -163,7 +167,7 @@ class CoinPackage(models.Model):
     amount_offer = models.PositiveIntegerField(_('amount offer'), null=True, blank=True)
     price = models.PositiveIntegerField(_('price'))
     price_offer = models.PositiveIntegerField(_('price offer'), null=True, blank=True)
-    name = models.CharField(_('package title'), max_length=100, blank=True)
+    name = models.CharField(_('package title'), max_length=100)
     sku = models.CharField(_('package sku'), max_length=40, unique=True, null=True)
     featured = models.DateTimeField(null=True, blank=True)
     is_enable = models.BooleanField(default=True)
@@ -175,6 +179,10 @@ class CoinPackage(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.id}"
+
+    @property
+    def is_featured(self):
+        return self.featured is not None and self.featured > timezone.now()
 
     @property
     def package_price(self):
@@ -303,9 +311,22 @@ class BlockedText(models.Model):
 class AllowedGateway(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
-    version_name = models.CharField(_('version_name'), max_length=50, unique=True)
+    version_pattern = models.CharField(_("pattern"), max_length=120)
     gateways_code = ArrayField(models.CharField(verbose_name=_('code'), max_length=10))
 
     class Meta:
         verbose_name = _("Allowed Gateway")
         verbose_name_plural = _('Allowed Gateways')
+
+    @classmethod
+    def get_gateways_by_version_name(cls, version_name):
+        gateways = cache.get("gateways", [])
+        allowed_gateways = []
+        for gw in cls.objects.all():
+            if re.match(gw.version_pattern, version_name):
+                allowed_gateways = gw.gateways_code
+                break
+
+        for gateway in gateways:
+            if gateway['code'] in allowed_gateways:
+                yield gateway

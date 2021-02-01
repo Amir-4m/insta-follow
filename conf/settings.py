@@ -37,9 +37,10 @@ INSTALLED_APPS = [
     'apps.contents',
     'apps.config',
     'apps.instagram_app',
+
     'rest_framework',
     'drf_yasg',
-    'django_celery_beat',
+    # 'django_celery_beat',
     'tinymce',
 
     'django.contrib.admin',
@@ -246,9 +247,11 @@ PAYMENT_API_URL = config('PAYMENT_API_URL', default='')
 PAYMENT_SERVICE_SECRET = config('PAYMENT_SERVICE_SECRET', default='')
 MONITOR_TOKEN = config('MONITOR_TOKEN', default='')
 USER_PENALTY_AMOUNT = config('USER_PENALTY_AMOUNT', default=2, cast=int)
+PENALTY_CHECK_HOUR = config('PENALTY_CHECK_HOUR', default=48, cast=int)
 
-FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=100000, cast=int)
+ORDER_TARGET_RATIO = config('ORDER_TARGET_RATIO', default=100, cast=int)
 
+FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=1000, cast=int)
 MAXIMUM_COIN_TRANSFER = config('MAXIMUM_COIN_TRANSFER', default=1000, cast=int)
 DAILY_TRANSFER_LIMIT = config('DAILY_TRANSFER_LIMIT', default=2, cast=int)
 COIN_TRANSFER_FEE = config('COIN_TRANSFER_FEE', default=5, cast=int)
@@ -274,6 +277,7 @@ COIN_DAILY_REWARD_AMOUNT = config('COIN_DAILY_REWARD_AMOUNT', default=10, cast=i
 
 COIN_AD_VIEW_REWARD_AMOUNT = config('COIN_AD_VIEW_REWARD_AMOUNT', default=2, cast=int)
 COIN_AD_CLICKED_REWARD_AMOUNT = config('COIN_AD_CLICKED_REWARD_AMOUNT', default=5, cast=int)
+AD_CACHE_EXPIRY = config('AD_CACHE_EXPIRY', default=120, cast=int)
 
 if DEVEL is False:
     import sentry_sdk

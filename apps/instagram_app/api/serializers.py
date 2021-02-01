@@ -1,17 +1,17 @@
 import logging
 import re
-
 import requests
+
 from django.conf import settings
-from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError, ParseError
+from rest_framework.exceptions import ValidationError
 
+from apps.instagram_app.tasks import check_order_validity
 from apps.instagram_app.models import (
     UserInquiry, CoinTransaction, Order,
     InstaAction, Device, CoinPackage,
@@ -19,7 +19,8 @@ from apps.instagram_app.models import (
     ReportAbuse, BlockWordRegex, BlockedText,
     AllowedGateway
 )
-from apps.instagram_app.services import CustomService
+
+# from apps.instagram_app.services import CustomService
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,8 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
             response = requests.get(
                 url=f'https://i.instagram.com/api/v1/users/{user_id}/info/',
                 cookies={'sessionid': session_id},
-                headers={'User-Agent': user_agent}
+                headers={'User-Agent': user_agent},
+                timeout=(3.05, 9)
             )
             temp = response.json()['user']
         except Exception as e:
@@ -58,10 +60,10 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        username = validated_data['instagram_username']
+        username = validated_data['instagram_username'].lower()
         user_id = validated_data['instagram_user_id']
         session_id = validated_data['session_id']
-        page, _created = InstaPage.objects.get_or_create(
+        page, _created = InstaPage.objects.update_or_create(
             instagram_user_id=user_id,
             defaults={
                 "instagram_username": username,
@@ -138,7 +140,7 @@ class OrderSerializer(serializers.ModelSerializer):
         insta_action = validated_data.get('action')
         target_no = validated_data.get('target_no')
         comments = validated_data.get('comments')
-        instagram_username = validated_data.get('instagram_username')
+        instagram_username = validated_data['instagram_username'].lower()
         media_properties = validated_data.get('media_properties')
 
         if insta_action.pk == InstaAction.ACTION_FOLLOW:
@@ -187,7 +189,9 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class UserInquirySerializer(serializers.ModelSerializer):
+    check = serializers.BooleanField(default=False, write_only=True)
     page = serializers.ReadOnlyField(source='page.instagram_username')
+    earned_coin = serializers.ReadOnlyField(source='order.action.action_value')
     done_id = serializers.PrimaryKeyRelatedField(
         write_only=True,
         queryset=Order.objects.all(),
@@ -197,8 +201,13 @@ class UserInquirySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserInquiry
-        fields = ('page', 'order', 'done_id', 'status')
+        fields = ('page', 'order', 'done_id', 'status', 'earned_coin', 'check')
         extra_kwargs = {'order': {'required': False}}
+
+    def validate_status(self, value):
+        if value not in (UserInquiry.STATUS_REFUSED, UserInquiry.STATUS_VALIDATED):
+            raise ValidationError(detail={'detail': _('status not correct!')})
+        return value
 
     def validate(self, attrs):
         order = attrs.get('order', attrs.pop('done_id', None))
@@ -211,21 +220,25 @@ class UserInquirySerializer(serializers.ModelSerializer):
                 order__entity_id=order.entity_id,
                 page=page
         ).exists():
-            raise ValidationError(detail={'detail': _('order with this id already has been done by this page !')})
+            raise ValidationError(detail={'detail': _('order with this id already has been done by this page!')})
         attrs.update({'order': order, 'page_id': page.id})
         return attrs
 
     def create(self, validated_data):
         page = self.context['request'].auth['page']
         order = validated_data['order']
+        check = validated_data.pop('check')
 
         try:
-            user_inquiry = super(UserInquirySerializer, self).create(validated_data)
+            user_inquiry = super().create(validated_data)
         except Exception as e:
             logger.error(f'error in creating inquiry for page {page.id} with order {order.id}: {e}')
             raise ValidationError(detail={'detail': _(f'error occurred while creating inquiry. try again later.')})
 
-        if order.owner != page and order.instagram_username != page.instagram_username:
+        if check is True:
+            check_order_validity.delay(order.pk)
+
+        if user_inquiry.status == UserInquiry.STATUS_VALIDATED and order.owner != page and order.instagram_username != page.instagram_username:
             CoinTransaction.objects.create(
                 page=user_inquiry.page,
                 inquiry=user_inquiry,
@@ -254,9 +267,14 @@ class InstaActionSerializer(serializers.ModelSerializer):
 
 
 class CoinPackageSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = CoinPackage
-        fields = ('id', 'name', 'sku', 'amount', 'price', 'is_enable', 'featured', 'price_offer', 'amount_offer')
+        fields = (
+            'id', 'name', 'sku', 'amount',
+            'price', 'is_enable', 'is_featured',
+            'featured', 'price_offer', 'amount_offer'
+        )
 
 
 class CoinPackageOrderSerializer(serializers.ModelSerializer):
@@ -282,15 +300,9 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
             return gateways_list
 
         try:
-            codes = cache.get("gateway_codes")
-            allowed_gateways = AllowedGateway.objects.get(version_name=obj.version_name)
-            for code in codes:
-                if code in allowed_gateways.gateways_code:
-                    gateways_list.append(code)
+            gateways_list = list(AllowedGateway.get_gateways_by_version_name(obj.version_name))
         except Exception as e:
-            logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
-            gateways_list.clear()
-
+            logger.error(f"getting gateways list failed in creating package order: {e}")
         return gateways_list
 
 
@@ -338,14 +350,14 @@ class CoinTransferSerializer(serializers.ModelSerializer):
             raise ValidationError(detail={'detail': _("you've reached today's transfer limit!")})
         if amount > settings.MAXIMUM_COIN_TRANSFER or amount <= 0:
             raise ValidationError(detail={'detail': _("Transfer amount is invalid!")})
-        if not InstaPage.objects.filter(instagram_username=username).exists():
+        if not InstaPage.objects.filter(instagram_username__iexact=username).exists():
             raise ValidationError(detail={'detail': _('Target page does not exists')})
         return attrs
 
     def create(self, validated_data):
         sender = validated_data.get('sender')
         real_amount = validated_data['amount']
-        target = validated_data['to_page']
+        target = validated_data['to_page'].lower()
         fee_amount = real_amount + settings.COIN_TRANSFER_FEE
         if sender.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet'] < fee_amount:
             raise ValidationError(detail={'detail': _("Transfer amount is higher than your coin balance!")})
