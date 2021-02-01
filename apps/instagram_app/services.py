@@ -30,9 +30,9 @@ class InstagramAppService(object):
         try:
             header = {'Authorization': settings.MONITOR_TOKEN}
             if method.lower() == 'get':
-                response = requests.get(url=url, headers=header, params=params)
+                response = requests.get(url=url, headers=header, params=params, timeout=(3.05, 9))
             elif method.lower() == 'post':
-                response = requests.post(url=url, headers=header, data=data)
+                response = requests.post(url=url, headers=header, data=data, timeout=(3.05, 9))
             else:
                 return None
             return response
@@ -122,14 +122,15 @@ class InstagramAppService(object):
             response = requests.get(
                 url=url,
                 cookies={'sessionid': page.session_id},
-                headers={'User-Agent': f'{timezone.now().isoformat()}'}
+                headers={'User-Agent': f'{timezone.now().isoformat()}'},
+                timeout=(3.05, 9)
             )
             response.raise_for_status()
             r_json = response.json()
+            result = r_json['graphql']['user']['is_private']
         except Exception as e:
             logger.error(f"getting page info failed {page.instagram_username}: {e}")
             return None
-        result = r_json['graphql']['user']['is_private']
         return result
 
 
@@ -146,7 +147,7 @@ class CustomService(object):
             'post': requests.post
         }
 
-        response = methods[method](f"{settings.PAYMENT_API_URL}{endpoint}/", headers=headers, json=data)
+        response = methods[method](f"{settings.PAYMENT_API_URL}{endpoint}/", headers=headers, json=data, timeout=(3.05, 9))
         response.raise_for_status()
         return response
 
