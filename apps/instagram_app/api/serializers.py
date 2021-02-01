@@ -1,7 +1,7 @@
 import logging
 import re
-
 import requests
+
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Sum
@@ -42,7 +42,8 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
             response = requests.get(
                 url=f'https://i.instagram.com/api/v1/users/{user_id}/info/',
                 cookies={'sessionid': session_id},
-                headers={'User-Agent': user_agent}
+                headers={'User-Agent': user_agent},
+                timeout=(3.05, 9)
             )
             temp = response.json()['user']
         except Exception as e:
