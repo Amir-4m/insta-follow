@@ -3,9 +3,8 @@ import logging
 from django.conf import settings
 from django.db import transaction
 from django.urls import reverse
-from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from django.db.models import Sum, Q
+from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -30,7 +29,7 @@ from .serializers import (
     PackageOrderGateWaySerializer,
 )
 from ..services import CustomService
-from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination, CoinPackageOrderPagination
+from ..pagination import CoinTransactionPagination, OrderPagination, CoinPackageOrderPagination
 from apps.instagram_app.models import (
     InstaAction, Order, UserInquiry,
     CoinTransaction, Device, CoinPackage,
@@ -38,8 +37,20 @@ from apps.instagram_app.models import (
     ReportAbuse,
     AllowedGateway
 )
+from apps.instagram_app.tasks import check_order_validity
 
 logger = logging.getLogger(__name__)
+
+
+class PrivateAccount(views.APIView):
+    authentication_classes = (PageAuthentication,)
+
+    def get(self, request, *args, **kwargs):
+        page = request.auth['page']
+        orders = Order.objects.filter(owner=page, action__action_type=InstaAction.ACTION_FOLLOW, is_enable=True)
+        for order in orders:
+            check_order_validity.delay(order.pk)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class LoginVerification(generics.CreateAPIView):
@@ -369,22 +380,10 @@ class GatewayAPIView(views.APIView):
         version_name = request.query_params.get('version_name')
         if version_name is None:
             raise ValidationError(detail={'detail': _('version must be set in query params!')})
-
-        gateways_list = []
         try:
-            response = CustomService.payment_request('gateways', 'get')
-            data = response.json()
-            allowed_gateways = AllowedGateway.objects.get(version_name=version_name)
-            for gateway in data:
-                if gateway['code'] in allowed_gateways.gateways_code:
-                    gateways_list.append(gateway)
-
-        except AllowedGateway.DoesNotExist as e:
-            logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
-            raise ValidationError(detail={'detail': _('no allowed gateway found!')})
-
+            gateways_list = list(AllowedGateway.get_gateways_by_version_name(version_name))
         except Exception as e:
-            logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
-            gateways_list.clear()
-            raise ValidationError(detail={'detail': _('error in getting gateway')})
+            logger.error(f"error in getting gateways list: {e}")
+            gateways_list = []
+
         return Response(gateways_list)

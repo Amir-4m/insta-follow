@@ -37,9 +37,10 @@ INSTALLED_APPS = [
     'apps.contents',
     'apps.config',
     'apps.instagram_app',
+
     'rest_framework',
     'drf_yasg',
-    'django_celery_beat',
+    # 'django_celery_beat',
     'tinymce',
 
     'django.contrib.admin',

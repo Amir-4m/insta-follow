@@ -18,8 +18,7 @@ from .models import Order, UserInquiry, InstaAction, CoinTransaction, CoinPackag
 
 logger = logging.getLogger(__name__)
 
-# TODO: Review
-"""
+
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(hour='*/17', minute='0')))
 def final_validate_user_inquiries():
@@ -28,14 +27,23 @@ def final_validate_user_inquiries():
         validated_time__isnull=True,
         status=UserInquiry.STATUS_VALIDATED,
         order__action__action_type=InstaAction.ACTION_FOLLOW,
-        order__is_enable = True
+        order__is_enable=True
+    )
+    insta_pages = InstaPage.objects.filter(
+        instagram_user_id__in=user_inquiries.distinct('order__owner__instagram_user_id').values_list('order__owner__instagram_user_id', flat=True)
     )
     order_usernames = {}
-    for username in user_inquiries.order_by('order__instagram_username').distinct('order__instagram_username').values('order__instagram_username'):
+    for page in insta_pages:
+        if InstagramAppService.page_private(page) is True:
+            user_inquiries.filter(order__owner=page).update(validated_time=timezone.now())
+            continue
+
         try:
-            order_usernames[username] = [follower.username for follower in InstagramAppService.get_user_followers(username)]
+            order_usernames[page.instagram_username] = [
+                follower.username for follower in InstagramAppService.get_user_followers(page.session_id, page.instagram_username)
+            ]
         except Exception as e:
-            logger.error(f"final inquiry validation for order {username} got exception: {e}")
+            logger.error(f"order followers `{page.instagram_username}` got exception: {type(e)} - {e}")
             continue
 
     for inquiry in user_inquiries:
@@ -44,13 +52,12 @@ def final_validate_user_inquiries():
                 inquiry.status = UserInquiry.STATUS_REJECTED
                 amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
                 description = _("penalty")
-                transaction_type = CoinTransaction.TYPE_PENALTY
                 CoinTransaction.objects.create(
                     page=inquiry.page,
                     inquiry=inquiry,
                     amount=amount,
                     description=description,
-                    transaction_type=transaction_type
+                    transaction_type=CoinTransaction.TYPE_PENALTY
                 )
             else:
                 inquiry.validated_time = timezone.now()
@@ -58,8 +65,11 @@ def final_validate_user_inquiries():
         except Exception as e:
             logger.error(f"validating inquiry {inquiry.id} failed due to : {e}")
 
-    # reactivating orders, which lost their achieved followers
-    Order.objects.annotate(
+
+# PERIODIC TASK
+@periodic_task(run_every=(crontab(minute='*/5')))
+def update_orders_achieved_number():
+    q = Order.objects.filter(is_enable=True).annotate(
         achived_no=Sum(
             Case(
                 When(
@@ -68,36 +78,24 @@ def final_validate_user_inquiries():
             ),
             output_field=IntegerField()
         ),
-    ).filter(
-        achived_no__lt=F('target_no') * settings.ORDER_TARGET_RATIO / 100,
-        is_enable=False,
-        action=InstaAction.ACTION_FOLLOW,
-        updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
-    ).update(
-        is_enable=True,
-        description=_('order enabled properly.')
     )
-"""
-
-
-# PERIODIC TASK
-@periodic_task(run_every=(crontab(minute='*/5')))
-def update_orders_achieved_number():
     try:
-        Order.objects.filter(is_enable=True).annotate(
-            achived_no=Sum(
-                Case(
-                    When(
-                        user_inquiries__status=UserInquiry.STATUS_VALIDATED, then=1
-                    )
-                ),
-                output_field=IntegerField()
-            ),
-        ).filter(
+        q.filter(
             achived_no__gte=F('target_no')
         ).update(
             is_enable=False,
             description=_("order completed")
+        )
+
+        # reactivating orders, which lost their achieved followers
+        q.filter(
+            achived_no__lt=F('target_no') * settings.ORDER_TARGET_RATIO / 100,
+            is_enable=False,
+            action=InstaAction.ACTION_FOLLOW,
+            updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
+        ).update(
+            is_enable=True,
+            description=_('order enabled properly.')
         )
     except Exception as e:
         logger.error(f"updating orders achieved number got exception: {e}")
@@ -122,18 +120,18 @@ def update_expired_featured_packages():
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(minute='*/30')))
 def cache_gateways():
-    codes = []
+    gateways = []
     response = CustomService.payment_request('gateways', 'get')
     data = response.json()
     for gateway in data:
-        codes.append(gateway['code'])
-    cache.set("gateway_codes", codes, None)
+        gateways.append(gateway)
+    cache.set("gateways", gateways, None)
 
 
 @shared_task()
 def check_order_validity(order_id):
     try:
-        order = Order.objects.get(pk=order_id)
+        order = Order.objects.get(pk=order_id, is_enable=True)
     except Order.DoesNotExist:
         logger.error(f'[order check failed]-[id: {order_id}]-[exc: order does not exists!]')
         return
@@ -149,8 +147,7 @@ def check_order_validity(order_id):
         res = r.json()
 
     except requests.exceptions.HTTPError as e:
-        logger.warning(
-            f'[order invalid]-[id: {order.id}, url: {order.link}]-[status code: {e.response.status_code}]')
+        logger.warning(f'[order invalid]-[id: {order.id}, url: {order.link}]-[status code: {e.response.status_code}]')
         if e.response.status_code == 404:
             order.is_enable = False
             order.save()
@@ -165,3 +162,25 @@ def check_order_validity(order_id):
         else:
             order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
             order.save()
+
+
+@periodic_task(run_every=(crontab(minute=0)))
+def check_orders_media():
+    orders = Order.objects.filter(
+        is_enable=True,
+        action__action_type__in=(InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT)
+    ).order_by('updated_time')
+    for order in orders:
+        # checking post image signature
+        post_url = order.media_properties.get('media_url', '')
+
+        try:
+            r = requests.get(post_url, timeout=(3.05, 9))
+            r.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logger.warning(f'[order media invalid]-[{post_url}]-[status code: {e.response.status_code}]')
+            if e.response.status_code == 429:
+                break
+            check_order_validity.delay(order.id)
+        except Exception as e:
+            logger.error(f'[order media check failed]-[{post_url}]-[exc: {e}]')

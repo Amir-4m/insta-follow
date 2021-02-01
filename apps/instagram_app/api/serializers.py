@@ -1,16 +1,15 @@
 import logging
 import re
-
 import requests
+
 from django.conf import settings
-from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError, ParseError
+from rest_framework.exceptions import ValidationError
 
 from apps.instagram_app.tasks import check_order_validity
 from apps.instagram_app.models import (
@@ -20,7 +19,8 @@ from apps.instagram_app.models import (
     ReportAbuse, BlockWordRegex, BlockedText,
     AllowedGateway
 )
-from apps.instagram_app.services import CustomService
+
+# from apps.instagram_app.services import CustomService
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,8 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
             response = requests.get(
                 url=f'https://i.instagram.com/api/v1/users/{user_id}/info/',
                 cookies={'sessionid': session_id},
-                headers={'User-Agent': user_agent}
+                headers={'User-Agent': user_agent},
+                timeout=(3.05, 9)
             )
             temp = response.json()['user']
         except Exception as e:
@@ -266,9 +267,14 @@ class InstaActionSerializer(serializers.ModelSerializer):
 
 
 class CoinPackageSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = CoinPackage
-        fields = ('id', 'name', 'sku', 'amount', 'price', 'is_enable', 'featured', 'price_offer', 'amount_offer')
+        fields = (
+            'id', 'name', 'sku', 'amount',
+            'price', 'is_enable', 'is_featured',
+            'featured', 'price_offer', 'amount_offer'
+        )
 
 
 class CoinPackageOrderSerializer(serializers.ModelSerializer):
@@ -294,15 +300,9 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
             return gateways_list
 
         try:
-            codes = cache.get("gateway_codes")
-            allowed_gateways = AllowedGateway.objects.get(version_name=obj.version_name)
-            for code in codes:
-                if code in allowed_gateways.gateways_code:
-                    gateways_list.append(code)
+            gateways_list = list(AllowedGateway.get_gateways_by_version_name(obj.version_name))
         except Exception as e:
-            logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
-            gateways_list.clear()
-
+            logger.error(f"getting gateways list failed in creating package order: {e}")
         return gateways_list
 
 

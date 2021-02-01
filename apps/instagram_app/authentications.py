@@ -50,6 +50,7 @@ class PageAuthentication(authentication.BaseAuthentication):
         for hour in [0, -1, 1]:
             try:
                 new_dt = dt + timedelta(hours=hour)
+                # this method is only available in python3.6
                 uuid = CryptoService(new_dt.strftime("%d%m%y%H") + new_dt.strftime("%d%m%y%H")).decrypt(token)
                 break
             except UnicodeDecodeError:
