@@ -181,7 +181,6 @@ class CoinPackage(models.Model):
     @property
     def is_featured(self):
         return self.featured is not None and self.featured > timezone.now()
-    is_featured.boolean = True
 
     @property
     def package_price(self):
