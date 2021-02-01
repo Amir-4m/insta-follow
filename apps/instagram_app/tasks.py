@@ -128,7 +128,7 @@ def cache_gateways():
 @shared_task()
 def check_order_validity(order_id):
     try:
-        order = Order.objects.get(pk=order_id)
+        order = Order.objects.get(pk=order_id, is_enable=True)
     except Order.DoesNotExist:
         logger.error(f'[order check failed]-[id: {order_id}]-[exc: order does not exists!]')
         return
@@ -144,8 +144,7 @@ def check_order_validity(order_id):
         res = r.json()
 
     except requests.exceptions.HTTPError as e:
-        logger.warning(
-            f'[order invalid]-[id: {order.id}, url: {order.link}]-[status code: {e.response.status_code}]')
+        logger.warning(f'[order invalid]-[id: {order.id}, url: {order.link}]-[status code: {e.response.status_code}]')
         if e.response.status_code == 404:
             order.is_enable = False
             order.save()
@@ -160,3 +159,25 @@ def check_order_validity(order_id):
         else:
             order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
             order.save()
+
+
+@periodic_task(run_every=(crontab(hour='*/4')))
+def check_orders_media():
+    orders = Order.objects.filter(
+        is_enable=True,
+        action__action_type__in=(InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT)
+    ).order_by('updated_time')
+    for order in orders:
+        # checking post image signature
+        post_url = order.media_properties.get('media_url', '')
+
+        try:
+            r = requests.get(post_url, timeout=(3.05, 9))
+            r.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logger.warning(f'[order media invalid]-[{post_url}]-[status code: {e.response.status_code}]')
+            if e.response.status_code == 429:
+                break
+            check_order_validity.delay(order.id)
+        except Exception as e:
+            logger.error(f'[order media check failed]-[{post_url}]-[exc: {e}]')
