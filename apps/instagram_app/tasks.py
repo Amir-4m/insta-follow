@@ -117,12 +117,12 @@ def update_expired_featured_packages():
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(minute='*/30')))
 def cache_gateways():
-    codes = []
+    gateways = []
     response = CustomService.payment_request('gateways', 'get')
     data = response.json()
     for gateway in data:
-        codes.append(gateway['code'])
-    cache.set("gateway_codes", codes, None)
+        gateways.append(gateway)
+    cache.set("gateways", gateways, None)
 
 
 @shared_task()
