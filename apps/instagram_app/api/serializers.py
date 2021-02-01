@@ -10,7 +10,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError, ParseError
+from rest_framework.exceptions import ValidationError
 
 from apps.instagram_app.tasks import check_order_validity
 from apps.instagram_app.models import (
@@ -20,7 +20,7 @@ from apps.instagram_app.models import (
     ReportAbuse, BlockWordRegex, BlockedText,
     AllowedGateway
 )
-from apps.instagram_app.services import CustomService
+# from apps.instagram_app.services import CustomService
 
 logger = logging.getLogger(__name__)
 
