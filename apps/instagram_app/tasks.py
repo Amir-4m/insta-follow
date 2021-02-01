@@ -30,20 +30,17 @@ def final_validate_user_inquiries():
         order__is_enable=True
     )
     insta_pages = InstaPage.objects.filter(
-        instagram_user_id__in=user_inquiries.distinct('order__owner__instagram_user_id').values_list(
-            'order__owner__instagram_user_id', flat=True)
+        instagram_user_id__in=user_inquiries.distinct('order__owner__instagram_user_id').values_list('order__owner__instagram_user_id', flat=True)
     )
     order_usernames = {}
     for page in insta_pages:
-        if InstagramAppService.page_private(page):
-            user_inquiries.filter(
-                order__owner=page,
-                order__action__action_type=InstaAction.ACTION_FOLLOW,
-            ).update(validated_time=timezone.now())
+        if InstagramAppService.page_private(page) is True:
+            user_inquiries.filter(order__owner=page).update(validated_time=timezone.now())
+            continue
+
         try:
             order_usernames[page.instagram_username] = [
-                follower.username for follower in
-                InstagramAppService.get_user_followers(page.session_id, page.instagram_username)
+                follower.username for follower in InstagramAppService.get_user_followers(page.session_id, page.instagram_username)
             ]
         except Exception as e:
             logger.error(f"order followers `{page.username}` got exception: {type(e)} - {e}")
@@ -55,13 +52,12 @@ def final_validate_user_inquiries():
                 inquiry.status = UserInquiry.STATUS_REJECTED
                 amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
                 description = _("penalty")
-                transaction_type = CoinTransaction.TYPE_PENALTY
                 CoinTransaction.objects.create(
                     page=inquiry.page,
                     inquiry=inquiry,
                     amount=amount,
                     description=description,
-                    transaction_type=transaction_type
+                    transaction_type=CoinTransaction.TYPE_PENALTY
                 )
             else:
                 inquiry.validated_time = timezone.now()

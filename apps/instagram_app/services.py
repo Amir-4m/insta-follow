@@ -118,7 +118,6 @@ class InstagramAppService(object):
     @staticmethod
     def page_private(page):
         url = f'https://www.instagram.com/{page.instagram_username}/?__a=1'
-        result = True
         try:
             response = requests.get(
                 url=url,
@@ -129,7 +128,7 @@ class InstagramAppService(object):
             r_json = response.json()
         except Exception as e:
             logger.error(f"getting page info failed {page.instagram_username}: {e}")
-            return result
+            return None
         result = r_json['graphql']['user']['is_private']
         return result
 
