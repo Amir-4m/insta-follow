@@ -31,7 +31,7 @@ from .serializers import (
     CommentSerializer, CoinTransferSerializer, ReportAbuseSerializer,
     PackageOrderGateWaySerializer,
 )
-from ..services import CustomService
+from ..services import CustomService, GatewayService
 from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination, CoinPackageOrderPagination
 from apps.instagram_app.models import (
     InstaAction, Order, UserInquiry,
@@ -371,21 +371,10 @@ class GatewayAPIView(views.APIView):
         version_name = request.query_params.get('version_name')
         if version_name is None:
             raise ValidationError(detail={'detail': _('version must be set in query params!')})
-
-        gateways_list = []
         try:
-            codes = cache.get("gateway_codes")
-            allowed_gateways = []
-            for gw in AllowedGateway.objects.all():
-                if re.match(gw.version_pattern, version_name) is not None:
-                    allowed_gateways = gw.gateways_code
-                    break
-
-            for code in codes:
-                if code in allowed_gateways:
-                    gateways_list.append(code)
+            gateways_list = list(GatewayService.get_gateways_by_version_name(version_name))
         except Exception as e:
-            logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
-            gateways_list.clear()
+            logger.error(f"error in getting gateways list: {e}")
+            gateways_list = []
 
         return Response(gateways_list)
