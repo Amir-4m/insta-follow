@@ -40,8 +40,20 @@ from apps.instagram_app.models import (
     ReportAbuse,
     AllowedGateway
 )
+from ..tasks import check_order_validity
 
 logger = logging.getLogger(__name__)
+
+
+class PrivateAccount(views.APIView):
+    authentication_classes = (PageAuthentication,)
+
+    def get(self, request, *args, **kwargs):
+        page = self.request.auth['page']
+        orders = Order.objects.filter(owner=page, action__action_type=InstaAction.ACTION_FOLLOW, is_enable=True)
+        for order in orders:
+            check_order_validity.delay(order.pk)
+        return Response({}, status=status.HTTP_202_ACCEPTED)
 
 
 class LoginVerification(generics.CreateAPIView):

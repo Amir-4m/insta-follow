@@ -35,6 +35,11 @@ def final_validate_user_inquiries():
     )
     order_usernames = {}
     for page in insta_pages:
+        if InstagramAppService.page_private(page):
+            user_inquiries.filter(
+                order__owner=page,
+                order__action__action_type=InstaAction.ACTION_FOLLOW,
+            ).update(validated_time=timezone.now())
         try:
             order_usernames[page.instagram_username] = [
                 follower.username for follower in
