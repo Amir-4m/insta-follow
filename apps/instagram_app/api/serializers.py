@@ -11,13 +11,13 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from apps.instagram_app.services import GatewayService
 from apps.instagram_app.tasks import check_order_validity
 from apps.instagram_app.models import (
     UserInquiry, CoinTransaction, Order,
     InstaAction, Device, CoinPackage,
     CoinPackageOrder, InstaPage, Comment,
     ReportAbuse, BlockWordRegex, BlockedText,
+    AllowedGateway
 )
 
 # from apps.instagram_app.services import CustomService
@@ -300,7 +300,7 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
             return gateways_list
 
         try:
-            gateways_list = list(GatewayService.get_gateways_by_version_name(obj.version_name))
+            gateways_list = list(AllowedGateway.get_gateways_by_version_name(obj.version_name))
         except Exception as e:
             logger.error(f"getting gateways list failed in creating package order: {e}")
         return gateways_list

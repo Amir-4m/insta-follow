@@ -31,7 +31,7 @@ from .serializers import (
     CommentSerializer, CoinTransferSerializer, ReportAbuseSerializer,
     PackageOrderGateWaySerializer,
 )
-from ..services import CustomService, GatewayService
+from ..services import CustomService
 from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination, CoinPackageOrderPagination
 from apps.instagram_app.models import (
     InstaAction, Order, UserInquiry,
@@ -372,7 +372,7 @@ class GatewayAPIView(views.APIView):
         if version_name is None:
             raise ValidationError(detail={'detail': _('version must be set in query params!')})
         try:
-            gateways_list = list(GatewayService.get_gateways_by_version_name(version_name))
+            gateways_list = list(AllowedGateway.get_gateways_by_version_name(version_name))
         except Exception as e:
             logger.error(f"error in getting gateways list: {e}")
             gateways_list = []

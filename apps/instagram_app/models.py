@@ -1,4 +1,5 @@
 import logging
+import re
 import uuid
 
 from django.contrib.postgres.fields import ArrayField, JSONField
@@ -6,6 +7,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from django.core.validators import MinValueValidator
 
 logger = logging.getLogger(__name__)
@@ -315,3 +317,16 @@ class AllowedGateway(models.Model):
     class Meta:
         verbose_name = _("Allowed Gateway")
         verbose_name_plural = _('Allowed Gateways')
+
+    @classmethod
+    def get_gateways_by_version_name(cls, version_name):
+        gateways = cache.get("gateways", [])
+        allowed_gateways = []
+        for gw in cls.objects.all():
+            if re.match(gw.version_pattern, version_name):
+                allowed_gateways = gw.gateways_code
+                break
+
+        for gateway in gateways:
+            if gateway['code'] in allowed_gateways:
+                yield gateway
