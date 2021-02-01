@@ -10,7 +10,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError, ParseError
+from rest_framework.exceptions import ValidationError
 
 from apps.instagram_app.tasks import check_order_validity
 from apps.instagram_app.models import (
@@ -20,7 +20,7 @@ from apps.instagram_app.models import (
     ReportAbuse, BlockWordRegex, BlockedText,
     AllowedGateway
 )
-from apps.instagram_app.services import CustomService
+# from apps.instagram_app.services import CustomService
 
 logger = logging.getLogger(__name__)
 
@@ -266,9 +266,15 @@ class InstaActionSerializer(serializers.ModelSerializer):
 
 
 class CoinPackageSerializer(serializers.ModelSerializer):
+    is_featured = serializers.BooleanField(read_only=True, source='is_featured')
+
     class Meta:
         model = CoinPackage
-        fields = ('id', 'name', 'sku', 'amount', 'price', 'is_enable', 'featured', 'price_offer', 'amount_offer')
+        fields = (
+            'id', 'name', 'sku', 'amount',
+            'price', 'is_enable', 'is_featured',
+            'featured', 'price_offer', 'amount_offer'
+        )
 
 
 class CoinPackageOrderSerializer(serializers.ModelSerializer):
@@ -295,9 +301,14 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
 
         try:
             codes = cache.get("gateway_codes")
-            allowed_gateways = AllowedGateway.objects.get(version_name=obj.version_name)
+            allowed_gateways = []
+            for gw in AllowedGateway.objects.all():
+                if re.match(gw.version_pattern, obj.version_name) is not None:
+                    allowed_gateways = gw.gateways_code
+                    break
+
             for code in codes:
-                if code in allowed_gateways.gateways_code:
+                if code in allowed_gateways:
                     gateways_list.append(code)
         except Exception as e:
             logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
