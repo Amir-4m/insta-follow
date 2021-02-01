@@ -7,7 +7,6 @@ import time
 import requests
 
 from django.conf import settings
-from django.core.cache import cache
 from django.db.models.functions import Coalesce
 from django.db.models import F, Sum, Case, When, IntegerField, Q
 from django.utils import timezone
@@ -18,7 +17,7 @@ from Crypto import Random
 from urllib import parse
 from base64 import b64decode, b64encode
 
-from .models import UserInquiry, Order, InstagramAccount, AllowedGateway
+from .models import UserInquiry, Order, InstagramAccount
 
 logger = logging.getLogger(__name__)
 
@@ -193,18 +192,3 @@ class CryptoService:
         enc = enc[16:]
         cipher = AES.new(self.key, AES.MODE_CBC, iv)
         return self.__unpad(cipher.decrypt(enc).decode())
-
-
-class GatewayService(object):
-    @staticmethod
-    def get_gateways_by_version_name(version_name):
-        gateways = cache.get("gateways")
-        allowed_gateways = []
-        for gw in AllowedGateway.objects.all():
-            if re.match(gw.version_pattern, version_name) is not None:
-                allowed_gateways = gw.gateways_code
-                break
-
-        for gateway in gateways:
-            if gateway['code'] in allowed_gateways:
-                yield gateway
