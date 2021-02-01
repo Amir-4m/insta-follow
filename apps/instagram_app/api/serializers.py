@@ -295,9 +295,14 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
 
         try:
             codes = cache.get("gateway_codes")
-            allowed_gateways = AllowedGateway.objects.get(version_name=obj.version_name)
+            allowed_gateways = []
+            for gw in AllowedGateway.objects.all():
+                if re.match(gw.version_pattern, obj.version_name) is not None:
+                    allowed_gateways = gw.gateways_code
+                    break
+
             for code in codes:
-                if code in allowed_gateways.gateways_code:
+                if code in allowed_gateways:
                     gateways_list.append(code)
         except Exception as e:
             logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")

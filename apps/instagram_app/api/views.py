@@ -1,8 +1,10 @@
 import logging
+import re
 
 from django.conf import settings
 from django.db import transaction
 from django.urls import reverse
+from django.core.cache import cache
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import Sum, Q
@@ -372,19 +374,18 @@ class GatewayAPIView(views.APIView):
 
         gateways_list = []
         try:
-            response = CustomService.payment_request('gateways', 'get')
-            data = response.json()
-            allowed_gateways = AllowedGateway.objects.get(version_name=version_name)
-            for gateway in data:
-                if gateway['code'] in allowed_gateways.gateways_code:
-                    gateways_list.append(gateway)
+            codes = cache.get("gateway_codes")
+            allowed_gateways = []
+            for gw in AllowedGateway.objects.all():
+                if re.match(gw.version_pattern, version_name) is not None:
+                    allowed_gateways = gw.gateways_code
+                    break
 
-        except AllowedGateway.DoesNotExist as e:
-            logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
-            raise ValidationError(detail={'detail': _('no allowed gateway found!')})
-
+            for code in codes:
+                if code in allowed_gateways:
+                    gateways_list.append(code)
         except Exception as e:
             logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
             gateways_list.clear()
-            raise ValidationError(detail={'detail': _('error in getting gateway')})
+
         return Response(gateways_list)

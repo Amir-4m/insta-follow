@@ -309,7 +309,7 @@ class BlockedText(models.Model):
 class AllowedGateway(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
-    version_name = models.CharField(_('version_name'), max_length=50, unique=True)
+    version_pattern = models.CharField(_("pattern"), max_length=120)
     gateways_code = ArrayField(models.CharField(verbose_name=_('code'), max_length=10))
 
     class Meta:
