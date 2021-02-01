@@ -43,7 +43,7 @@ def final_validate_user_inquiries():
                 follower.username for follower in InstagramAppService.get_user_followers(page.session_id, page.instagram_username)
             ]
         except Exception as e:
-            logger.error(f"order followers `{page.username}` got exception: {type(e)} - {e}")
+            logger.error(f"order followers `{page.instagram_username}` got exception: {type(e)} - {e}")
             continue
 
     for inquiry in user_inquiries:
