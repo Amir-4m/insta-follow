@@ -1,13 +1,10 @@
 import logging
-import re
 
 from django.conf import settings
 from django.db import transaction
 from django.urls import reverse
-from django.core.cache import cache
-from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from django.db.models import Sum, Q
+from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -32,7 +29,7 @@ from .serializers import (
     PackageOrderGateWaySerializer,
 )
 from ..services import CustomService
-from ..pagination import CoinTransactionPagination, OrderPagination, InquiryPagination, CoinPackageOrderPagination
+from ..pagination import CoinTransactionPagination, OrderPagination, CoinPackageOrderPagination
 from apps.instagram_app.models import (
     InstaAction, Order, UserInquiry,
     CoinTransaction, Device, CoinPackage,
@@ -40,7 +37,7 @@ from apps.instagram_app.models import (
     ReportAbuse,
     AllowedGateway
 )
-from ..tasks import check_order_validity
+from apps.instagram_app.tasks import check_order_validity
 
 logger = logging.getLogger(__name__)
 
