@@ -30,13 +30,15 @@ def final_validate_user_inquiries():
         order__is_enable=True
     )
     insta_pages = InstaPage.objects.filter(
-        instagram_user_id__in=user_inquiries.distinct('order__owner__instagram_user_id').values_list('order__owner__instagram_user_id', flat=True)
+        instagram_user_id__in=user_inquiries.distinct('order__owner__instagram_user_id').values_list(
+            'order__owner__instagram_user_id', flat=True)
     )
     order_usernames = {}
     for page in insta_pages:
         try:
             order_usernames[page.instagram_username] = [
-                follower.username for follower in InstagramAppService.get_user_followers(page.session_id, page.instagram_username)
+                follower.username for follower in
+                InstagramAppService.get_user_followers(page.session_id, page.instagram_username)
             ]
         except Exception as e:
             logger.error(f"order followers `{page.username}` got exception: {type(e)} - {e}")
@@ -161,7 +163,7 @@ def check_order_validity(order_id):
             order.save()
 
 
-@periodic_task(run_every=(crontab(hour='*/4')))
+@periodic_task(run_every=(crontab(minute=0)))
 def check_orders_media():
     orders = Order.objects.filter(
         is_enable=True,
