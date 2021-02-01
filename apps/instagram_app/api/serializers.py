@@ -266,7 +266,6 @@ class InstaActionSerializer(serializers.ModelSerializer):
 
 
 class CoinPackageSerializer(serializers.ModelSerializer):
-    is_featured = serializers.ReadOnlyField(source='is_featured')
 
     class Meta:
         model = CoinPackage
