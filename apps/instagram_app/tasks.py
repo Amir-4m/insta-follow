@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(hour='*/17', minute='0')))
+@periodic_task(run_every=(crontab(hour='*/17', minute='30')))
 def final_validate_user_inquiries():
     user_inquiries = UserInquiry.objects.select_related('order').filter(
         created_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
@@ -36,6 +36,7 @@ def final_validate_user_inquiries():
     for page in insta_pages:
         if InstagramAppService.page_private(page) is True:
             user_inquiries.filter(order__owner=page).update(validated_time=timezone.now())
+            logger.warning(f"page `{page.instagram_username}` is private")
             continue
 
         try:
@@ -43,7 +44,7 @@ def final_validate_user_inquiries():
                 follower.username for follower in InstagramAppService.get_user_followers(page.session_id, page.instagram_username)
             ]
         except Exception as e:
-            logger.error(f"order followers `{page.instagram_username}` got exception: {type(e)} - {e}")
+            logger.error(f"page followers `{page.instagram_username}` got exception: {type(e)} - {str(e)}")
             continue
 
     for inquiry in user_inquiries:
@@ -63,7 +64,7 @@ def final_validate_user_inquiries():
                 inquiry.validated_time = timezone.now()
             inquiry.save()
         except Exception as e:
-            logger.error(f"validating inquiry {inquiry.id} failed due to : {e}")
+            logger.error(f"validating inquiry {inquiry.id} failed due to: {type(e)} - {str(e)}")
 
 
 # PERIODIC TASK
@@ -120,12 +121,8 @@ def update_expired_featured_packages():
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(minute='*/30')))
 def cache_gateways():
-    gateways = []
-    response = CustomService.payment_request('gateways', 'get')
-    data = response.json()
-    for gateway in data:
-        gateways.append(gateway)
-    cache.set("gateways", gateways, None)
+    data = CustomService.payment_request('gateways', 'get')
+    cache.set("gateways", data, None)
 
 
 @shared_task()

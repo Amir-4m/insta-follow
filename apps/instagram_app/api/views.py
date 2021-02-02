@@ -236,7 +236,7 @@ class PurchaseVerificationAPIView(views.APIView):
             order = CoinPackageOrder.objects.select_related('coin_package').get(id=package_order.id)
             if gateway_code == "BAZAAR":
                 try:
-                    response = CustomService.payment_request(
+                    _r = CustomService.payment_request(
                         'purchase/verify',
                         'post',
                         data={
@@ -244,7 +244,7 @@ class PurchaseVerificationAPIView(views.APIView):
                             'purchase_token': purchase_token
                         }
                     )
-                    purchase_verified = response.json()['purchase_verified']
+                    purchase_verified = _r['purchase_verified']
                 except Exception as e:
                     logger.error(f"error calling payment with endpoint purchase/verify and action post: {e}")
                     raise ValidationError(detail={'detail': _('error in verifying purchase')})
@@ -337,7 +337,7 @@ class OrderGateWayAPIView(views.APIView):
             sku = package_order.coin_package.sku
         try:
 
-            order_response = CustomService.payment_request(
+            _r = CustomService.payment_request(
                 'orders',
                 'post',
                 data={
@@ -352,7 +352,7 @@ class OrderGateWayAPIView(views.APIView):
                     }
                 }
             )
-            transaction_id = order_response.json().get('transaction_id')
+            transaction_id = _r.get('transaction_id')
             package_order.transaction_id = transaction_id
             package_order.save()
         except Exception as e:
@@ -369,7 +369,7 @@ class OrderGateWayAPIView(views.APIView):
             logger.error(f"error calling payment with endpoint purchase/gateway and action post: {e}")
             raise ValidationError(detail={'detail': _('error in getting order gateway')})
 
-        return Response(data=response.json())
+        return Response(data=response)
 
 
 class GatewayAPIView(views.APIView):
