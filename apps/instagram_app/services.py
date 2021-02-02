@@ -147,9 +147,9 @@ class CustomService(object):
             'post': requests.post
         }
 
-        response = methods[method](f"{settings.PAYMENT_API_URL}{endpoint}/", headers=headers, json=data, timeout=(3.05, 9))
-        response.raise_for_status()
-        return response
+        _r = methods[method](f"{settings.PAYMENT_API_URL}{endpoint}/", headers=headers, json=data, timeout=(3.05, 9))
+        _r.raise_for_status()
+        return _r.json()
 
     @staticmethod
     def get_or_create_orders(page, action_type, limit=100):
