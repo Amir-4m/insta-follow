@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 class PrivateAccount(views.APIView):
     authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
 
     def get(self, request, *args, **kwargs):
         page = request.auth['page']
