@@ -96,6 +96,15 @@ class Comment(models.Model):
 
 # Inventory
 class Order(models.Model):
+    STATUS_ENABLE = 0
+    STATUS_COMPLETE = 1
+    STATUS_DISABLE = 2
+
+    STATUS_CHOICES = [
+        (STATUS_ENABLE, _('Order Enabled')),
+        (STATUS_COMPLETE, _('Order Completed')),
+        (STATUS_DISABLE, _('Order Disabled')),
+    ]
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
@@ -107,6 +116,7 @@ class Order(models.Model):
     comments = ArrayField(models.TextField(max_length=1024), null=True, blank=True)
     description = models.TextField(_("description"), blank=True, default=_('order enabled properly.'))
     is_enable = models.BooleanField(_("is enable"), default=True)
+    order_status = models.IntegerField(_('order status'), choices=STATUS_CHOICES, default=STATUS_ENABLE)
     owner = models.ForeignKey(InstaPage, related_name='orders', on_delete=models.CASCADE)
     track_id = models.CharField(max_length=40, blank=True)
 
