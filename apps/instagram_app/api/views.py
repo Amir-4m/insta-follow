@@ -262,7 +262,6 @@ class PurchaseVerificationAPIView(views.APIView):
                 amount=ct_amount,
                 package=order,
                 transaction_type=CoinTransaction.TYPE_PURCHASE,
-                description="coin package has been purchased."
             )
         return Response({'purchase_verified': purchase_verified})
 

@@ -41,7 +41,6 @@ class DailyRewardAPIView(views.APIView):
         else:
             CoinTransaction.objects.create(
                 page=page,
-                description="daily reward",
                 amount=reward_amount,
                 transaction_type=CoinTransaction.TYPE_DAILY_REWARD
             )
@@ -76,7 +75,6 @@ class TapsellRewardAPIView(views.APIView):
             CoinTransaction.objects.create(
                 page=page,
                 amount=reward,
-                description='ad reward',
                 transaction_type=CoinTransaction.TYPE_AD_REWARD
             )
             AdReward.objects.create(
@@ -109,7 +107,6 @@ class AdViewVerificationViewsSet(viewsets.ViewSet):
         CoinTransaction.objects.create(
             page=page,
             amount=settings.COIN_AD_VIEW_REWARD_AMOUNT,
-            description='ad reward',
             transaction_type=CoinTransaction.TYPE_AD_REWARD
         )
         AdReward.objects.create(

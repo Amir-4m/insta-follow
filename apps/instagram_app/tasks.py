@@ -54,12 +54,10 @@ def final_validate_user_inquiries():
             if inquiry.page.instagram_username not in order_usernames[inquiry.order.instagram_username]:
                 inquiry.status = UserInquiry.STATUS_REJECTED
                 amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
-                description = _("penalty")
                 CoinTransaction.objects.create(
                     page=inquiry.page,
                     inquiry=inquiry,
                     amount=amount,
-                    description=description,
                     transaction_type=CoinTransaction.TYPE_PENALTY
                 )
             else:
@@ -88,7 +86,6 @@ def update_orders_achieved_number():
         ).update(
             order_status=Order.STATUS_COMPLETE,
             is_enable=False,
-            description="order completed"
         )
 
         # reactivating orders, which lost their achieved followers
@@ -99,7 +96,6 @@ def update_orders_achieved_number():
             updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
         ).update(
             is_enable=True,
-            description='order enabled properly.',
             order_status=Order.STATUS_ENABLE
         )
     except Exception as e:

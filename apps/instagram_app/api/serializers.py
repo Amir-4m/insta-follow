@@ -244,7 +244,6 @@ class UserInquirySerializer(serializers.ModelSerializer):
                 page=user_inquiry.page,
                 inquiry=user_inquiry,
                 amount=user_inquiry.order.action.action_value,
-                description="%s" % user_inquiry.order.action.get_action_type_display(),
                 transaction_type=CoinTransaction.TYPE_INQUIRY
             )
 
@@ -372,14 +371,12 @@ class CoinTransferSerializer(serializers.ModelSerializer):
             sender_transaction = CoinTransaction.objects.create(
                 page=sender_page,
                 amount=-fee_amount,
-                description="transfer to page %s" % target_page,
                 to_page=target_page,
                 transaction_type=CoinTransaction.TYPE_TRANSFER
             )
             CoinTransaction.objects.create(
                 page=target_page,
                 amount=real_amount,
-                description="transfer from page %s" % sender_page,
                 from_page=sender_page,
                 transaction_type=CoinTransaction.TYPE_TRANSFER
 

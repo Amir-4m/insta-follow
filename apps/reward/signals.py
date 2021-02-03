@@ -30,7 +30,6 @@ def reward_user(sender, query, **kwargs):
     CoinTransaction.objects.create(
         page=page,
         amount=reward_amount,
-        description="ad reward",
         transaction_type=CoinTransaction.TYPE_AD_REWARD
     )
     AdReward.objects.create(
