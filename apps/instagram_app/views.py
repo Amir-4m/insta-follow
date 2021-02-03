@@ -44,7 +44,7 @@ class PaymentView(View):
                 amount=ct_amount,
                 package=order,
                 transaction_type=CoinTransaction.TYPE_PURCHASE,
-                description=_("coin package has been purchased.")
+                description="coin package has been purchased."
             )
         context = {
             "redirect_url": order.redirect_url,
