@@ -86,17 +86,17 @@ class DeviceSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     shortcode = serializers.CharField(required=False)
-    description = serializers.ReadOnlyField(source='get_status')
+    description = serializers.ReadOnlyField(source='get_status_display')
 
     class Meta:
         model = Order
         fields = (
             'id', 'entity_id', 'action',
             'target_no', 'achieved_number_approved', 'link',
-            'instagram_username', 'is_enable', 'description',
+            'instagram_username', 'is_enable', 'description', 'status',
             'comments', 'shortcode', 'media_properties', 'created_time'
         )
-        read_only_fields = ('is_enable', 'achieved_number_approved', 'description', 'link', 'created_time')
+        read_only_fields = ('is_enable', 'achieved_number_approved', 'description', 'status', 'link', 'created_time')
 
     def validate(self, attrs):
         action_value = attrs.get('action')
@@ -163,9 +163,15 @@ class OrderSerializer(serializers.ModelSerializer):
                 transaction_type=CoinTransaction.TYPE_ORDER
             )
 
-            if Order.objects.filter(owner=page, entity_id=entity_id, is_enable=True, action=insta_action).exists():
+            if Order.objects.filter(
+                    owner=page,
+                    entity_id=entity_id,
+                    status=Order.STATUS_ENABLE,
+                    action=insta_action
+            ).exists():
+
                 order = Order.objects.select_related('owner', 'action').select_for_update().filter(
-                    owner=page, entity_id=entity_id, is_enable=True, action=insta_action
+                    owner=page, entity_id=entity_id, status=Order.STATUS_ENABLE, action=insta_action
                 ).first()
 
                 order.target_no += target_no
