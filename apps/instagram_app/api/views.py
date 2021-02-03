@@ -208,13 +208,13 @@ class CoinPackageOrderViewSet(
 ):
     authentication_classes = (PageAuthentication,)
     permission_classes = (PagePermission,)
-    queryset = CoinPackageOrder.objects.all()
+    queryset = CoinPackageOrder.objects.filter(is_paid=True)
     serializer_class = CoinPackageOrderSerializer
     pagination_class = CoinPackageOrderPagination
 
     def get_queryset(self):
-        qs = super(CoinPackageOrderViewSet, self).get_queryset()
-        return qs.filter(page=self.request.auth['page']).order_by('-created_time')
+        qs = super().get_queryset()
+        return qs.filter(page=self.request.auth['page']).order_by('-pk')
 
     def perform_create(self, serializer):
         serializer.save(page=self.request.auth['page'])
