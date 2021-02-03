@@ -41,7 +41,6 @@ class UserInquiryModelAdmin(admin.ModelAdmin):
     list_select_related = ['order', 'page']
     readonly_fields = ('validated_time', 'page', 'order')
     list_filter = ('status', 'order__action')
-    sortable_by = ('-created_time',)
     search_fields = ('page__instagram_username',)
 
 
@@ -53,7 +52,6 @@ class InstaActionModelAdmin(admin.ModelAdmin):
 @admin.register(CoinPackage)
 class CoinPackageModelAdmin(admin.ModelAdmin):
     list_display = ('name', 'amount', 'price', 'is_featured', 'updated_time', 'created_time')
-    sortable_by = ('-created_time', 'price')
 
 
 @admin.register(InstagramAccount)
