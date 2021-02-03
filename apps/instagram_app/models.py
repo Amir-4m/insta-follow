@@ -96,6 +96,10 @@ class Comment(models.Model):
 
 # Inventory
 class Order(models.Model):
+    STATUS_ENABLE = _('Order Enabled')
+    STATUS_COMPLETE = _('Order Completed')
+    STATUS_DISABLE = _('Order Disabled')
+
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
@@ -105,7 +109,7 @@ class Order(models.Model):
     entity_id = models.BigIntegerField(_('entity ID'), null=True, db_index=True)
     instagram_username = models.CharField(_("instagram username"), max_length=120)
     comments = ArrayField(models.TextField(max_length=1024), null=True, blank=True)
-    description = models.TextField(_("description"), blank=True, default=_('order enabled properly.'))
+    description = models.TextField(_("description"), blank=True)
     is_enable = models.BooleanField(_("is enable"), default=True)
     owner = models.ForeignKey(InstaPage, related_name='orders', on_delete=models.CASCADE)
     track_id = models.CharField(max_length=40, blank=True)
@@ -115,19 +119,36 @@ class Order(models.Model):
         verbose_name = _("Order")
         verbose_name_plural = _("Orders")
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._achieved = None
+
     def __str__(self):
         return f"{self.id} - {self.action}"
 
+    @property
     def achieved_number_approved(self):
-        return UserInquiry.objects.filter(
-            order=self,
-            status=UserInquiry.STATUS_VALIDATED,
-            # validated_time__isnull=False,
-        ).count()
+        if self._achieved is None:
+            self._achieved = UserInquiry.objects.filter(
+                order=self,
+                status=UserInquiry.STATUS_VALIDATED,
+                # validated_time__isnull=False,
+            ).count()
+        return self._achieved
 
     def clean(self):
         if self.action in [InstaAction.ACTION_FOLLOW, InstaAction.ACTION_LIKE] and self.comments is not None:
             raise ValidationError(_("Comment is not allowed in like and follow method!"))
+
+    @property
+    def get_status(self):
+        if self.is_enable:
+            res = self.STATUS_ENABLE
+        elif self.achieved_number_approved() >= self.target_no:
+            res = self.STATUS_COMPLETE
+        else:
+            res = self.STATUS_DISABLE
+        return res
 
 
 class UserInquiry(models.Model):

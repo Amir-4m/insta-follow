@@ -41,7 +41,8 @@ def final_validate_user_inquiries():
 
         try:
             order_usernames[page.instagram_username] = [
-                follower.username for follower in InstagramAppService.get_user_followers(page.session_id, page.instagram_username)
+                follower.username for follower in
+                InstagramAppService.get_user_followers(page.session_id, page.instagram_username)
             ]
         except Exception as e:
             logger.error(f"page followers `{page.instagram_username}` got exception: {type(e)} - {str(e)}")
@@ -52,12 +53,10 @@ def final_validate_user_inquiries():
             if inquiry.page.instagram_username not in order_usernames[inquiry.order.instagram_username]:
                 inquiry.status = UserInquiry.STATUS_REJECTED
                 amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
-                description = _("penalty")
                 CoinTransaction.objects.create(
                     page=inquiry.page,
                     inquiry=inquiry,
                     amount=amount,
-                    description=description,
                     transaction_type=CoinTransaction.TYPE_PENALTY
                 )
             else:
@@ -85,7 +84,6 @@ def update_orders_achieved_number():
             achived_no__gte=F('target_no')
         ).update(
             is_enable=False,
-            description=_("order completed")
         )
 
         # reactivating orders, which lost their achieved followers
@@ -96,7 +94,6 @@ def update_orders_achieved_number():
             updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
         ).update(
             is_enable=True,
-            description=_('order enabled properly.')
         )
     except Exception as e:
         logger.error(f"updating orders achieved number got exception: {e}")
@@ -147,7 +144,6 @@ def check_order_validity(order_id):
         logger.warning(f'[order invalid]-[id: {order.id}, url: {order.link}]-[status code: {e.response.status_code}]')
         if e.response.status_code == 404:
             order.is_enable = False
-            order.save()
 
     except Exception as e:
         logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {type(e)}, {str(e)}]')
@@ -158,7 +154,8 @@ def check_order_validity(order_id):
             order.is_enable = not res['graphql']['user'].get('is_private', False)
         else:
             order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
-            order.save()
+
+    order.save()
 
 
 @periodic_task(run_every=(crontab(minute=0)))

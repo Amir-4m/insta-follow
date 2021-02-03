@@ -86,6 +86,7 @@ class DeviceSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     shortcode = serializers.CharField(required=False)
+    description = serializers.ReadOnlyField(source='get_status')
 
     class Meta:
         model = Order
@@ -243,7 +244,6 @@ class UserInquirySerializer(serializers.ModelSerializer):
                 page=user_inquiry.page,
                 inquiry=user_inquiry,
                 amount=user_inquiry.order.action.action_value,
-                description=_("%s") % user_inquiry.order.action.get_action_type_display(),
                 transaction_type=CoinTransaction.TYPE_INQUIRY
             )
 
@@ -255,6 +255,8 @@ class UserInquirySerializer(serializers.ModelSerializer):
 
 
 class CoinTransactionSerializer(serializers.ModelSerializer):
+    description = serializers.ReadOnlyField(source='get_transaction_type_display')
+
     class Meta:
         model = CoinTransaction
         exclude = ('page',)
@@ -267,7 +269,6 @@ class InstaActionSerializer(serializers.ModelSerializer):
 
 
 class CoinPackageSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = CoinPackage
         fields = (
@@ -370,14 +371,12 @@ class CoinTransferSerializer(serializers.ModelSerializer):
             sender_transaction = CoinTransaction.objects.create(
                 page=sender_page,
                 amount=-fee_amount,
-                description=_("transfer to page %s") % target_page,
                 to_page=target_page,
                 transaction_type=CoinTransaction.TYPE_TRANSFER
             )
             CoinTransaction.objects.create(
                 page=target_page,
                 amount=real_amount,
-                description=_("transfer from page %s") % sender_page,
                 from_page=sender_page,
                 transaction_type=CoinTransaction.TYPE_TRANSFER
 
