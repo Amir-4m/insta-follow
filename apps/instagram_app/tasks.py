@@ -147,7 +147,6 @@ def check_order_validity(order_id):
         logger.warning(f'[order invalid]-[id: {order.id}, url: {order.link}]-[status code: {e.response.status_code}]')
         if e.response.status_code == 404:
             order.is_enable = False
-            order.save()
 
     except Exception as e:
         logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {type(e)}, {str(e)}]')
@@ -158,7 +157,8 @@ def check_order_validity(order_id):
             order.is_enable = not res['graphql']['user'].get('is_private', False)
         else:
             order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
-            order.save()
+
+    order.save()
 
 
 @periodic_task(run_every=(crontab(minute=0)))

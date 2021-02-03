@@ -86,7 +86,7 @@ class DeviceSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     shortcode = serializers.CharField(required=False)
-    description = serializers.ReadOnlyField(source='get_order_status_display')
+    description = serializers.ReadOnlyField(source='get_status')
 
     class Meta:
         model = Order
