@@ -86,12 +86,12 @@ class DeviceSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     shortcode = serializers.CharField(required=False)
-    order_status = serializers.ReadOnlyField(source='get_order_status_display')
+    description = serializers.ReadOnlyField(source='get_order_status_display')
 
     class Meta:
         model = Order
         fields = (
-            'id', 'entity_id', 'action', 'order_status',
+            'id', 'entity_id', 'action',
             'target_no', 'achieved_number_approved', 'link',
             'instagram_username', 'is_enable', 'description',
             'comments', 'shortcode', 'media_properties', 'created_time'
@@ -256,7 +256,7 @@ class UserInquirySerializer(serializers.ModelSerializer):
 
 
 class CoinTransactionSerializer(serializers.ModelSerializer):
-    status = serializers.ReadOnlyField(source='get_transaction_type_display')
+    description = serializers.ReadOnlyField(source='get_transaction_type_display')
 
     class Meta:
         model = CoinTransaction
