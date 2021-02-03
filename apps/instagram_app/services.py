@@ -153,7 +153,7 @@ class CustomService(object):
 
     @staticmethod
     def get_or_create_orders(page, action_type, limit=100):
-        orders = Order.objects.filter(is_enable=True, action=action_type).annotate(
+        orders = Order.objects.filter(status=Order.STATUS_ENABLE, action=action_type).annotate(
             remaining=F('target_no') - Coalesce(Sum(
                 Case(
                     When(

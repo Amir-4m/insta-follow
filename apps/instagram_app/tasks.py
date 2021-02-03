@@ -27,10 +27,11 @@ def final_validate_user_inquiries():
         validated_time__isnull=True,
         status=UserInquiry.STATUS_VALIDATED,
         order__action__action_type=InstaAction.ACTION_FOLLOW,
-        order__is_enable=True
+        order__status=Order.STATUS_ENABLE
     )
     insta_pages = InstaPage.objects.filter(
-        instagram_user_id__in=user_inquiries.distinct('order__owner__instagram_user_id').values_list('order__owner__instagram_user_id', flat=True)
+        instagram_user_id__in=user_inquiries.distinct('order__owner__instagram_user_id').values_list(
+            'order__owner__instagram_user_id', flat=True)
     )
     order_usernames = {}
     for page in insta_pages:
@@ -69,7 +70,7 @@ def final_validate_user_inquiries():
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(minute='*/5')))
 def update_orders_achieved_number():
-    q = Order.objects.filter(is_enable=True).annotate(
+    q = Order.objects.filter(status=Order.STATUS_ENABLE).annotate(
         achived_no=Sum(
             Case(
                 When(
@@ -83,17 +84,17 @@ def update_orders_achieved_number():
         q.filter(
             achived_no__gte=F('target_no')
         ).update(
-            is_enable=False,
+            is_enable=Order.STATUS_COMPLETE,
         )
 
         # reactivating orders, which lost their achieved followers
         q.filter(
             achived_no__lt=F('target_no') * settings.ORDER_TARGET_RATIO / 100,
-            is_enable=False,
+            is_enable=Order.STATUS_COMPLETE,
             action=InstaAction.ACTION_FOLLOW,
             updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
         ).update(
-            is_enable=True,
+            is_enable=Order.STATUS_ENABLE,
         )
     except Exception as e:
         logger.error(f"updating orders achieved number got exception: {e}")
@@ -125,7 +126,7 @@ def cache_gateways():
 @shared_task()
 def check_order_validity(order_id):
     try:
-        order = Order.objects.get(pk=order_id, is_enable=True)
+        order = Order.objects.get(pk=order_id, status=Order.STATUS_ENABLE)
     except Order.DoesNotExist:
         logger.error(f'[order check failed]-[id: {order_id}]-[exc: order does not exists!]')
         return
@@ -143,7 +144,7 @@ def check_order_validity(order_id):
     except requests.exceptions.HTTPError as e:
         logger.warning(f'[order invalid]-[id: {order.id}, url: {order.link}]-[status code: {e.response.status_code}]')
         if e.response.status_code == 404:
-            order.is_enable = False
+            order.status = Order.STATUS_DISABLE
 
     except Exception as e:
         logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {type(e)}, {str(e)}]')
@@ -151,7 +152,8 @@ def check_order_validity(order_id):
 
     else:
         if order.action.action_type == InstaAction.ACTION_FOLLOW:
-            order.is_enable = not res['graphql']['user'].get('is_private', False)
+            if res['graphql']['user'].get('is_private', False):
+                order.status = Order.STATUS_DISABLE
         else:
             order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
 
@@ -161,7 +163,7 @@ def check_order_validity(order_id):
 @periodic_task(run_every=(crontab(minute=0)))
 def check_orders_media():
     orders = Order.objects.filter(
-        is_enable=True,
+        status=Order.STATUS_ENABLE,
         action__action_type__in=(InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT)
     ).order_by('updated_time')
     for order in orders:

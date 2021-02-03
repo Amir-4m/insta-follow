@@ -48,7 +48,7 @@ class PrivateAccount(views.APIView):
 
     def get(self, request, *args, **kwargs):
         page = request.auth['page']
-        orders = Order.objects.filter(entity_id=page.instagram_user_id, action__action_type=InstaAction.ACTION_FOLLOW, is_enable=True)
+        orders = Order.objects.filter(entity_id=page.instagram_user_id, action__action_type=InstaAction.ACTION_FOLLOW, status=Order.STATUS_ENABLE)
         for order in orders:
             check_order_validity.delay(order.pk)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -92,7 +92,7 @@ class OrderViewSet(viewsets.GenericViewSet,
     queryset = Order.objects.all()
     pagination_class = OrderPagination
     filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ['is_enable', 'action']
+    filterset_fields = ['is_enable', 'action', 'status']
 
     def get_queryset(self):
         qs = super(OrderViewSet, self).get_queryset()
