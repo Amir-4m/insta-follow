@@ -30,8 +30,7 @@ def final_validate_user_inquiries():
         order__is_enable=True
     )
     insta_pages = InstaPage.objects.filter(
-        instagram_user_id__in=user_inquiries.distinct('order__owner__instagram_user_id').values_list(
-            'order__owner__instagram_user_id', flat=True)
+        instagram_user_id__in=user_inquiries.distinct('order__owner__instagram_user_id').values_list('order__owner__instagram_user_id', flat=True)
     )
     order_usernames = {}
     for page in insta_pages:
@@ -84,7 +83,6 @@ def update_orders_achieved_number():
         q.filter(
             achived_no__gte=F('target_no')
         ).update(
-            order_status=Order.STATUS_COMPLETE,
             is_enable=False,
         )
 
@@ -96,7 +94,6 @@ def update_orders_achieved_number():
             updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
         ).update(
             is_enable=True,
-            order_status=Order.STATUS_ENABLE
         )
     except Exception as e:
         logger.error(f"updating orders achieved number got exception: {e}")
