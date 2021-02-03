@@ -86,6 +86,7 @@ class DeviceSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     shortcode = serializers.CharField(required=False)
+    order_status = serializers.ReadOnlyField(source='get_order_status_display')
 
     class Meta:
         model = Order
@@ -255,6 +256,8 @@ class UserInquirySerializer(serializers.ModelSerializer):
 
 
 class CoinTransactionSerializer(serializers.ModelSerializer):
+    status = serializers.ReadOnlyField(source='get_transaction_type_display')
+
     class Meta:
         model = CoinTransaction
         exclude = ('page',)
