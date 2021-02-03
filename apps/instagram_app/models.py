@@ -114,7 +114,7 @@ class Order(models.Model):
     entity_id = models.BigIntegerField(_('entity ID'), null=True, db_index=True)
     instagram_username = models.CharField(_("instagram username"), max_length=120)
     comments = ArrayField(models.TextField(max_length=1024), null=True, blank=True)
-    description = models.TextField(_("description"), blank=True, default=_('order enabled properly.'))
+    description = models.TextField(_("description"), blank=True)
     is_enable = models.BooleanField(_("is enable"), default=True)
     order_status = models.IntegerField(_('order status'), choices=STATUS_CHOICES, default=STATUS_ENABLE)
     owner = models.ForeignKey(InstaPage, related_name='orders', on_delete=models.CASCADE)
