@@ -7,7 +7,9 @@ from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
+from django.core.cache import cache
 from django.utils.translation import ugettext_lazy as _
+
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -256,6 +258,9 @@ class UserInquirySerializer(serializers.ModelSerializer):
             if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
                 user_inquiry.validated_time = timezone.now()
                 user_inquiry.save()
+
+        _ck = f"order_{order.id}_assigned"
+        cache.decr(_ck)
 
         return user_inquiry
 
