@@ -173,7 +173,7 @@ FIXTURE_DIRS = [
 ]
 
 LOCALE_PATHS = [
-    BASE_DIR / 'locale',
+    BASE_DIR / 'apps' / 'locale',
 ]
 
 LOG_DIR = BASE_DIR / 'logs'
