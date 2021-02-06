@@ -275,6 +275,8 @@ class CoinTransactionSerializer(serializers.ModelSerializer):
     def get_description(self, obj):
         if obj.transaction_type == obj.TYPE_ORDER:
             return _("order %s") % obj.order.action.get_action_type_display()
+        elif obj .transaction_type == obj.TYPE_INQUIRY:
+            return _("done %s") % obj.inquiry.order.action.get_action_type_display()
         return obj.get_transaction_type_display()
 
 
