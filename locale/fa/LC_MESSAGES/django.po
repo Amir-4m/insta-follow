@@ -264,16 +264,16 @@ msgid "Comments"
 msgstr "کامنت ها"
 
 #: apps/instagram_app/models.py:104
-msgid "Order Enabled"
-msgstr "سفارش فعال شد"
+msgid "enabled"
+msgstr "فعال"
 
 #: apps/instagram_app/models.py:105
-msgid "Order Completed"
-msgstr "سفارش تکمیل شد"
+msgid "completed"
+msgstr "تکمیل شده"
 
 #: apps/instagram_app/models.py:106
-msgid "Order Disabled"
-msgstr "سفارش غیرفعال شد"
+msgid "disabled"
+msgstr "غیرفعال"
 
 #: apps/instagram_app/models.py:111
 msgid "target number"

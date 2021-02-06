@@ -129,8 +129,7 @@ class OrderViewSet(viewsets.GenericViewSet,
         return self.get_orders(request, InstaAction.ACTION_FOLLOW)
 
 
-class UserInquiryViewSet(viewsets.GenericViewSet,
-                         mixins.CreateModelMixin):
+class UserInquiryViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     authentication_classes = (PageAuthentication,)
     permission_classes = (PagePermission,)
     queryset = UserInquiry.objects.select_related('order', 'order__action').all()

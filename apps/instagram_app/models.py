@@ -101,16 +101,18 @@ class Order(models.Model):
     STATUS_DISABLE = 2
 
     STATUS_CHOICES = [
-        (STATUS_ENABLE, _('Order Enabled')),
-        (STATUS_COMPLETE, _('Order Completed')),
-        (STATUS_DISABLE, _('Order Disabled')),
+        (STATUS_ENABLE, _('enabled')),
+        (STATUS_COMPLETE, _('completed')),
+        (STATUS_DISABLE, _('disabled')),
     ]
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     action = models.ForeignKey(InstaAction, on_delete=models.PROTECT, verbose_name=_('action type'))
     target_no = models.IntegerField(_("target number"), validators=[MinValueValidator(1)])
+    # TODO: Why URL Field?
     link = models.URLField(_("link"))
     media_properties = JSONField(_('media properties'), default=dict)
+    # TODO: Why nullable?
     entity_id = models.BigIntegerField(_('entity ID'), null=True, db_index=True)
     instagram_username = models.CharField(_("instagram username"), max_length=120)
     comments = ArrayField(models.TextField(max_length=1024), null=True, blank=True)
@@ -118,6 +120,7 @@ class Order(models.Model):
     status = models.IntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_ENABLE)
     is_enable = models.BooleanField(_("is enable"), default=True)
     owner = models.ForeignKey(InstaPage, related_name='orders', on_delete=models.CASCADE)
+    # TODO: What is this??
     track_id = models.CharField(max_length=40, blank=True)
 
     class Meta:
@@ -143,6 +146,7 @@ class Order(models.Model):
         return self._achieved
 
     def clean(self):
+        # TODO: What about the other way around??
         if self.action in [InstaAction.ACTION_FOLLOW, InstaAction.ACTION_LIKE] and self.comments is not None:
             raise ValidationError(_("Comment is not allowed in like and follow method!"))
 

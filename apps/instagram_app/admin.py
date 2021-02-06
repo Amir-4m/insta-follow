@@ -28,6 +28,7 @@ class OrderModelAdmin(admin.ModelAdmin):
         'status', 'achieved_number_approved', 'created_time'
     )
     list_filter = ('action', 'status')
+    # TODO: Why readonly??
     readonly_fields = ('media_properties', 'instagram_username', 'entity_id', 'achieved_number_approved', 'link')
     search_fields = ('owner__instagram_username', 'id', 'link')
 
