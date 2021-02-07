@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-02-06 15:44+0330\n"
+"POT-Creation-Date: 2021-02-06 16:15+0330\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -79,27 +79,32 @@ msgstr "سفارش با این آی دی قبلا توسط این صفحه ان�
 msgid "error occurred while creating inquiry. try again later."
 msgstr "خطا در ثبت اینکویری"
 
-#: instagram_app/api/serializers.py:335
+#: instagram_app/api/serializers.py:279
+#, python-format
+msgid "done %s"
+msgstr "انجام %s"
+
+#: instagram_app/api/serializers.py:337
 msgid "purchase_token is required for gateway bazaar!"
 msgstr "توکن خرید برای درگاه بازار احباری می باشد!"
 
-#: instagram_app/api/serializers.py:367
+#: instagram_app/api/serializers.py:369
 msgid "you've reached today's transfer limit!"
 msgstr "شما تعداد دفعات مجاز اتقال برای امروز را انجام داده اید."
 
-#: instagram_app/api/serializers.py:369 instagram_app/api/serializers.py:382
+#: instagram_app/api/serializers.py:371 instagram_app/api/serializers.py:384
 msgid "Transfer amount is invalid!"
 msgstr "مقدار ورودی برای انتقال نامعتبر می باشد."
 
-#: instagram_app/api/serializers.py:371
+#: instagram_app/api/serializers.py:373
 msgid "Target page does not exists"
 msgstr "کاربری با این صفحه وجود ندارد"
 
-#: instagram_app/api/serializers.py:380
+#: instagram_app/api/serializers.py:382
 msgid "Transfer amount is higher than your coin balance!"
 msgstr "مقدار سکه ورودی برای انتقال بیشتر از سکه موجود شما می باشد."
 
-#: instagram_app/api/serializers.py:411
+#: instagram_app/api/serializers.py:413
 msgid "order does not exists!"
 msgstr "سفارش موجود نمی باشد!"
 
