@@ -155,11 +155,15 @@ class CustomService(object):
     @staticmethod
     def get_or_create_orders(page, action_type, limit=100):
 
-        orders = list(Order.objects.filter(
+        _pointer_key = 'order_assign_pointer'
+        _qs = Order.objects.filter(
             status=Order.STATUS_ENABLE,
             action=action_type,
-            id__lt=cache.get('order_assign_pointer', 0)
-        ).annotate(
+        )
+        if cache.get(_pointer_key):
+            _qs = _qs.filter(id__lt=cache.get(_pointer_key, 0))
+
+        orders = list(_qs.annotate(
             remaining=F('target_no') - Coalesce(Sum(
                 Case(
                     When(
@@ -179,7 +183,6 @@ class CustomService(object):
             ).values_list('order__entity_id', flat=True)
         ).order_by('-pk')[:limit])
 
-        _pointer_key = 'order_assign_pointer'
         if len(orders) < limit:
             cache.delete(_pointer_key)
         else:
