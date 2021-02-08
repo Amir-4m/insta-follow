@@ -10,6 +10,7 @@ from django.conf import settings
 from django.db.models.functions import Coalesce
 from django.db.models import F, Sum, Case, When, IntegerField, Q
 from django.utils import timezone
+from django.core.cache import cache
 
 from igramscraper.instagram import Instagram
 from Crypto.Cipher import AES
@@ -153,7 +154,12 @@ class CustomService(object):
 
     @staticmethod
     def get_or_create_orders(page, action_type, limit=100):
-        orders = Order.objects.filter(status=Order.STATUS_ENABLE, action=action_type).annotate(
+
+        orders = list(Order.objects.filter(
+            status=Order.STATUS_ENABLE,
+            action=action_type,
+            id__lt=cache.get('order_assign_pointer', 0)
+        ).annotate(
             remaining=F('target_no') - Coalesce(Sum(
                 Case(
                     When(
@@ -166,14 +172,28 @@ class CustomService(object):
             remaining__lte=F('remaining')
         ).exclude(
             Q(owner=page) | Q(instagram_username__iexact=page.instagram_username),
-
         ).exclude(
-            entity_id__in=UserInquiry.objects.filter(page=page, order__action=action_type).values_list(
-                'order__entity_id', flat=True
-            )
-        )[:limit]
+            entity_id__in=UserInquiry.objects.filter(
+                page=page,
+                order__action=action_type
+            ).values_list('order__entity_id', flat=True)
+        ).order_by('-pk')[:limit])
 
-        return orders
+        _pointer_key = 'order_assign_pointer'
+        if len(orders) < limit:
+            cache.delete(_pointer_key)
+        else:
+            cache.set(_pointer_key, min([o.id for o in orders]))
+
+        result = []
+        for order in orders:
+            _ck = f"order_{order.id}_assigned"
+            if order.remaining >= cache.get(_ck, 0):
+                result.append(order)
+            cache.add(_ck, 1, 60 * 10)
+            cache.incr(_ck)
+
+        return result
 
 
 class CryptoService:

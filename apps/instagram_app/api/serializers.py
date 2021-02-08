@@ -7,7 +7,9 @@ from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
+from django.core.cache import cache
 from django.utils.translation import ugettext_lazy as _
+
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -257,15 +259,25 @@ class UserInquirySerializer(serializers.ModelSerializer):
                 user_inquiry.validated_time = timezone.now()
                 user_inquiry.save()
 
+        _ck = f"order_{order.id}_assigned"
+        cache.decr(_ck)
+
         return user_inquiry
 
 
 class CoinTransactionSerializer(serializers.ModelSerializer):
-    description = serializers.ReadOnlyField(source='get_transaction_type_display')
+    description = serializers.SerializerMethodField()
 
     class Meta:
         model = CoinTransaction
         exclude = ('page',)
+
+    def get_description(self, obj):
+        if obj.transaction_type == obj.TYPE_ORDER:
+            return _("order %s") % obj.order.action.get_action_type_display()
+        elif obj .transaction_type == obj.TYPE_INQUIRY:
+            return _("done %s") % obj.inquiry.order.action.get_action_type_display()
+        return obj.get_transaction_type_display()
 
 
 class InstaActionSerializer(serializers.ModelSerializer):
