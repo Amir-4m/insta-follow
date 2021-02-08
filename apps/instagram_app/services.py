@@ -156,12 +156,14 @@ class CustomService(object):
     def get_or_create_orders(page, action_type, limit=100):
 
         _pointer_key = 'order_assign_pointer'
+        _pointer = cache.get(_pointer_key)
+
         _qs = Order.objects.filter(
             status=Order.STATUS_ENABLE,
             action=action_type,
         )
-        if cache.get(_pointer_key):
-            _qs = _qs.filter(id__lt=cache.get(_pointer_key, 0))
+        if _pointer:
+            _qs = _qs.filter(id__lt=_pointer)
 
         orders = list(_qs.annotate(
             remaining=F('target_no') - Coalesce(Sum(
@@ -185,6 +187,8 @@ class CustomService(object):
 
         if len(orders) < limit:
             cache.delete(_pointer_key)
+            if _pointer and len(orders) == 0:
+                return CustomService.get_or_create_orders(page, action_type, limit)
         else:
             cache.set(_pointer_key, min([o.id for o in orders]))
 
