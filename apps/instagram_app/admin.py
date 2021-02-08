@@ -70,6 +70,7 @@ class CoinPackageOrderModelAdmin(admin.ModelAdmin):
     search_fields = ('page__instagram_username',)
 
     def has_change_permission(self, request, obj=None):
+        # TODO: Why?? in dg shirini lazeme.. na?
         return True if request.user.is_superuser else False
 
 
