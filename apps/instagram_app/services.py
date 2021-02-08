@@ -182,8 +182,6 @@ class CustomService(object):
         _pointer_key = 'order_assign_pointer'
         if len(orders) < limit:
             cache.delete(_pointer_key)
-            if len(orders) == 0:
-                return CustomService.get_or_create_orders(page, action_type, limit)
         else:
             cache.set(_pointer_key, min([o.id for o in orders]))
 
