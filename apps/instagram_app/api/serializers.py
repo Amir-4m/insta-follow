@@ -258,10 +258,12 @@ class UserInquirySerializer(serializers.ModelSerializer):
             if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
                 user_inquiry.validated_time = timezone.now()
                 user_inquiry.save()
-
         _ck = f"order_{order.id}_assigned"
-        cache.decr(_ck)
 
+        try:
+            cache.decr(_ck)
+        except Exception:
+            logger.warning(f'cache with key {_ck} does not exists!')
         return user_inquiry
 
 
@@ -275,7 +277,7 @@ class CoinTransactionSerializer(serializers.ModelSerializer):
     def get_description(self, obj):
         if obj.transaction_type == obj.TYPE_ORDER:
             return _("order %s") % obj.order.action.get_action_type_display()
-        elif obj .transaction_type == obj.TYPE_INQUIRY:
+        elif obj.transaction_type == obj.TYPE_INQUIRY:
             return _("done %s") % obj.inquiry.order.action.get_action_type_display()
         return obj.get_transaction_type_display()
 
