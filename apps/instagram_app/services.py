@@ -192,15 +192,17 @@ class CustomService(object):
         else:
             cache.set(_pointer_key, min([o.id for o in orders]))
 
-        result = []
-        for order in orders:
-            _ck = f"order_{order.id}_assigned"
-            if order.remaining >= cache.get(_ck, 0):
-                result.append(order)
-            cache.add(_ck, 1, 60 * 10)
-            cache.incr(_ck)
+        # result = []
+        # for order in orders:
+        #     _ck = f"order_{order.id}_assigned"
+        #     if order.remaining >= cache.get(_ck, 0):
+        #         result.append(order)
+        #     cache.add(_ck, 1, 60 * 10)
+        #     cache.incr(_ck)
+        #
+        # return result
 
-        return result
+        return orders
 
 
 class CryptoService:
