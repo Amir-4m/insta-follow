@@ -84,7 +84,7 @@ def update_orders_achieved_number():
         q.filter(
             achived_no__gte=F('target_no')
         ).update(
-            is_enable=Order.STATUS_COMPLETE,
+            status=Order.STATUS_COMPLETE,
         )
 
         # reactivating orders, which lost their achieved followers
@@ -94,10 +94,12 @@ def update_orders_achieved_number():
             action=InstaAction.ACTION_FOLLOW,
             updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
         ).update(
-            is_enable=Order.STATUS_ENABLE,
+            status=Order.STATUS_ENABLE,
         )
     except Exception as e:
         logger.error(f"updating orders achieved number got exception: {e}")
+
+    return q.count()
 
 
 # TODO: Review

@@ -249,7 +249,7 @@ MONITOR_TOKEN = config('MONITOR_TOKEN', default='')
 USER_PENALTY_AMOUNT = config('USER_PENALTY_AMOUNT', default=2, cast=int)
 PENALTY_CHECK_HOUR = config('PENALTY_CHECK_HOUR', default=48, cast=int)
 
-ORDER_TARGET_RATIO = config('ORDER_TARGET_RATIO', default=100, cast=int)
+ORDER_TARGET_RATIO = config('ORDER_TARGET_RATIO', default=90, cast=int)
 
 FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=1000, cast=int)
 MAXIMUM_COIN_TRANSFER = config('MAXIMUM_COIN_TRANSFER', default=1000, cast=int)
