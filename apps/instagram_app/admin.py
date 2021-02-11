@@ -86,7 +86,7 @@ class ReportAbuseModelAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         if obj.status == ReportAbuse.STATUS_APPROVED:
-            Order.objects.filter(id=obj.abuser.id).update(is_enable=False)
+            Order.objects.filter(id=obj.abuser.id).update(status=Order.STATUS_DISABLE)
         return super(ReportAbuseModelAdmin, self).save_model(request, obj, form, change)
 
 

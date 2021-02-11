@@ -90,7 +90,7 @@ def update_orders_achieved_number():
         # reactivating orders, which lost their achieved followers
         q.filter(
             achived_no__lt=F('target_no') * settings.ORDER_TARGET_RATIO / 100,
-            is_enable=Order.STATUS_COMPLETE,
+            status=Order.STATUS_COMPLETE,
             action=InstaAction.ACTION_FOLLOW,
             updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
         ).update(
