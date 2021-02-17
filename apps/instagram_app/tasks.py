@@ -8,6 +8,7 @@ from celery import shared_task
 from celery.schedules import crontab
 from celery.task import periodic_task
 from django.core.cache import cache
+from django.db import transaction
 from django.db.models import F, Sum, Case, When, IntegerField
 from django.utils import timezone
 from django.conf import settings
@@ -68,7 +69,7 @@ def final_validate_user_inquiries():
 
 
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(minute='*/5')))
+@periodic_task(run_every=(crontab(minute='*/1')))
 def update_orders_achieved_number():
     q = Order.objects.filter(status=Order.STATUS_ENABLE).annotate(
         achived_no=Sum(
@@ -80,24 +81,30 @@ def update_orders_achieved_number():
             output_field=IntegerField()
         ),
     )
-    try:
-        q.filter(
-            achived_no__gte=F('target_no')
-        ).update(
-            status=Order.STATUS_COMPLETE,
+    with transaction.atomic():
+        completed_orders = Order.objects.select_for_update(of=('self',)).filter(
+            pk__in=q.filter(achived_no__gte=F('target_no')).values_list('pk', flat=True)
         )
+        try:
+            for completed_order in completed_orders:
+                completed_order.status = Order.STATUS_COMPLETE
+                completed_order.save()
 
-        # reactivating orders, which lost their achieved followers
-        q.filter(
-            achived_no__lt=F('target_no') * settings.ORDER_TARGET_RATIO / 100,
-            status=Order.STATUS_COMPLETE,
-            action=InstaAction.ACTION_FOLLOW,
-            updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
-        ).update(
-            status=Order.STATUS_ENABLE,
-        )
-    except Exception as e:
-        logger.error(f"updating orders achieved number got exception: {e}")
+            # reactivating orders, which lost their achieved followers
+            remaining_orders = Order.objects.select_for_update(of=('self',)).filter(
+                pk__in=q.filter(
+                    achived_no__lt=F('target_no') * settings.ORDER_TARGET_RATIO / 100,
+                    status=Order.STATUS_COMPLETE,
+                    action=InstaAction.ACTION_FOLLOW,
+                    updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR)
+                ).values_list('pk', flat=True))
+
+            for order in remaining_orders:
+                order.status = Order.STATUS_ENABLE
+                order.save()
+
+        except Exception as e:
+            logger.error(f"updating orders achieved number got exception: {e}")
 
     return q.count()
 
