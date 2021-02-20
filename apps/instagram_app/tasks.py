@@ -8,14 +8,12 @@ from celery import shared_task
 from celery.schedules import crontab
 from celery.task import periodic_task
 from django.core.cache import cache
-from django.db import transaction
 from django.db.models import F, Sum, Case, When, IntegerField
 from django.utils import timezone
 from django.conf import settings
-from django.utils.translation import ugettext_lazy as _
 
 from .services import InstagramAppService, CustomService
-from .models import Order, UserInquiry, InstaAction, CoinTransaction, CoinPackage, InstaPage
+from .models import Order, UserInquiry, InstaAction, CoinTransaction, InstaPage
 
 logger = logging.getLogger(__name__)
 
