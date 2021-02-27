@@ -48,7 +48,8 @@ class PrivateAccount(views.APIView):
 
     def get(self, request, *args, **kwargs):
         page = request.auth['page']
-        orders = Order.objects.filter(entity_id=page.instagram_user_id, action__action_type=InstaAction.ACTION_FOLLOW, status=Order.STATUS_ENABLE)
+        orders = Order.objects.filter(entity_id=page.instagram_user_id, action__action_type=InstaAction.ACTION_FOLLOW,
+                                      status=Order.STATUS_ENABLE)
         for order in orders:
             check_order_validity.delay(order.pk)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -344,11 +345,9 @@ class OrderGateWayAPIView(views.APIView):
                     'price': package_order.price,
                     'service_reference': str(package_order.invoice_number),
                     'is_paid': package_order.is_paid,
-                    "properties": {
-                        "redirect_url": request.build_absolute_uri(reverse('payment-done')),
-                        "sku": sku,
-                        "package_name": settings.CAFE_BAZAAR_PACKAGE_NAME
-                    }
+                    "redirect_url": request.build_absolute_uri(reverse('payment-done')),
+                    "sku": sku,
+                    "package_name": settings.CAFE_BAZAAR_PACKAGE_NAME
                 }
             )
             transaction_id = _r.get('transaction_id')
