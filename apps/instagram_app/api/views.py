@@ -351,6 +351,13 @@ class OrderGateWayAPIView(views.APIView):
                 }
             )
             transaction_id = _r.get('transaction_id')
+            try:
+                for gw in list(AllowedGateway.get_gateways_by_version_name(package_order.version_name)):
+                    if gw['id'] == gateway:
+                        package_order.gateway = gw['display_name']
+            except Exception as e:
+                logger.warning(f'could not fetch gateway for order {package_order.id}: {e}')
+                pass
             package_order.transaction_id = transaction_id
             package_order.save()
         except Exception as e:
