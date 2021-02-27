@@ -48,7 +48,8 @@ class PrivateAccount(views.APIView):
 
     def get(self, request, *args, **kwargs):
         page = request.auth['page']
-        orders = Order.objects.filter(entity_id=page.instagram_user_id, action__action_type=InstaAction.ACTION_FOLLOW, status=Order.STATUS_ENABLE)
+        orders = Order.objects.filter(entity_id=page.instagram_user_id, action__action_type=InstaAction.ACTION_FOLLOW,
+                                      status=Order.STATUS_ENABLE)
         for order in orders:
             check_order_validity.delay(order.pk)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -344,14 +345,19 @@ class OrderGateWayAPIView(views.APIView):
                     'price': package_order.price,
                     'service_reference': str(package_order.invoice_number),
                     'is_paid': package_order.is_paid,
-                    "properties": {
-                        "redirect_url": request.build_absolute_uri(reverse('payment-done')),
-                        "sku": sku,
-                        "package_name": settings.CAFE_BAZAAR_PACKAGE_NAME
-                    }
+                    "redirect_url": request.build_absolute_uri(reverse('payment-done')),
+                    "sku": sku,
+                    "package_name": settings.CAFE_BAZAAR_PACKAGE_NAME
                 }
             )
             transaction_id = _r.get('transaction_id')
+            try:
+                for gw in list(AllowedGateway.get_gateways_by_version_name(package_order.version_name)):
+                    if gw['id'] == gateway:
+                        package_order.gateway = gw['display_name']
+            except Exception as e:
+                logger.warning(f'could not fetch gateway for order {package_order.id}: {e}')
+                pass
             package_order.transaction_id = transaction_id
             package_order.save()
         except Exception as e:
