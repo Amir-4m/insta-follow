@@ -116,6 +116,7 @@ class Order(models.Model):
     comments = ArrayField(models.TextField(), null=True, blank=True)
     description = models.TextField(_("description"), blank=True)
     status = models.IntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_ENABLE)
+    # TODO: should be removed, only kept for old client versions
     is_enable = models.BooleanField(_("is enable"), default=True)
     owner = models.ForeignKey(InstaPage, related_name='orders', on_delete=models.CASCADE)
 
