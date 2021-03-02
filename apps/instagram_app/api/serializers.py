@@ -258,12 +258,13 @@ class UserInquirySerializer(serializers.ModelSerializer):
             if user_inquiry.order.action.action_type in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT]:
                 user_inquiry.validated_time = timezone.now()
                 user_inquiry.save()
-        _ck = f"order_{order.id}_assigned"
 
-        try:
-            cache.decr(_ck)
-        except Exception:
-            logger.warning(f'cache with key {_ck} does not exists!')
+        # _ck = f"order_{order.id}_assigned"
+        # try:
+        #     cache.decr(_ck)
+        # except Exception:
+        #     logger.warning(f'cache with key {_ck} does not exists!')
+
         return user_inquiry
 
 

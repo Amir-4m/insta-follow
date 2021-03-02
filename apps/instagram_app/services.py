@@ -175,7 +175,7 @@ class CustomService(object):
                 output_field=IntegerField()
             ), 0),
         ).filter(
-            remaining__lte=F('remaining')
+            remaining__gt=0
         ).exclude(
             Q(owner=page) | Q(instagram_username__iexact=page.instagram_username),
         ).exclude(
