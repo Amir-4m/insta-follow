@@ -35,53 +35,59 @@ class OrderTestSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class BaseAuthenticatedTestCase(APITestCase):
-    def setUp(self):
-        try:
-            self.page = InstaPage.objects.get(instagram_username="instagram_username")
-        except InstaPage.DoesNotExist:
-            self.page = InstaPage.objects.create(
-                instagram_username="instagram_username",
-                instagram_user_id=111222333444,
+def create_enable_order(page):
+    order = None
+    if Order.objects.filter(status=Order.STATUS_ENABLE).count() > 1:
+        order = random.choice(Order.objects.filter(status=Order.STATUS_ENABLE))
+    else:
+        # first try to get a random InstaAction
+        insta_action, created = InstaAction.objects.get_or_create(
+            action_type=random.choice([InstaAction.ACTION_LIKE,
+                                       InstaAction.ACTION_FOLLOW,
+                                       InstaAction.ACTION_COMMENT]),
+            action_value=10,
+            buy_value=200
+        )
+        order = Order.objects.create(
+            action=insta_action,
+            # one hundred like, follow or comment request
+            target_no=100,
+            link="https://instagram.com/some-random-hash/",
+            media_properties={
+                'video_address': 'some_video_address',
+            },
+            entity_id=random.randint(10000, 88888888),
+            instagram_username="some-username",
+            comments=[
+                f"comment 1 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
+                f"comment 2 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
+                f"comment 3 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
+            ],
+            description="Some description",
+            status=Order.STATUS_ENABLE,
+            is_enable=True,
+            owner=page
+        )
+        return order
+
+
+def create_page():
+    return InstaPage.objects.create(
+                instagram_username=f"instagram_{''.join(random.choices(string.ascii_uppercase + string.digits, k=3))}",
+                instagram_user_id=random.randint(10000, 999999),
                 session_id="test-session"
             )
+
+
+class BaseAuthenticatedTestCase(APITestCase):
+    def setUp(self):
         # randomly select an order
+        self.page = create_page()
+
         self.orders = dict()
-
-        self.disable_order = None
-        self.complete_order = None
-
-        if Order.objects.filter(status=Order.STATUS_ENABLE).count() > 1:
-            self.orders[Order.STATUS_ENABLE] = random.choice(Order.objects.filter(status=Order.STATUS_ENABLE))
-        else:
-            # first try to get a random InstaAction
-            insta_action = InstaAction.objects.create(
-                action_type=random.choice([InstaAction.ACTION_LIKE,
-                                           InstaAction.ACTION_FOLLOW,
-                                           InstaAction.ACTION_COMMENT]),
-                action_value=10,
-                buy_value=200
-            )
-            self.orders[Order.STATUS_ENABLE] = Order.objects.create(
-                action=insta_action,
-                # one hundred like, follow or comment request
-                target_no=100,
-                link="https://instagram.com/some-random-hash/",
-                media_properties={
-                    'video_address': 'some_video_address',
-                },
-                entity_id=random.randint(10000, 88888888),
-                instagram_username="some-username",
-                comments=[
-                    f"comment 1 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
-                    f"comment 2 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
-                    f"comment 3 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
-                ],
-                description="Some description",
-                status=Order.STATUS_ENABLE,
-                is_enable=True,
-                owner=self.page
-            )
+        self.orders[Order.STATUS_ENABLE] = []
+        self.orders[Order.STATUS_ENABLE].append(create_enable_order(page=self.page))
+        self.orders[Order.STATUS_ENABLE].append(create_enable_order(page=create_page()))
 
         self.request = RequestFactory()
         self.request.user = self.page
@@ -124,7 +130,7 @@ class UserInquiryTestCases(BaseAuthenticatedTestCase):
         url = reverse('userinquiry-list')
         data = {
             'page': self.page.id,
-            'order': self.orders[Order.STATUS_ENABLE].id,
+            'order': self.orders[Order.STATUS_ENABLE][0].id,
             'status': UserInquiry.STATUS_VALIDATED,
             'earned_coin': '50',
             'check': False
@@ -134,7 +140,7 @@ class UserInquiryTestCases(BaseAuthenticatedTestCase):
         print(response.content)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        user_inquiry = UserInquiry.objects.get(order=self.orders[Order.STATUS_ENABLE], page=self.page)
+        user_inquiry = UserInquiry.objects.get(order=self.orders[Order.STATUS_ENABLE][0], page=self.page)
         self.assertEqual(user_inquiry.status, UserInquiry.STATUS_VALIDATED)
         # the list of orders are filtered before so checking this condition is not necessary
         # self.assertNotEqual(user_inquiry.page.id, self.orders[Order.STATUS_ENABLE].owner.id)
@@ -145,7 +151,7 @@ class UserInquiryTestCases(BaseAuthenticatedTestCase):
         # this scenario should give an error status not correct
         data = {
             'page': self.page.id,
-            'order': self.orders[Order.STATUS_ENABLE].id,
+            'order': self.orders[Order.STATUS_ENABLE][0].id,
             'status': UserInquiry.STATUS_CHOICES,
             'earned_coin': '50',
             'check': False
@@ -156,7 +162,7 @@ class UserInquiryTestCases(BaseAuthenticatedTestCase):
     def test_inquiries_done(self):
         url = reverse('userinquiry-done')
         data = {
-            'order': self.orders[Order.STATUS_ENABLE].id
+            'order': self.orders[Order.STATUS_ENABLE][0].id
         }
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -168,12 +174,12 @@ class OrderTestCases(BaseAuthenticatedTestCase):
     def setUp(self):
         super(OrderTestCases, self).setUp()
 
-    def test_orders_get(self):
+    def test_order_get(self):
         url = reverse('order-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_orders_post(self):
+    def test_order_post(self):
         url = reverse('order-list')
         CoinTransaction.objects.create(page=self.page, amount=50)
         action_type = random.choice([
@@ -197,7 +203,7 @@ class OrderTestCases(BaseAuthenticatedTestCase):
                                  target_no=self.register_order_data['target_no']).count() > 0
         )
 
-    def test_orders_post_action_code_for_like_follow(self):
+    def test_order_post_action_code_for_like_follow(self):
         url = reverse('order-list')
         CoinTransaction.objects.create(page=self.page, amount=50)
         action_type = random.choice([
@@ -217,7 +223,7 @@ class OrderTestCases(BaseAuthenticatedTestCase):
         print(response.content)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_orders_post_action_follow_no_username(self):
+    def test_order_post_action_follow_no_username(self):
         url = reverse('order-list')
         CoinTransaction.objects.create(page=self.page, amount=50)
         action_type = InstaAction.ACTION_FOLLOW
@@ -234,7 +240,7 @@ class OrderTestCases(BaseAuthenticatedTestCase):
         print(response.content)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_orders_post_comments_none_like_follow(self):
+    def test_order_post_comment_none_like_follow(self):
         url = reverse('order-list')
         CoinTransaction.objects.create(page=self.page, amount=50)
         action_type = random.choice([
@@ -251,10 +257,10 @@ class OrderTestCases(BaseAuthenticatedTestCase):
         self.register_order_data['action'] = instagram_action.action_type
         response = self.client.post(url, data=self.register_order_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        order = Order.objects.exclude(id=self.orders[Order.STATUS_ENABLE].id).first()
+        order = Order.objects.exclude(id=self.orders[Order.STATUS_ENABLE][0].id).first()
         self.assertEqual(order.comments, None)
 
-    def test_orders_post_previous_order_target_no_increase(self):
+    def test_order_post_previous_order_target_no_increase(self):
         url = reverse('order-list')
         CoinTransaction.objects.create(page=self.page, amount=50)
         action_type = random.choice([
@@ -274,7 +280,7 @@ class OrderTestCases(BaseAuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         response = self.client.post(url, data=self.register_order_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        order = Order.objects.exclude(id=self.orders[Order.STATUS_ENABLE].id).first()
+        order = Order.objects.exclude(id=self.orders[Order.STATUS_ENABLE][0].id).first()
         self.assertEqual(order.target_no, target_no * 2)
 
     # def test_orders_comments_get(self):
@@ -284,3 +290,33 @@ class OrderTestCases(BaseAuthenticatedTestCase):
     #     print(Order.objects.first())
     #     response = self.client.get(url, format='json')
     #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_orders_comment(self):
+        url = reverse('order-comment')
+        # Here we have two orders with different pages however we get min error again
+        print(Order.objects.count())
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_order_like(self):
+        url = reverse('order-like')
+        # Here we have two orders with different pages however we get min error again
+        print(Order.objects.count())
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class LoginTestCase(BaseAuthenticatedTestCase):
+
+    def setUp(self):
+        self.page = create_page()
+
+    def test_authentication_using_token(self):
+        # generate a token for authentication
+        dt = datetime.utcnow()
+        self.token = CryptoService(dt.strftime("%d%m%y%H") + dt.strftime("%d%m%y%H")).encrypt(str(self.page.uuid))
+        # Authenticate the client :
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + smart_text(self.token))
+        url = reverse('order-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
