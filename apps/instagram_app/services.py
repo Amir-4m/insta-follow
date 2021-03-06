@@ -184,7 +184,7 @@ class CustomService(object):
                 order__action=action_type
             ).values_list('order__entity_id', flat=True)
         ).order_by('-pk')[:limit])
-
+        print(orders)
         if len(orders) < limit:
             cache.delete(_pointer_key)
             if _pointer and len(orders) == 0:
