@@ -147,6 +147,7 @@ def check_order_validity(order_id):
         logger.warning(f'[order invalid]-[id: {order.id}, url: {order.link}]-[status code: {e.response.status_code}]')
         if e.response.status_code == 404:
             order.status = Order.STATUS_DISABLE
+            order.description = "(Page Error) - Cannot get page error"
 
     except Exception as e:
         logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {type(e)}, {str(e)}]')
@@ -156,6 +157,7 @@ def check_order_validity(order_id):
         if order.action.action_type == InstaAction.ACTION_FOLLOW:
             if res['graphql']['user'].get('is_private', False):
                 order.status = Order.STATUS_DISABLE
+                order.description = "(Private Page) - Order is disabled due to page being private"
         else:
             order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
 

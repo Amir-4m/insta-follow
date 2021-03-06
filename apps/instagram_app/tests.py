@@ -320,3 +320,26 @@ class LoginTestCase(BaseAuthenticatedTestCase):
         url = reverse('order-list')
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class RegisterTestCase(BaseAuthenticatedTestCase):
+
+    def test_registration_no_username_no_user_id(self):
+        # register user with some fake information
+        url = reverse('login-verification')
+        register_data = {
+            "session_id": 716537612357,
+        }
+        response = self.client.post(url, data=register_data, format='json')
+        self.assertRaises(ValidationError)
+
+    def test_registration_invalid_session_id(self):
+        # register user with some fake information
+        url = reverse('login-verification')
+        register_data = {
+            "instagram_user_id": "some-user-id",
+            "instagram_username": "instagram-username",
+            "session_id": 716537612357,
+        }
+        response = self.client.post(url, data=register_data, format='json')
+        self.assertRaises(ValidationError)
