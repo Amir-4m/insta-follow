@@ -11,10 +11,9 @@ from django.core.cache import cache
 from django.db.models import F, Sum, Case, When, IntegerField
 from django.utils import timezone
 from django.conf import settings
-from django.utils.translation import ugettext_lazy as _
 
 from .services import InstagramAppService, CustomService
-from .models import Order, UserInquiry, InstaAction, CoinTransaction, CoinPackage, InstaPage
+from .models import Order, UserInquiry, InstaAction, CoinTransaction, InstaPage
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +67,7 @@ def final_validate_user_inquiries():
 
 
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(minute='*/5')))
+@periodic_task(run_every=(crontab(minute='*')))
 def update_orders_achieved_number():
     q = Order.objects.filter(status=Order.STATUS_ENABLE).annotate(
         achived_no=Sum(

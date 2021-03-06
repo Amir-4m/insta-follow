@@ -116,6 +116,7 @@ class Order(models.Model):
     comments = ArrayField(models.TextField(), null=True, blank=True)
     description = models.TextField(_("description"), blank=True)
     status = models.IntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_ENABLE)
+    # TODO: should be removed, only kept for old client versions
     is_enable = models.BooleanField(_("is enable"), default=True)
     owner = models.ForeignKey(InstaPage, related_name='orders', on_delete=models.CASCADE)
 
@@ -160,7 +161,8 @@ class UserInquiry(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
 
-    status = models.PositiveSmallIntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_VALIDATED, db_index=True)
+    status = models.PositiveSmallIntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_VALIDATED,
+                                              db_index=True)
     validated_time = models.DateTimeField(_("validated time"), null=True, blank=True, db_index=True)
 
     order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='user_inquiries')
@@ -220,6 +222,7 @@ class CoinPackage(models.Model):
 class CoinPackageOrder(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
+    gateway = models.CharField(_('gateway'), max_length=50, blank=True, db_index=True)
     invoice_number = models.UUIDField(_('uuid'), unique=True, default=uuid.uuid4, editable=False)
     transaction_id = models.CharField(_('transaction id'), unique=True, null=True, max_length=40)
     coin_package = models.ForeignKey(CoinPackage, on_delete=models.PROTECT)

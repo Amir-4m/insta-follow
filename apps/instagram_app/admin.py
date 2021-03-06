@@ -65,13 +65,12 @@ class InstagramAccountModelAdmin(admin.ModelAdmin):
 
 @admin.register(CoinPackageOrder)
 class CoinPackageOrderModelAdmin(admin.ModelAdmin):
-    list_display = ('coin_package', 'page', 'price', 'invoice_number', 'is_paid', 'updated_time', 'created_time')
-    list_filter = ('is_paid', 'coin_package',)
-    search_fields = ('page__instagram_username',)
-
-    def has_change_permission(self, request, obj=None):
-        # TODO: Why?? in dg shirini lazeme.. na?
-        return True if request.user.is_superuser else False
+    list_display = (
+        'coin_package', 'page', 'price', 'invoice_number',
+        'gateway', 'is_paid', 'updated_time', 'created_time'
+    )
+    list_filter = ('is_paid', 'coin_package', 'gateway')
+    search_fields = ('page__instagram_username', 'gateway')
 
 
 @admin.register(Comment)
