@@ -215,6 +215,7 @@ class UserInquirySerializer(serializers.ModelSerializer):
                 order__entity_id=order.entity_id,
                 page=page
         ).exists():
+            logger.warning(f'(Duplicate Inquiry) page: {page}, order: {order.id}, entity_id: {order.entity_id}')
             raise ValidationError(detail={'detail': _('order with this id already has been done by this page!')})
         attrs.update({'order': order, 'page_id': page.id})
         return attrs
