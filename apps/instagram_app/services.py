@@ -158,8 +158,10 @@ class CustomService(object):
         _pointer_key = 'order_assign_pointer'
         _pointer = cache.get(_pointer_key)
 
-        _distinct_orders = list(Order.objects.filter(status=Order.STATUS_ENABLE,
-                                                     action=action_type).annotate(min_id=Min('id')).values_list('min_id', flat=True))
+        _distinct_orders = list(Order.objects.filter(
+            status=Order.STATUS_ENABLE,
+            action=action_type
+        ).values('entity_id').annotate(min_id=Min('id')).values_list('min_id', flat=True))
 
         _qs = Order.objects.filter(
             id__in=_distinct_orders
