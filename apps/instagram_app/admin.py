@@ -30,6 +30,7 @@ class OrderModelAdmin(admin.ModelAdmin):
     list_filter = ('action', 'status')
     readonly_fields = ('media_properties', 'instagram_username', 'entity_id', 'achieved_number_approved')
     search_fields = ('owner__instagram_username', 'id', 'link')
+    raw_id_fields = ('owner', )
 
     def has_add_permission(self, request):
         return False
@@ -42,6 +43,7 @@ class UserInquiryModelAdmin(admin.ModelAdmin):
     readonly_fields = ('validated_time', 'page', 'order')
     list_filter = ('status', 'order__action')
     search_fields = ('page__instagram_username',)
+    raw_id_fields = ('order', 'page', )
 
 
 @admin.register(InstaAction)
@@ -71,6 +73,7 @@ class CoinPackageOrderModelAdmin(admin.ModelAdmin):
     )
     list_filter = ('is_paid', 'coin_package', 'gateway')
     search_fields = ('page__instagram_username', 'gateway')
+    raw_id_fields = ('page', )
 
 
 @admin.register(Comment)
@@ -82,6 +85,7 @@ class CommentModelAdmin(admin.ModelAdmin):
 class ReportAbuseModelAdmin(admin.ModelAdmin):
     list_display = ('reporter', 'text', 'abuser', 'status', 'created_time')
     list_filter = ('status',)
+    raw_id_fields = ('reporter', 'abuser', )
 
     def save_model(self, request, obj, form, change):
         if obj.status == ReportAbuse.STATUS_APPROVED:
@@ -98,6 +102,7 @@ class BlockWordRegexModelAdmin(admin.ModelAdmin):
 @admin.register(BlockedText)
 class BlockedTextModelAdmin(admin.ModelAdmin):
     list_display = ('text', 'pattern', 'author', 'created_time')
+    raw_id_fields = ('author', )
 
 
 @admin.register(AllowedGateway)
@@ -110,6 +115,7 @@ class AllowedGatewayAdmin(admin.ModelAdmin):
 class CoinTransactionAdmin(admin.ModelAdmin):
     list_display = ('page', 'amount', 'transaction_type', 'created_time')
     search_fields = ('page__instagram_username',)
+    raw_id_fields = ('page', 'inquiry', 'order', 'from_page', 'to_page', )
 
     def has_change_permission(self, request, obj=None):
         return False
