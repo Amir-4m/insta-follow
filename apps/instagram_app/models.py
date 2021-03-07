@@ -265,8 +265,8 @@ class CoinTransaction(models.Model):
     amount = models.IntegerField(_('amount'))
     description = models.TextField(_("description"), blank=True)
     inquiry = models.ForeignKey(UserInquiry, on_delete=models.CASCADE, null=True, blank=True)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True)
-    package = models.ForeignKey(CoinPackageOrder, on_delete=models.PROTECT, null=True, blank=True)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True, verbose_name=_('Insta Order'))
+    package = models.ForeignKey(CoinPackageOrder, on_delete=models.PROTECT, null=True, blank=True, verbose_name=_('Coin Package Order'))
     from_page = models.ForeignKey(InstaPage, related_name='senders', on_delete=models.PROTECT, null=True, blank=True)
     to_page = models.ForeignKey(InstaPage, related_name='receivers', on_delete=models.PROTECT, null=True, blank=True)
     transaction_type = models.CharField(

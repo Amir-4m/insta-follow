@@ -146,7 +146,7 @@ def check_order_validity(order_id):
         logger.warning(f'[order invalid]-[id: {order.id}, url: {order.link}]-[status code: {e.response.status_code}]')
         if e.response.status_code == 404:
             order.status = Order.STATUS_DISABLE
-            order.description = "(Page Error) - Cannot get page error"
+            order.description = "(Page Not Found) - Cannot get page info"
 
     except Exception as e:
         logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {type(e)}, {str(e)}]')

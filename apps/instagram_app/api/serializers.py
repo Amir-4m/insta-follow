@@ -164,32 +164,18 @@ class OrderSerializer(serializers.ModelSerializer):
                 amount=-(insta_action.buy_value * target_no),
                 transaction_type=CoinTransaction.TYPE_ORDER
             )
+            # remove order check
+            order = Order.objects.create(
+                entity_id=entity_id,
+                action=insta_action,
+                link=link,
+                target_no=target_no,
+                media_properties=media_properties,
+                instagram_username=instagram_username,
+                owner=page,
+                comments=comments
+            )
 
-            if Order.objects.filter(
-                    owner=page,
-                    entity_id=entity_id,
-                    status=Order.STATUS_ENABLE,
-                    action=insta_action
-            ).exists():
-
-                order = Order.objects.select_related('owner', 'action').select_for_update().filter(
-                    owner=page, entity_id=entity_id, status=Order.STATUS_ENABLE, action=insta_action
-                ).first()
-
-                order.target_no += target_no
-                order.comments = comments
-                order.save()
-            else:
-                order = Order.objects.create(
-                    entity_id=entity_id,
-                    action=insta_action,
-                    link=link,
-                    target_no=target_no,
-                    media_properties=media_properties,
-                    instagram_username=instagram_username,
-                    owner=page,
-                    comments=comments
-                )
             ct.order = order
             ct.description = _("order %s") % insta_action.get_action_type_display()
             ct.save()
@@ -229,6 +215,7 @@ class UserInquirySerializer(serializers.ModelSerializer):
                 order__entity_id=order.entity_id,
                 page=page
         ).exists():
+            logger.warning(f'(Duplicate Inquiry) page: {page}, order: {order.id}, entity_id: {order.entity_id}')
             raise ValidationError(detail={'detail': _('order with this id already has been done by this page!')})
         attrs.update({'order': order, 'page_id': page.id})
         return attrs
