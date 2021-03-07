@@ -35,40 +35,35 @@ class OrderTestSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-def create_enable_order(page):
+def create_enable_order(page, action=InstaAction.ACTION_LIKE):
     order = None
-    if Order.objects.filter(status=Order.STATUS_ENABLE).count() > 1:
-        order = random.choice(Order.objects.filter(status=Order.STATUS_ENABLE))
-    else:
-        # first try to get a random InstaAction
-        insta_action, created = InstaAction.objects.get_or_create(
-            action_type=random.choice([InstaAction.ACTION_LIKE,
-                                       InstaAction.ACTION_FOLLOW,
-                                       InstaAction.ACTION_COMMENT]),
-            action_value=10,
-            buy_value=200
-        )
-        order = Order.objects.create(
-            action=insta_action,
-            # one hundred like, follow or comment request
-            target_no=100,
-            link="https://instagram.com/some-random-hash/",
-            media_properties={
-                'video_address': 'some_video_address',
-            },
-            entity_id=random.randint(10000, 88888888),
-            instagram_username="some-username",
-            comments=[
-                f"comment 1 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
-                f"comment 2 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
-                f"comment 3 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
-            ],
-            description="Some description",
-            status=Order.STATUS_ENABLE,
-            is_enable=True,
-            owner=page
-        )
-        return order
+    # first try to get a random InstaAction
+    insta_action, created = InstaAction.objects.get_or_create(
+        action_type=action,
+        action_value=10,
+        buy_value=200
+    )
+    order = Order.objects.create(
+        action=insta_action,
+        # one hundred like, follow or comment request
+        target_no=100,
+        link="https://instagram.com/some-random-hash/",
+        media_properties={
+            'video_address': 'some_video_address',
+        },
+        entity_id=2153612,
+        instagram_username="some-username",
+        comments=[
+            f"comment 1 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
+            f"comment 2 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
+            f"comment 3 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
+        ],
+        description="Some description",
+        status=Order.STATUS_ENABLE,
+        is_enable=True,
+        owner=page
+    )
+    return order
 
 
 def create_page():
@@ -87,7 +82,9 @@ class BaseAuthenticatedTestCase(APITestCase):
         self.orders = dict()
         self.orders[Order.STATUS_ENABLE] = []
         self.orders[Order.STATUS_ENABLE].append(create_enable_order(page=self.page))
-        self.orders[Order.STATUS_ENABLE].append(create_enable_order(page=create_page()))
+        repeated_page = create_page()
+        self.orders[Order.STATUS_ENABLE].append(create_enable_order(page=repeated_page))
+        self.orders[Order.STATUS_ENABLE].append(create_enable_order(page=repeated_page))
 
         self.request = RequestFactory()
         self.request.user = self.page
@@ -137,7 +134,6 @@ class UserInquiryTestCases(BaseAuthenticatedTestCase):
         }
 
         response = self.client.post(url, data=data, format='json')
-        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         user_inquiry = UserInquiry.objects.get(order=self.orders[Order.STATUS_ENABLE][0], page=self.page)
@@ -195,7 +191,6 @@ class OrderTestCases(BaseAuthenticatedTestCase):
         )
         self.register_order_data['action'] = instagram_action.action_type
         response = self.client.post(url, data=self.register_order_data, format='json')
-        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         # the link is changed based on action type so if put it here result in test failure
         self.assertTrue(
@@ -220,7 +215,6 @@ class OrderTestCases(BaseAuthenticatedTestCase):
         self.register_order_data['action'] = instagram_action.action_type
         del self.register_order_data['shortcode']
         response = self.client.post(url, data=self.register_order_data, format='json')
-        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_order_post_action_follow_no_username(self):
@@ -237,7 +231,6 @@ class OrderTestCases(BaseAuthenticatedTestCase):
         self.register_order_data['action'] = instagram_action.action_type
         del self.register_order_data['instagram_username']
         response = self.client.post(url, data=self.register_order_data, format='json')
-        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_order_post_comment_none_like_follow(self):
@@ -287,21 +280,18 @@ class OrderTestCases(BaseAuthenticatedTestCase):
     #     url = reverse('order-comment')
     #     create_url = reverse('order-list')
     #     response = self.client.post(create_url, data=self.register_order_data, format='json')
-    #     print(Order.objects.first())
     #     response = self.client.get(url, format='json')
     #     self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_get_orders_comment(self):
         url = reverse('order-comment')
         # Here we have two orders with different pages however we get min error again
-        print(Order.objects.count())
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_get_order_like(self):
         url = reverse('order-like')
         # Here we have two orders with different pages however we get min error again
-        print(Order.objects.count())
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 

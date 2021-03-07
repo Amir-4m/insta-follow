@@ -105,7 +105,7 @@ class OrderViewSet(viewsets.GenericViewSet,
     def get_orders(self, request, action_type):
         page = request.auth['page']
         try:
-            limit = abs(min(int(request.query_params.get('limit', 0)), 100))
+            limit = abs(min(int(request.query_params.get('limit', 1)), 100))
         except ValueError:
             raise ValidationError(detail={'detail': _('make sure the limit value is a positive number!')})
 
