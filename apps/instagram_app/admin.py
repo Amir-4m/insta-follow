@@ -115,7 +115,7 @@ class AllowedGatewayAdmin(admin.ModelAdmin):
 class CoinTransactionAdmin(admin.ModelAdmin):
     list_display = ('page', 'amount', 'transaction_type', 'created_time')
     search_fields = ('page__instagram_username',)
-    raw_id_fields = ('page', 'inquiry', 'order', 'from_page', 'to_page', )
+    raw_id_fields = ('page', 'inquiry', 'order', 'from_page', 'to_page', 'package')
 
     def has_change_permission(self, request, obj=None):
         return False
