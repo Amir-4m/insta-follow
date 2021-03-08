@@ -74,7 +74,9 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
                 "session_id": session_id,
             }
         )
-        page.device_uuids.append(device_uuid)
+        if device_uuid not in page.device_uuids:
+            page.device_uuids.append(device_uuid)
+        page.save()
         return page
 
 
