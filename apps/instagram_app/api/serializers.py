@@ -29,10 +29,11 @@ logger = logging.getLogger(__name__)
 
 class LoginVerificationSerializer(serializers.ModelSerializer):
     instagram_user_id = serializers.IntegerField()
+    device_uuid = serializers.CharField(required=False)
 
     class Meta:
         model = InstaPage
-        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid')
+        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', 'device_uuid', )
         read_only_fields = ('uuid',)
 
     def validate(self, attrs):
@@ -65,8 +66,10 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
         username = validated_data['instagram_username'].lower()
         user_id = validated_data['instagram_user_id']
         session_id = validated_data['session_id']
+        device_uuid = validated_data['device_uuid'] if 'device_uuid' in validated_data else None
         page, _created = InstaPage.objects.update_or_create(
             instagram_user_id=user_id,
+            device_uuid=device_uuid,
             defaults={
                 "instagram_username": username,
                 "session_id": session_id

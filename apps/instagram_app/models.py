@@ -61,6 +61,7 @@ class InstaPage(models.Model):
     instagram_username = models.CharField(_("instagram username"), max_length=50)
     instagram_user_id = models.BigIntegerField(_("instagram id"), unique=True)
     session_id = models.CharField(_('session id'), max_length=50)
+    device_uuid = models.CharField(_('device uuid'), max_length=50, null=True, default=None)
 
     class Meta:
         db_table = "insta_pages"
