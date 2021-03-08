@@ -69,10 +69,10 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
         device_uuid = validated_data['device_uuid'] if 'device_uuid' in validated_data else None
         page, _created = InstaPage.objects.update_or_create(
             instagram_user_id=user_id,
-            device_uuid=device_uuid,
             defaults={
                 "instagram_username": username,
-                "session_id": session_id
+                "session_id": session_id,
+                "device_uuid": device_uuid
             }
         )
         return page
