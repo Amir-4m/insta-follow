@@ -33,7 +33,7 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = InstaPage
-        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', 'device_uuid', )
+        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', )
         read_only_fields = ('uuid',)
 
     def validate(self, attrs):
@@ -72,9 +72,9 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
             defaults={
                 "instagram_username": username,
                 "session_id": session_id,
-                "device_uuid": device_uuid
             }
         )
+        page.device_uuids.append(device_uuid)
         return page
 
 

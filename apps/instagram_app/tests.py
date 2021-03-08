@@ -354,6 +354,17 @@ class RegisterTestCase(BaseAuthenticatedTestCase):
         page = register_serializer.create(validated_data=register_data)
         self.assertNotEqual(page, None)
 
+    def test_registration_serializer_with_uuid_none(self):
+        register_data = {
+            "instagram_user_id": 27354623,
+            "instagram_username": "instagram-username",
+            "session_id": 716537612357,
+            "device_uuid": None
+        }
+        register_serializer = LoginVerificationSerializer(data=register_data)
+        page = register_serializer.create(validated_data=register_data)
+        self.assertNotEqual(page, None)
+
     def test_registration_serializer_without_uuid(self):
         device_uuid = "538a5b12-a019-44c8-88b1-e14f36412c0f"
         register_data = {
@@ -364,5 +375,5 @@ class RegisterTestCase(BaseAuthenticatedTestCase):
         }
         register_serializer = LoginVerificationSerializer(data=register_data)
         page = register_serializer.create(validated_data=register_data)
-        self.assertEqual(page.device_uuid, device_uuid)
+        self.assertNotEqual(len(page.device_uuids), 0)
 
