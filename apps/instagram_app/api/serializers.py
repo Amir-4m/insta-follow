@@ -16,7 +16,7 @@ from rest_framework.exceptions import ValidationError
 from apps.instagram_app.tasks import check_order_validity
 from apps.instagram_app.models import (
     UserInquiry, CoinTransaction, Order,
-    InstaAction, Device, CoinPackage,
+    InstaAction, CoinPackage,
     CoinPackageOrder, InstaPage, Comment,
     ReportAbuse, BlockWordRegex, BlockedText,
     AllowedGateway
@@ -76,17 +76,6 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
             }
         )
         return page
-
-
-class DeviceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Device
-        fields = ('device_id',)
-
-    def create(self, validated_data):
-        page = validated_data.get('page')
-        device_id = validated_data.get('device_id')
-        return Device.objects.create(page=page, device_id=device_id)
 
 
 class OrderSerializer(serializers.ModelSerializer):

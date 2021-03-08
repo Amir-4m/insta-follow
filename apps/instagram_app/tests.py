@@ -355,7 +355,7 @@ class RegisterTestCase(BaseAuthenticatedTestCase):
         self.assertNotEqual(page, None)
 
     def test_registration_serializer_without_uuid(self):
-        device_uuid = "nsdkc71254126S"
+        device_uuid = "538a5b12-a019-44c8-88b1-e14f36412c0f"
         register_data = {
             "instagram_user_id": 27354623,
             "instagram_username": "instagram-username",

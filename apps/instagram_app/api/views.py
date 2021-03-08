@@ -23,7 +23,7 @@ from ..permissions import PagePermission
 from ..swagger_schemas import *
 from .serializers import (
     OrderSerializer, UserInquirySerializer, CoinTransactionSerializer,
-    InstaActionSerializer, DeviceSerializer, CoinPackageSerializer,
+    InstaActionSerializer, CoinPackageSerializer,
     CoinPackageOrderSerializer, LoginVerificationSerializer, PurchaseSerializer,
     CommentSerializer, CoinTransferSerializer, ReportAbuseSerializer,
     PackageOrderGateWaySerializer,
@@ -32,7 +32,7 @@ from ..services import CustomService
 from ..pagination import CoinTransactionPagination, OrderPagination, CoinPackageOrderPagination
 from apps.instagram_app.models import (
     InstaAction, Order, UserInquiry,
-    CoinTransaction, Device, CoinPackage,
+    CoinTransaction, CoinPackage,
     CoinPackageOrder, InstaPage, Comment,
     ReportAbuse,
     AllowedGateway
@@ -59,19 +59,6 @@ class LoginVerification(generics.CreateAPIView):
     """verify and create the logged in page"""
     serializer_class = LoginVerificationSerializer
     queryset = InstaPage.objects.all()
-
-
-class DeviceViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
-    """
-    add the given device ID to user
-    """
-    serializer_class = DeviceSerializer
-    authentication_classes = (PageAuthentication,)
-    permission_classes = (PagePermission,)
-    queryset = Device.objects.all()
-
-    def perform_create(self, serializer):
-        serializer.save(page=self.request.auth['page'])
 
 
 @method_decorator(name='list', decorator=swagger_auto_schema(
