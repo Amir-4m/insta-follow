@@ -375,6 +375,7 @@ class RegisterTestCase(BaseAuthenticatedTestCase):
         }
         register_serializer = LoginVerificationSerializer(data=register_data)
         page = register_serializer.create(validated_data=register_data)
+        print(page.device_uuids)
         self.assertNotEqual(len(page.device_uuids), 0)
         self.assertEqual(page.device_uuids[0], device_uuid)
 
