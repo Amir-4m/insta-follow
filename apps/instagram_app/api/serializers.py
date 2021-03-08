@@ -16,7 +16,7 @@ from rest_framework.exceptions import ValidationError
 from apps.instagram_app.tasks import check_order_validity
 from apps.instagram_app.models import (
     UserInquiry, CoinTransaction, Order,
-    InstaAction, Device, CoinPackage,
+    InstaAction, CoinPackage,
     CoinPackageOrder, InstaPage, Comment,
     ReportAbuse, BlockWordRegex, BlockedText,
     AllowedGateway
@@ -29,10 +29,11 @@ logger = logging.getLogger(__name__)
 
 class LoginVerificationSerializer(serializers.ModelSerializer):
     instagram_user_id = serializers.IntegerField()
+    device_uuid = serializers.UUIDField(required=False)
 
     class Meta:
         model = InstaPage
-        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid')
+        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', )
         read_only_fields = ('uuid',)
 
     def validate(self, attrs):
@@ -65,25 +66,18 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
         username = validated_data['instagram_username'].lower()
         user_id = validated_data['instagram_user_id']
         session_id = validated_data['session_id']
+        device_uuid = validated_data.get('device_uuid')
         page, _created = InstaPage.objects.update_or_create(
             instagram_user_id=user_id,
             defaults={
                 "instagram_username": username,
-                "session_id": session_id
+                "session_id": session_id,
             }
         )
+        if device_uuid not in page.device_uuids:
+            page.device_uuids.append(device_uuid)
+        page.save()
         return page
-
-
-class DeviceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Device
-        fields = ('device_id',)
-
-    def create(self, validated_data):
-        page = validated_data.get('page')
-        device_id = validated_data.get('device_id')
-        return Device.objects.create(page=page, device_id=device_id)
 
 
 class OrderSerializer(serializers.ModelSerializer):

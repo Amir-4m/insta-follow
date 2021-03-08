@@ -61,6 +61,7 @@ class InstaPage(models.Model):
     instagram_username = models.CharField(_("instagram username"), max_length=50)
     instagram_user_id = models.BigIntegerField(_("instagram id"), unique=True)
     session_id = models.CharField(_('session id'), max_length=50)
+    device_uuids = ArrayField(models.UUIDField(_('device uuids')), default=list)
 
     class Meta:
         db_table = "insta_pages"
@@ -69,19 +70,6 @@ class InstaPage(models.Model):
 
     def __str__(self):
         return self.instagram_username
-
-
-class Device(models.Model):
-    page = models.ForeignKey(InstaPage, on_delete=models.CASCADE, related_name='devices')
-    device_id = models.CharField(_('device id'), max_length=40, db_index=True)
-
-    class Meta:
-        db_table = "insta_devices"
-        verbose_name = _("Device")
-        verbose_name_plural = _("Devices")
-
-    def __str__(self):
-        return f"{self.page.instagram_username} - {self.device_id}"
 
 
 class Comment(models.Model):

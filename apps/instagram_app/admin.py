@@ -15,7 +15,7 @@ from .models import (
 class InstaPageModelAdmin(admin.ModelAdmin):
     list_display = ('instagram_username', 'instagram_user_id', 'updated_time', 'created_time')
     readonly_fields = ('uuid',)
-    search_fields = ('instagram_username', 'instagram_user_id')
+    search_fields = ('instagram_username', 'instagram_user_id', 'device_uuids', )
 
     def has_change_permission(self, request, obj=None):
         return False

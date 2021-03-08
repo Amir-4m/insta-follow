@@ -6,7 +6,7 @@ import string
 from django.utils.encoding import smart_text
 from psycopg2._psycopg import IntegrityError
 
-from apps.instagram_app.api.serializers import InstaActionSerializer
+from apps.instagram_app.api.serializers import InstaActionSerializer, LoginVerificationSerializer
 from apps.instagram_app.services import CryptoService
 from datetime import datetime, timedelta
 from django.db.models import Sum
@@ -333,3 +333,39 @@ class RegisterTestCase(BaseAuthenticatedTestCase):
         }
         response = self.client.post(url, data=register_data, format='json')
         self.assertRaises(ValidationError)
+
+    def test_registration_serializer_with_uuid(self):
+        register_data = {
+            "instagram_user_id": 27354623,
+            "instagram_username": "instagram-username",
+            "session_id": 716537612357,
+        }
+        register_serializer = LoginVerificationSerializer(data=register_data)
+        page = register_serializer.create(validated_data=register_data)
+        self.assertNotEqual(page, None)
+
+    def test_registration_serializer_with_uuid_none(self):
+        register_data = {
+            "instagram_user_id": 27354623,
+            "instagram_username": "instagram-username",
+            "session_id": 716537612357,
+            "device_uuid": None
+        }
+        register_serializer = LoginVerificationSerializer(data=register_data)
+        page = register_serializer.create(validated_data=register_data)
+        self.assertNotEqual(page, None)
+
+    def test_registration_serializer_without_uuid(self):
+        device_uuid = "538a5b12-a019-44c8-88b1-e14f36412c0f"
+        register_data = {
+            "instagram_user_id": 27354623,
+            "instagram_username": "instagram-username",
+            "session_id": 716537612357,
+            "device_uuid": device_uuid
+        }
+        register_serializer = LoginVerificationSerializer(data=register_data)
+        page = register_serializer.create(validated_data=register_data)
+        print(page.device_uuids)
+        self.assertNotEqual(len(page.device_uuids), 0)
+        self.assertEqual(page.device_uuids[0], device_uuid)
+
