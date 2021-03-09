@@ -33,7 +33,7 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = InstaPage
-        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', )
+        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', 'device_uuid', )
         read_only_fields = ('uuid',)
 
     def validate(self, attrs):
