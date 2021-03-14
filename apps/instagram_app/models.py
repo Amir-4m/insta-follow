@@ -197,7 +197,7 @@ class CoinPackage(models.Model):
 
     @property
     def package_amount(self):
-        return self.amount_offer or self.price
+        return self.amount_offer or self.amount
 
     def clean(self):
         if self.amount_offer is not None and self.price_offer is not None:

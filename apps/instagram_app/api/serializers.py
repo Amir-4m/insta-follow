@@ -284,12 +284,16 @@ class InstaActionSerializer(serializers.ModelSerializer):
 
 
 class CoinPackageSerializer(serializers.ModelSerializer):
+    package_price = serializers.IntegerField(required=False)
+    package_amount = serializers.IntegerField(required=False)
+
     class Meta:
         model = CoinPackage
         fields = (
             'id', 'name', 'sku', 'amount',
             'price', 'is_enable', 'is_featured',
-            'featured', 'price_offer', 'amount_offer'
+            'featured', 'price_offer', 'amount_offer',
+            'package_price', 'package_amount',
         )
 
 
