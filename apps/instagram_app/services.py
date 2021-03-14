@@ -168,7 +168,7 @@ class CustomService(object):
         )
 
         if _pointer:
-            _qs = _qs.filter(id__lt=_pointer)
+            _qs = _qs.exclude(id__in=_pointer)
 
         orders = list(_qs.annotate(
             remaining=F('target_no') - Coalesce(Sum(
@@ -195,7 +195,7 @@ class CustomService(object):
             if _pointer and len(orders) == 0:
                 return CustomService.get_or_create_orders(page, action_type, limit)
         else:
-            cache.set(_pointer_key, min([o.id for o in orders]))
+            cache.set(_pointer_key, [o.id for o in orders])
 
         # result = []
         # for order in orders:
