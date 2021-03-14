@@ -195,7 +195,7 @@ class CustomService(object):
             if _pointer and len(orders) == 0:
                 return CustomService.get_or_create_orders(page, action_type, limit)
         else:
-            cache.set(_pointer_key, _pointer.append(o.id for o in orders))
+            cache.set(_pointer_key, _pointer.extend(o.id for o in orders))
 
         # result = []
         # for order in orders:
