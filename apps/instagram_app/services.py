@@ -161,7 +161,7 @@ class CustomService(object):
         _distinct_orders = list(Order.objects.filter(
             status=Order.STATUS_ENABLE,
             action=action_type
-        ).annotate(min_id=Min('id')).values_list('min_id', flat=True))
+        ).values('entity_id').annotate(min_id=Min('id')).values_list('min_id', flat=True))
 
         _qs = Order.objects.filter(
             id__in=_distinct_orders
