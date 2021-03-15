@@ -197,7 +197,7 @@ class CoinPackage(models.Model):
 
     @property
     def package_amount(self):
-        return self.amount_offer or self.price
+        return self.amount_offer or self.amount
 
     def clean(self):
         if self.amount_offer is not None and self.price_offer is not None:
@@ -218,6 +218,7 @@ class CoinPackageOrder(models.Model):
     page = models.ForeignKey(InstaPage, on_delete=models.PROTECT, related_name='package_orders')
     is_paid = models.BooleanField(_("is paid"), null=True)
     price = models.PositiveIntegerField(_('price'))
+    amount = models.PositiveIntegerField(_('amount'), null=True)
     version_name = models.CharField(_('version name'), max_length=50)
     redirect_url = models.CharField(_('redirect url'), max_length=120)
 
