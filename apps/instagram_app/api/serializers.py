@@ -284,8 +284,6 @@ class InstaActionSerializer(serializers.ModelSerializer):
 
 
 class CoinPackageSerializer(serializers.ModelSerializer):
-    package_price = serializers.IntegerField(required=False)
-    package_amount = serializers.IntegerField(required=False)
 
     class Meta:
         model = CoinPackage
@@ -293,7 +291,6 @@ class CoinPackageSerializer(serializers.ModelSerializer):
             'id', 'name', 'sku', 'amount',
             'price', 'is_enable', 'is_featured',
             'featured', 'price_offer', 'amount_offer',
-            'package_price', 'package_amount',
         )
 
 
@@ -306,9 +303,10 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'invoice_number', 'coin_package',
             'page', 'is_paid', 'price', 'package_detail',
-            'version_name', 'gateways', 'created_time', 'redirect_url'
+            'version_name', 'gateways', 'created_time', 'redirect_url',
+            'amount'
         )
-        read_only_fields = ('page',)
+        read_only_fields = ('page', 'price', 'amount', )
 
     def get_package_detail(self, obj):
         if obj.coin_package:
@@ -324,6 +322,11 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
         except Exception as e:
             logger.error(f"getting gateways list failed in creating package order: {e}")
         return gateways_list
+
+    def create(self, validated_data):
+        validated_data['price'] = validated_data['coin_package'].package_price
+        validated_data['amount'] = validated_data['coin_package'].package_amount
+        return super().create(validated_data)
 
 
 class PurchaseSerializer(serializers.Serializer):
