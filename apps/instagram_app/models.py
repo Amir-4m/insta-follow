@@ -61,6 +61,7 @@ class InstaPage(models.Model):
     instagram_username = models.CharField(_("instagram username"), max_length=50)
     instagram_user_id = models.BigIntegerField(_("instagram id"), unique=True)
     session_id = models.CharField(_('session id'), max_length=50)
+    device_uuids = ArrayField(models.UUIDField(_('device uuids')), default=list)
 
     class Meta:
         db_table = "insta_pages"
@@ -69,19 +70,6 @@ class InstaPage(models.Model):
 
     def __str__(self):
         return self.instagram_username
-
-
-class Device(models.Model):
-    page = models.ForeignKey(InstaPage, on_delete=models.CASCADE, related_name='devices')
-    device_id = models.CharField(_('device id'), max_length=40, db_index=True)
-
-    class Meta:
-        db_table = "insta_devices"
-        verbose_name = _("Device")
-        verbose_name_plural = _("Devices")
-
-    def __str__(self):
-        return f"{self.page.instagram_username} - {self.device_id}"
 
 
 class Comment(models.Model):
@@ -187,7 +175,8 @@ class CoinPackage(models.Model):
     price_offer = models.PositiveIntegerField(_('price offer'), null=True, blank=True)
     name = models.CharField(_('package title'), max_length=100)
     sku = models.CharField(_('package sku'), max_length=40, unique=True, null=True)
-    featured = models.DateTimeField(null=True, blank=True)
+    featured = models.DateTimeField(null=True, blank=True,
+                                    help_text=_('if this date field is specified, the coin package will be featured until this date'))
     is_enable = models.BooleanField(default=True)
 
     class Meta:
@@ -208,7 +197,7 @@ class CoinPackage(models.Model):
 
     @property
     def package_amount(self):
-        return self.amount_offer or self.price
+        return self.amount_offer or self.amount
 
     def clean(self):
         if self.amount_offer is not None and self.price_offer is not None:
@@ -229,6 +218,7 @@ class CoinPackageOrder(models.Model):
     page = models.ForeignKey(InstaPage, on_delete=models.PROTECT, related_name='package_orders')
     is_paid = models.BooleanField(_("is paid"), null=True)
     price = models.PositiveIntegerField(_('price'))
+    amount = models.PositiveIntegerField(_('amount'), null=True)
     version_name = models.CharField(_('version name'), max_length=50)
     redirect_url = models.CharField(_('redirect url'), max_length=120)
 

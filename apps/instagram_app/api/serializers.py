@@ -16,7 +16,7 @@ from rest_framework.exceptions import ValidationError
 from apps.instagram_app.tasks import check_order_validity
 from apps.instagram_app.models import (
     UserInquiry, CoinTransaction, Order,
-    InstaAction, Device, CoinPackage,
+    InstaAction, CoinPackage,
     CoinPackageOrder, InstaPage, Comment,
     ReportAbuse, BlockWordRegex, BlockedText,
     AllowedGateway
@@ -29,10 +29,11 @@ logger = logging.getLogger(__name__)
 
 class LoginVerificationSerializer(serializers.ModelSerializer):
     instagram_user_id = serializers.IntegerField()
+    device_uuid = serializers.UUIDField(required=False)
 
     class Meta:
         model = InstaPage
-        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid')
+        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', 'device_uuid', )
         read_only_fields = ('uuid',)
 
     def validate(self, attrs):
@@ -65,25 +66,18 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
         username = validated_data['instagram_username'].lower()
         user_id = validated_data['instagram_user_id']
         session_id = validated_data['session_id']
+        device_uuid = validated_data.get('device_uuid')
         page, _created = InstaPage.objects.update_or_create(
             instagram_user_id=user_id,
             defaults={
                 "instagram_username": username,
-                "session_id": session_id
+                "session_id": session_id,
             }
         )
+        if device_uuid not in page.device_uuids:
+            page.device_uuids.append(device_uuid)
+        page.save()
         return page
-
-
-class DeviceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Device
-        fields = ('device_id',)
-
-    def create(self, validated_data):
-        page = validated_data.get('page')
-        device_id = validated_data.get('device_id')
-        return Device.objects.create(page=page, device_id=device_id)
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -277,12 +271,13 @@ class InstaActionSerializer(serializers.ModelSerializer):
 
 
 class CoinPackageSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = CoinPackage
         fields = (
             'id', 'name', 'sku', 'amount',
             'price', 'is_enable', 'is_featured',
-            'featured', 'price_offer', 'amount_offer'
+            'featured', 'price_offer', 'amount_offer',
         )
 
 
@@ -295,9 +290,10 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'invoice_number', 'coin_package',
             'page', 'is_paid', 'price', 'package_detail',
-            'version_name', 'gateways', 'created_time', 'redirect_url'
+            'version_name', 'gateways', 'created_time', 'redirect_url',
+            'amount'
         )
-        read_only_fields = ('page',)
+        read_only_fields = ('page', 'price', 'amount', )
 
     def get_package_detail(self, obj):
         if obj.coin_package:
@@ -313,6 +309,11 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
         except Exception as e:
             logger.error(f"getting gateways list failed in creating package order: {e}")
         return gateways_list
+
+    def create(self, validated_data):
+        validated_data['price'] = validated_data['coin_package'].package_price
+        validated_data['amount'] = validated_data['coin_package'].package_amount
+        return super().create(validated_data)
 
 
 class PurchaseSerializer(serializers.Serializer):

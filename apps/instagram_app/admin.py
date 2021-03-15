@@ -15,7 +15,7 @@ from .models import (
 class InstaPageModelAdmin(admin.ModelAdmin):
     list_display = ('instagram_username', 'instagram_user_id', 'updated_time', 'created_time')
     readonly_fields = ('uuid',)
-    search_fields = ('instagram_username', 'instagram_user_id')
+    search_fields = ('instagram_username', 'instagram_user_id', 'device_uuids', )
 
     def has_change_permission(self, request, obj=None):
         return False
@@ -31,6 +31,7 @@ class OrderModelAdmin(admin.ModelAdmin):
     readonly_fields = ('media_properties', 'instagram_username', 'entity_id', 'achieved_number_approved')
     search_fields = ('owner__instagram_username', 'id', 'link')
     raw_id_fields = ('owner', )
+    date_hierarchy = 'created_time'
 
     def has_add_permission(self, request):
         return False
@@ -74,6 +75,7 @@ class CoinPackageOrderModelAdmin(admin.ModelAdmin):
     list_filter = ('is_paid', 'coin_package', 'gateway')
     search_fields = ('page__instagram_username', 'gateway')
     raw_id_fields = ('page', )
+    date_hierarchy = 'created_time'
 
 
 @admin.register(Comment)
@@ -115,7 +117,8 @@ class AllowedGatewayAdmin(admin.ModelAdmin):
 class CoinTransactionAdmin(admin.ModelAdmin):
     list_display = ('page', 'amount', 'transaction_type', 'created_time')
     search_fields = ('page__instagram_username',)
-    raw_id_fields = ('page', 'inquiry', 'order', 'from_page', 'to_page', 'package')
+    raw_id_fields = ('page', 'inquiry', 'order', 'from_page', 'to_page', )
+    date_hierarchy = 'created_time'
 
     def has_change_permission(self, request, obj=None):
         return False
