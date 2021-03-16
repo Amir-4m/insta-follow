@@ -8,7 +8,7 @@ import requests
 
 from django.conf import settings
 from django.db.models.functions import Coalesce
-from django.db.models import F, Sum, Case, When, IntegerField, Q, Min, Max
+from django.db.models import F, Sum, Case, When, IntegerField, Q, Max, Min
 from django.utils import timezone
 from django.core.cache import cache
 
@@ -155,8 +155,11 @@ class CustomService(object):
     @staticmethod
     def get_or_create_orders(page, action_type, limit=100):
 
-        _pointer_key = 'order_assign_pointer'
-        _pointer = cache.get(_pointer_key, [])
+        _is_even = timezone.now().minute % 2
+        _iterate_vals = (('gt', 'pk', max), ('lt', '-pk', min))
+        _flt, _ord, _fct = _iterate_vals[_is_even]
+        _pointer_key = f'order_assign_pointer_{action_type}_{_is_even}'
+        _pointer = cache.get(_pointer_key)
 
         _distinct_orders = list(Order.objects.filter(
             status=Order.STATUS_ENABLE,
@@ -168,7 +171,8 @@ class CustomService(object):
         )
 
         if _pointer:
-            _qs = _qs.exclude(id__in=_pointer)
+            _d = {f'id__{_flt}': _pointer}
+            _qs = _qs.filter(**_d)
 
         orders = list(_qs.annotate(
             remaining=F('target_no') - Coalesce(Sum(
@@ -188,14 +192,14 @@ class CustomService(object):
                 page=page,
                 order__action=action_type
             ).values_list('order__entity_id', flat=True)
-        ).annotate(action_time=Max('user_inquiries__created_time')).order_by('action_time')[:limit])
+        ).order_by(_ord)[:limit])
 
         if len(orders) < limit:
             cache.delete(_pointer_key)
             if _pointer and len(orders) == 0:
                 return CustomService.get_or_create_orders(page, action_type, limit)
         else:
-            cache.set(_pointer_key, _pointer.extend(o.id for o in orders))
+            cache.set(_pointer_key, _fct([o.id for o in orders]))
 
         # result = []
         # for order in orders:
