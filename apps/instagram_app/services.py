@@ -155,22 +155,17 @@ class CustomService(object):
     @staticmethod
     def get_or_create_orders(page, action_type, limit=100):
 
-        _pointer_key = 'order_assign_pointer'
+        _is_even = timezone.now().minute % 2
+        _pointer_key = f'order_assign_pointer_{_is_even}'
+
         _pointer = cache.get(_pointer_key, [])
 
-        _distinct_orders = list(Order.objects.filter(
-            status=Order.STATUS_ENABLE,
-            action=action_type
-        ).values('entity_id').annotate(min_id=Min('id')).values_list('min_id', flat=True))
-
         _qs = Order.objects.filter(
-            id__in=_distinct_orders
+            status=Order.STATUS_ENABLE,
+            action=action_type,
         )
 
-        if _pointer:
-            _qs = _qs.exclude(id__in=_pointer)
-
-        orders = list(_qs.annotate(
+        orders = _qs.annotate(
             remaining=F('target_no') - Coalesce(Sum(
                 Case(
                     When(
@@ -188,14 +183,20 @@ class CustomService(object):
                 page=page,
                 order__action=action_type
             ).values_list('order__entity_id', flat=True)
-        ).annotate(action_time=Max('user_inquiries__created_time')).order_by('action_time')[:limit])
+        )
 
+        if _is_even == 0:
+            orders = list(orders.filter(id__gt=_pointer).order_by('pk')[:limit])
+        else:
+            orders = list(orders.filter(id__lt=_pointer).order_by('-pk')[:limit])
+
+        print(orders)
         if len(orders) < limit:
             cache.delete(_pointer_key)
             if _pointer and len(orders) == 0:
                 return CustomService.get_or_create_orders(page, action_type, limit)
         else:
-            cache.set(_pointer_key, _pointer.extend(o.id for o in orders))
+            cache.set(_pointer_key, min([o.id for o in orders]))
 
         # result = []
         # for order in orders:
