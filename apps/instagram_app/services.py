@@ -158,7 +158,7 @@ class CustomService(object):
         _is_even = timezone.now().minute % 2
         _iterate_vals = (('gt', 'pk', max), ('lt', '-pk', min))
         _flt, _ord, _fct = _iterate_vals[_is_even]
-        _pointer_key = f'order_assign_pointer_{_is_even}'
+        _pointer_key = f'order_assign_pointer_{action_type}_{_is_even}'
         _pointer = cache.get(_pointer_key)
 
         _distinct_orders = list(Order.objects.filter(
