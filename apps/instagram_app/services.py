@@ -156,7 +156,7 @@ class CustomService(object):
     def get_or_create_orders(page, action_type, limit=100):
 
         _is_even = timezone.now().minute % 2
-        _iterate_vals = (('gt', 'pk', max), ('lt', '-pk', min)
+        _iterate_vals = (('gt', 'pk', max), ('lt', '-pk', min))
         _flt, _ord, _fct = _iterate_vals[_is_even]
         _pointer_key = f'order_assign_pointer_{_is_even}'
         _pointer = cache.get(_pointer_key)
@@ -173,7 +173,7 @@ class CustomService(object):
         if _pointer:
             _d = {f'id__{_flt}': _pointer}
             _qs = _qs.filter(**_d)
-        
+
         orders = list(_qs.annotate(
             remaining=F('target_no') - Coalesce(Sum(
                 Case(
@@ -196,8 +196,8 @@ class CustomService(object):
 
         if len(orders) < limit:
             cache.delete(_pointer_key)
-            if _pointer and len(orders) == 0:
-                return CustomService.get_or_create_orders(page, action_type, limit)
+        if _pointer and len(orders) == 0:
+            return CustomService.get_or_create_orders(page, action_type, limit)
         else:
             cache.set(_pointer_key, _fct([o.id for o in orders]))
 
