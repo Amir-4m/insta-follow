@@ -168,8 +168,8 @@ class InstaActionAPIView(generics.ListAPIView):
     serializer_class = InstaActionSerializer
 
 
-@method_decorator(name='list', decorator=cache_page(60 * 60 * 5))  # 5 hours cache
-@method_decorator(name='retrieve', decorator=cache_page(60 * 60 * 5))  # 5 hours cache
+@method_decorator(name='list', decorator=cache_page(60 * 60 * 2))  # 2 hours cache
+@method_decorator(name='retrieve', decorator=cache_page(60 * 30))  # 30 minutes cache
 class CoinPackageViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
     """Get a list of coin packages"""
     queryset = CoinPackage.objects.filter(is_enable=True).order_by('price')
