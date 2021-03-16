@@ -8,7 +8,7 @@ import requests
 
 from django.conf import settings
 from django.db.models.functions import Coalesce
-from django.db.models import F, Sum, Case, When, IntegerField, Q, Min, Max
+from django.db.models import F, Sum, Case, When, IntegerField, Q, Max
 from django.utils import timezone
 from django.core.cache import cache
 
@@ -164,7 +164,7 @@ class CustomService(object):
         _distinct_orders = list(Order.objects.filter(
             status=Order.STATUS_ENABLE,
             action=action_type
-        ).values('entity_id').annotate(min_id=Min('id')).values_list('min_id', flat=True))
+        ).values('entity_id').annotate(max_id=Max('id')).values_list('max_id', flat=True))
 
         _qs = Order.objects.filter(
             id__in=_distinct_orders
@@ -196,8 +196,8 @@ class CustomService(object):
 
         if len(orders) < limit:
             cache.delete(_pointer_key)
-        if _pointer and len(orders) == 0:
-            return CustomService.get_or_create_orders(page, action_type, limit)
+            if _pointer and len(orders) == 0:
+                return CustomService.get_or_create_orders(page, action_type, limit)
         else:
             cache.set(_pointer_key, _fct([o.id for o in orders]))
 
@@ -209,7 +209,7 @@ class CustomService(object):
         #     cache.add(_ck, 1, 60 * 10)
         #     cache.incr(_ck)
         #
-        # return res
+        # return result
 
         return orders
 
