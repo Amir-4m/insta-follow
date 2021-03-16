@@ -156,16 +156,25 @@ class CustomService(object):
     def get_or_create_orders(page, action_type, limit=100):
 
         _is_even = timezone.now().minute % 2
+        _iterate_vals = (('gt', 'pk', max), ('lt', '-pk', min)
+        _flt, _ord, _fct = _iterate_vals[_is_even]
         _pointer_key = f'order_assign_pointer_{_is_even}'
+        _pointer = cache.get(_pointer_key)
 
-        _pointer = cache.get(_pointer_key, [])
+        _distinct_orders = list(Order.objects.filter(
+            status=Order.STATUS_ENABLE,
+            action=action_type
+        ).values('entity_id').annotate(min_id=Min('id')).values_list('min_id', flat=True))
 
         _qs = Order.objects.filter(
-            status=Order.STATUS_ENABLE,
-            action=action_type,
+            id__in=_distinct_orders
         )
 
-        orders = _qs.annotate(
+        if _pointer:
+            _d = {f'id__{_flt}': _pointer}
+            _qs = _qs.filter(**_d)
+        
+        orders = list(_qs.annotate(
             remaining=F('target_no') - Coalesce(Sum(
                 Case(
                     When(
@@ -183,20 +192,14 @@ class CustomService(object):
                 page=page,
                 order__action=action_type
             ).values_list('order__entity_id', flat=True)
-        )
+        ).order_by(_ord)[:limit])
 
-        if _is_even == 0:
-            orders = list(orders.filter(id__gt=_pointer).order_by('pk')[:limit])
-        else:
-            orders = list(orders.filter(id__lt=_pointer).order_by('-pk')[:limit])
-
-        print(orders)
         if len(orders) < limit:
             cache.delete(_pointer_key)
             if _pointer and len(orders) == 0:
                 return CustomService.get_or_create_orders(page, action_type, limit)
         else:
-            cache.set(_pointer_key, min([o.id for o in orders]))
+            cache.set(_pointer_key, _fct([o.id for o in orders]))
 
         # result = []
         # for order in orders:
@@ -206,7 +209,7 @@ class CustomService(object):
         #     cache.add(_ck, 1, 60 * 10)
         #     cache.incr(_ck)
         #
-        # return result
+        # return res
 
         return orders
 
