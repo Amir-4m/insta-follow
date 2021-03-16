@@ -31,7 +31,6 @@ class OrderModelAdmin(admin.ModelAdmin):
     readonly_fields = ('media_properties', 'instagram_username', 'entity_id', 'achieved_number_approved')
     search_fields = ('owner__instagram_username', 'id', 'link')
     raw_id_fields = ('owner', )
-    sortable_by = ('achieved_number_approved', )
     date_hierarchy = 'created_time'
 
     def has_add_permission(self, request):
