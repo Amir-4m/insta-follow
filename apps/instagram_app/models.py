@@ -212,7 +212,7 @@ class CoinPackageOrder(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
     gateway = models.CharField(_('gateway'), max_length=50, blank=True, db_index=True)
-    invoice_number = models.UUIDField(_('uuid'), unique=True, default=uuid.uuid4, editable=False)
+    invoice_number = models.UUIDField(_('invoice number'), unique=True, default=uuid.uuid4, editable=False)
     transaction_id = models.CharField(_('transaction id'), unique=True, null=True, max_length=40)
     coin_package = models.ForeignKey(CoinPackage, on_delete=models.PROTECT)
     page = models.ForeignKey(InstaPage, on_delete=models.PROTECT, related_name='package_orders')
