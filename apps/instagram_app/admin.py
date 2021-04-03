@@ -73,7 +73,7 @@ class CoinPackageOrderModelAdmin(admin.ModelAdmin):
         'gateway', 'is_paid', 'updated_time', 'created_time'
     )
     list_filter = ('is_paid', 'coin_package', 'gateway')
-    search_fields = ('page__instagram_username', 'gateway', 'invoice_number')
+    search_fields = ('page__instagram_username', 'gateway', 'invoice_number', 'transaction_id')
     raw_id_fields = ('page', )
     date_hierarchy = 'created_time'
 
