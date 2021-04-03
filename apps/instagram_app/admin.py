@@ -117,6 +117,7 @@ class AllowedGatewayAdmin(admin.ModelAdmin):
 class CoinTransactionAdmin(admin.ModelAdmin):
     list_display = ('page', 'amount', 'transaction_type', 'created_time')
     search_fields = ('page__instagram_username',)
+    list_filter = ('transaction_type', )
     raw_id_fields = ('page', 'inquiry', 'order', 'from_page', 'to_page', )
     date_hierarchy = 'created_time'
 
