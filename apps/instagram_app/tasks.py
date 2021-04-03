@@ -153,12 +153,16 @@ def check_order_validity(order_id):
         check_order_validity.delay(order_id)
 
     else:
-        if order.action.action_type == InstaAction.ACTION_FOLLOW:
-            if res['graphql']['user'].get('is_private', False):
-                order.status = Order.STATUS_DISABLE
-                order.description = "(Private Page) - Order is disabled due to page being private"
-        else:
-            order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
+        try:
+            if order.action.action_type == InstaAction.ACTION_FOLLOW:
+                if res['graphql']['user'].get('is_private', False):
+                    order.status = Order.STATUS_DISABLE
+                    order.description = "(Private Page) - Order is disabled due to page being private"
+            else:
+                order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
+        except KeyError:
+            order.status = Order.STATUS_DISABLE
+            order.description = f"(Order Unavailable) - Order is disabled - res: {res}"
 
     order.save()
 
