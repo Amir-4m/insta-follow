@@ -15,7 +15,7 @@ from .models import (
 class InstaPageModelAdmin(admin.ModelAdmin):
     list_display = ('instagram_username', 'instagram_user_id', 'updated_time', 'created_time')
     readonly_fields = ('uuid',)
-    search_fields = ('instagram_username', 'instagram_user_id', 'device_uuids', )
+    search_fields = ('instagram_username', 'instagram_user_id', 'device_uuids',)
 
     def has_change_permission(self, request, obj=None):
         return False
@@ -30,7 +30,7 @@ class OrderModelAdmin(admin.ModelAdmin):
     list_filter = ('action', 'status')
     readonly_fields = ('media_properties', 'instagram_username', 'entity_id', 'achieved_number_approved')
     search_fields = ('owner__instagram_username', 'id', 'link')
-    raw_id_fields = ('owner', )
+    raw_id_fields = ('owner',)
     date_hierarchy = 'created_time'
 
     def has_add_permission(self, request):
@@ -44,7 +44,7 @@ class UserInquiryModelAdmin(admin.ModelAdmin):
     readonly_fields = ('validated_time', 'page', 'order')
     list_filter = ('status', 'order__action')
     search_fields = ('page__instagram_username',)
-    raw_id_fields = ('order', 'page', )
+    raw_id_fields = ('order', 'page',)
 
 
 @admin.register(InstaAction)
@@ -69,13 +69,16 @@ class InstagramAccountModelAdmin(admin.ModelAdmin):
 @admin.register(CoinPackageOrder)
 class CoinPackageOrderModelAdmin(admin.ModelAdmin):
     list_display = (
-        'coin_package', 'page', 'price', 'invoice_number',
+        'coin_package', 'page', 'price', 'invoice_number', 'transaction_id',
         'gateway', 'is_paid', 'updated_time', 'created_time'
     )
     list_filter = ('is_paid', 'coin_package', 'gateway')
-    search_fields = ('page__instagram_username', 'gateway', 'invoice_number', 'transaction_id')
-    raw_id_fields = ('page', )
+    search_fields = ('page__instagram_username', 'invoice_number', 'transaction_id')
+    raw_id_fields = ('page',)
     date_hierarchy = 'created_time'
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Comment)
@@ -87,7 +90,7 @@ class CommentModelAdmin(admin.ModelAdmin):
 class ReportAbuseModelAdmin(admin.ModelAdmin):
     list_display = ('reporter', 'text', 'abuser', 'status', 'created_time')
     list_filter = ('status',)
-    raw_id_fields = ('reporter', 'abuser', )
+    raw_id_fields = ('reporter', 'abuser',)
 
     def save_model(self, request, obj, form, change):
         if obj.status == ReportAbuse.STATUS_APPROVED:
@@ -104,7 +107,7 @@ class BlockWordRegexModelAdmin(admin.ModelAdmin):
 @admin.register(BlockedText)
 class BlockedTextModelAdmin(admin.ModelAdmin):
     list_display = ('text', 'pattern', 'author', 'created_time')
-    raw_id_fields = ('author', )
+    raw_id_fields = ('author',)
 
 
 @admin.register(AllowedGateway)
@@ -117,7 +120,7 @@ class AllowedGatewayAdmin(admin.ModelAdmin):
 class CoinTransactionAdmin(admin.ModelAdmin):
     list_display = ('page', 'amount', 'transaction_type', 'created_time')
     search_fields = ('page__instagram_username',)
-    raw_id_fields = ('page', 'inquiry', 'order', 'from_page', 'to_page', )
+    raw_id_fields = ('page', 'inquiry', 'order', 'from_page', 'to_page',)
     date_hierarchy = 'created_time'
 
     def has_change_permission(self, request, obj=None):
