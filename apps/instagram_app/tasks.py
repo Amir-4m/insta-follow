@@ -49,6 +49,8 @@ def final_validate_user_inquiries():
             continue
 
     for inquiry in user_inquiries:
+        if inquiry.order.instagram_username not in order_usernames:
+            continue
         try:
             if inquiry.page.instagram_username not in order_usernames[inquiry.order.instagram_username]:
                 inquiry.status = UserInquiry.STATUS_REJECTED

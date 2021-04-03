@@ -148,7 +148,7 @@ class CustomService(object):
             'post': requests.post
         }
 
-        _r = methods[method](f"{settings.PAYMENT_API_URL}{endpoint}/", headers=headers, json=data, timeout=(3.05, 9))
+        _r = methods[method](f"{settings.PAYMENT_API_URL}{endpoint}/", headers=headers, json=data, timeout=(3.05, 30))
         _r.raise_for_status()
         return _r.json()
 
