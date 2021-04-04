@@ -1,16 +1,16 @@
 import logging
-from django.db.models.signals import pre_save
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import CoinPackageOrder, CoinTransaction
 
 logger = logging.getLogger(__name__)
 
 
-@receiver(pre_save, sender=CoinPackageOrder)
+@receiver(post_save, sender=CoinPackageOrder)
 def package_order_receiver(sender, instance, **kwargs):
     if instance._b_is_paid is None and instance.is_paid is True:
         coin_package = instance.coin_package
-        ct_amount = coin_package.amount if coin_package.amount_offer is None else coin_package.amount_offer
+        ct_amount = coin_package.amount_offer or coin_package.amount
         CoinTransaction.objects.create(
             page=instance.page,
             amount=ct_amount,

@@ -68,9 +68,9 @@ class InstagramAccountModelAdmin(admin.ModelAdmin):
 
 
 def make_paid(modeladmin, request, queryset):
-    queryset.update(is_paid=True)
-
-
+    for obj in queryset.filter(is_paid__isnull=True):
+        obj.is_paid = True
+        obj.save()
 make_paid.short_description = _("Mark selected orders as paid")
 
 
