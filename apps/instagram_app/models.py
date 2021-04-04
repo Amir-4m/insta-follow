@@ -226,6 +226,10 @@ class CoinPackageOrder(models.Model):
         verbose_name = _("Coin Package Order")
         verbose_name_plural = _('Coin Package Orders')
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._b_is_paid = self.is_paid
+
     def __str__(self):
         return f"order {self.id}"
 
