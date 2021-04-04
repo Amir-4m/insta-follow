@@ -240,16 +240,6 @@ class PurchaseVerificationAPIView(views.APIView):
             order.is_paid = purchase_verified
             order.save()
 
-        if order.is_paid is True:
-            coin_package = order.coin_package
-            ct_amount = coin_package.amount if coin_package.amount_offer is None else coin_package.amount_offer
-
-            CoinTransaction.objects.create(
-                page=page,
-                amount=ct_amount,
-                package=order,
-                transaction_type=CoinTransaction.TYPE_PURCHASE,
-            )
         return Response({'purchase_verified': purchase_verified})
 
 

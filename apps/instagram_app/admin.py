@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.translation import ugettext_lazy as _
 
 from .forms import InstagramAccountForm
 from .models import (
@@ -66,6 +67,13 @@ class InstagramAccountModelAdmin(admin.ModelAdmin):
     list_filter = ('is_enable',)
 
 
+def make_paid(modeladmin, request, queryset):
+    for obj in queryset.filter(is_paid__isnull=True):
+        obj.is_paid = True
+        obj.save()
+make_paid.short_description = _("Mark selected orders as paid")
+
+
 @admin.register(CoinPackageOrder)
 class CoinPackageOrderModelAdmin(admin.ModelAdmin):
     list_display = (
@@ -75,6 +83,9 @@ class CoinPackageOrderModelAdmin(admin.ModelAdmin):
     list_filter = ('is_paid', 'coin_package', 'gateway')
     search_fields = ('page__instagram_username', 'invoice_number', 'transaction_id')
     raw_id_fields = ('page',)
+    actions = (
+        make_paid,
+    )
     date_hierarchy = 'created_time'
 
     def has_change_permission(self, request, obj=None):
