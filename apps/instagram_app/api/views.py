@@ -218,22 +218,23 @@ class PurchaseVerificationAPIView(views.APIView):
         serializer = PurchaseSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         gateway_code = serializer.validated_data['gateway_code']
-        purchase_token = serializer.validated_data.get('purchase_token')
         package_order = serializer.validated_data['package_order']
         with transaction.atomic():
             order = CoinPackageOrder.objects.select_related('coin_package').get(id=package_order.id)
             if gateway_code == "BAZAAR":
+                order.reference_id = serializer.validated_data.get('purchase_token', '')
                 try:
                     _r = CustomService.payment_request(
                         'purchase/verify',
                         'post',
                         data={
                             'order': str(order.invoice_number),
-                            'purchase_token': purchase_token
+                            'purchase_token': order.reference_id
                         }
                     )
                     purchase_verified = _r['purchase_verified']
                 except Exception as e:
+                    order.save()
                     logger.error(f"error calling payment with endpoint purchase/verify and action post: {e}")
                     raise ValidationError(detail={'detail': _('error in verifying purchase')})
 

@@ -71,6 +71,8 @@ def make_paid(modeladmin, request, queryset):
     for obj in queryset.filter(is_paid__isnull=True):
         obj.is_paid = True
         obj.save()
+
+
 make_paid.short_description = _("Mark selected orders as paid")
 
 
@@ -78,10 +80,10 @@ make_paid.short_description = _("Mark selected orders as paid")
 class CoinPackageOrderModelAdmin(admin.ModelAdmin):
     list_display = (
         'coin_package', 'page', 'price', 'invoice_number', 'transaction_id',
-        'gateway', 'is_paid', 'updated_time', 'created_time'
+        'reference_id', 'gateway', 'is_paid', 'updated_time', 'created_time'
     )
     list_filter = ('is_paid', 'coin_package', 'gateway')
-    search_fields = ('page__instagram_username', 'invoice_number', 'transaction_id')
+    search_fields = ('page__instagram_username', 'invoice_number', 'transaction_id', 'reference_id')
     raw_id_fields = ('page',)
     actions = (
         make_paid,
@@ -137,8 +139,8 @@ class AllowedGatewayAdmin(admin.ModelAdmin):
 class CoinTransactionAdmin(admin.ModelAdmin):
     list_display = ('page', 'amount', 'transaction_type', 'created_time')
     search_fields = ('page__instagram_username',)
-    list_filter = ('transaction_type', )
-    raw_id_fields = ('page', 'inquiry', 'order', 'from_page', 'to_page', )
+    list_filter = ('transaction_type',)
+    raw_id_fields = ('page', 'inquiry', 'order', 'from_page', 'to_page',)
     date_hierarchy = 'created_time'
 
     def has_change_permission(self, request, obj=None):

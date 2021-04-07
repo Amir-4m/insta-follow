@@ -214,6 +214,7 @@ class CoinPackageOrder(models.Model):
     gateway = models.CharField(_('gateway'), max_length=50, blank=True, db_index=True)
     invoice_number = models.UUIDField(_('invoice number'), unique=True, default=uuid.uuid4, editable=False)
     transaction_id = models.CharField(_('transaction id'), unique=True, null=True, max_length=40)
+    reference_id = models.CharField(_('reference id'), blank=True, max_length=64, db_index=True)
     coin_package = models.ForeignKey(CoinPackage, on_delete=models.PROTECT)
     page = models.ForeignKey(InstaPage, on_delete=models.PROTECT, related_name='package_orders')
     is_paid = models.BooleanField(_("is paid"), null=True)
