@@ -174,7 +174,7 @@ class CoinPackage(models.Model):
     price = models.PositiveIntegerField(_('price'))
     price_offer = models.PositiveIntegerField(_('price offer'), null=True, blank=True)
     name = models.CharField(_('package title'), max_length=100)
-    sku = models.CharField(_('package sku'), max_length=40, unique=True, null=True)
+    sku = models.CharField(_('package sku'), max_length=40, blank=True)
     featured = models.DateTimeField(null=True, blank=True,
                                     help_text=_('if this date field is specified, the coin package will be featured until this date'))
     is_enable = models.BooleanField(default=True)

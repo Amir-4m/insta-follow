@@ -33,7 +33,7 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = InstaPage
-        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', 'device_uuid', )
+        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', 'device_uuid',)
         read_only_fields = ('uuid',)
 
     def validate(self, attrs):
@@ -271,7 +271,6 @@ class InstaActionSerializer(serializers.ModelSerializer):
 
 
 class CoinPackageSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = CoinPackage
         fields = (
@@ -293,11 +292,16 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
             'version_name', 'gateways', 'created_time', 'redirect_url',
             'amount'
         )
-        read_only_fields = ('page', 'price', 'amount', )
+        read_only_fields = ('page', 'price', 'amount',)
 
     def get_package_detail(self, obj):
         if obj.coin_package:
             return CoinPackageSerializer(obj.coin_package).data
+
+    def validate_coin_package(self, obj):
+        if not obj.sku:
+            raise ValidationError(_('coin package has no sku.'))
+        return obj
 
     def get_gateways(self, obj):
         gateways_list = []
