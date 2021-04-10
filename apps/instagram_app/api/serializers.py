@@ -298,20 +298,11 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
         if obj.coin_package:
             return CoinPackageSerializer(obj.coin_package).data
 
-    def validate_coin_package(self, obj):
-        if not obj.sku:
-            raise ValidationError(_('coin package has no sku.'))
-        return obj
-
     def get_gateways(self, obj):
         gateways_list = []
         if self.context['view'].action != 'create':
             return gateways_list
-
-        try:
-            gateways_list = list(AllowedGateway.get_gateways_by_version_name(obj.version_name))
-        except Exception as e:
-            logger.error(f"getting gateways list failed in creating package order: {e}")
+        gateways_list = AllowedGateway.get_gateways_by_version_name(obj.version_name)
         return gateways_list
 
     def create(self, validated_data):

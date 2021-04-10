@@ -312,15 +312,14 @@ class OrderGateWayAPIView(views.APIView):
         gateway = serializer.validated_data['gateway']
         code = ''
 
-        try:
-            for gw in list(AllowedGateway.get_gateways_by_version_name(package_order.version_name)):
-                if gw['id'] == gateway:
-                    package_order.gateway = gw['display_name']
-                    code = gw['code']
-                    break
-        except Exception as e:
-            logger.warning(f'could not fetch gateway for order {package_order.id}: {e}')
-            pass
+        for gw in AllowedGateway.get_gateways_by_version_name(package_order.version_name):
+            if gw['id'] == gateway:
+                package_order.gateway = gw['display_name']
+                code = gw['code']
+                break
+
+        if not code:
+            raise ValidationError(detail={'detail': _('no gateway has been found.')})
 
         try:
             data = {
@@ -332,6 +331,9 @@ class OrderGateWayAPIView(views.APIView):
 
             }
             if code == 'BAZAAR':
+                if not package_order.coin_package.sku:
+                    raise ValidationError(detail={'detail': _('coin package has no sku.')})
+
                 data.update({
                     "sku": package_order.coin_package.sku,
                     "package_name": settings.CAFE_BAZAAR_PACKAGE_NAME
@@ -372,10 +374,6 @@ class GatewayAPIView(views.APIView):
         version_name = request.query_params.get('version_name')
         if version_name is None:
             raise ValidationError(detail={'detail': _('version must be set in query params!')})
-        try:
-            gateways_list = list(AllowedGateway.get_gateways_by_version_name(version_name))
-        except Exception as e:
-            logger.error(f"error in getting gateways list: {e}")
-            gateways_list = []
+        gateways_list = AllowedGateway.get_gateways_by_version_name(version_name)
 
         return Response(gateways_list)

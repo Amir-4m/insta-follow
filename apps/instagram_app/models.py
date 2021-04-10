@@ -336,11 +336,17 @@ class AllowedGateway(models.Model):
     def get_gateways_by_version_name(cls, version_name):
         gateways = cache.get("gateways", [])
         allowed_gateways = []
-        for gw in cls.objects.all():
-            if re.match(gw.version_pattern, version_name):
-                allowed_gateways = gw.gateways_code
-                break
+        gateways_list = []
 
-        for gateway in gateways:
-            if gateway['code'] in allowed_gateways:
-                yield gateway
+        try:
+            for gw in cls.objects.all():
+                if re.match(gw.version_pattern, version_name):
+                    allowed_gateways = gw.gateways_code
+                    break
+            for gateway in gateways:
+                if gateway['code'] in allowed_gateways:
+                    gateways_list.append(gateway)
+        except Exception as e:
+            logger.error(f'getting gateways by version name {version_name} failed: {e}')
+
+        return gateways_list
