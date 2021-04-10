@@ -33,7 +33,7 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = InstaPage
-        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', 'device_uuid', )
+        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', 'device_uuid',)
         read_only_fields = ('uuid',)
 
     def validate(self, attrs):
@@ -271,7 +271,6 @@ class InstaActionSerializer(serializers.ModelSerializer):
 
 
 class CoinPackageSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = CoinPackage
         fields = (
@@ -293,7 +292,7 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
             'version_name', 'gateways', 'created_time', 'redirect_url',
             'amount'
         )
-        read_only_fields = ('page', 'price', 'amount', )
+        read_only_fields = ('page', 'price', 'amount',)
 
     def get_package_detail(self, obj):
         if obj.coin_package:
@@ -303,11 +302,7 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
         gateways_list = []
         if self.context['view'].action != 'create':
             return gateways_list
-
-        try:
-            gateways_list = list(AllowedGateway.get_gateways_by_version_name(obj.version_name))
-        except Exception as e:
-            logger.error(f"getting gateways list failed in creating package order: {e}")
+        gateways_list = AllowedGateway.get_gateways_by_version_name(obj.version_name)
         return gateways_list
 
     def create(self, validated_data):

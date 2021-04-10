@@ -218,22 +218,23 @@ class PurchaseVerificationAPIView(views.APIView):
         serializer = PurchaseSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         gateway_code = serializer.validated_data['gateway_code']
-        purchase_token = serializer.validated_data.get('purchase_token')
         package_order = serializer.validated_data['package_order']
         with transaction.atomic():
             order = CoinPackageOrder.objects.select_related('coin_package').get(id=package_order.id)
             if gateway_code == "BAZAAR":
+                order.reference_id = serializer.validated_data.get('purchase_token', '')
                 try:
                     _r = CustomService.payment_request(
                         'purchase/verify',
                         'post',
                         data={
                             'order': str(order.invoice_number),
-                            'purchase_token': purchase_token
+                            'purchase_token': order.reference_id
                         }
                     )
                     purchase_verified = _r['purchase_verified']
                 except Exception as e:
+                    order.save()
                     logger.error(f"error calling payment with endpoint purchase/verify and action post: {e}")
                     raise ValidationError(detail={'detail': _('error in verifying purchase')})
 
@@ -309,37 +310,48 @@ class OrderGateWayAPIView(views.APIView):
         serializer.is_valid(raise_exception=True)
         package_order = serializer.validated_data['package_order']
         gateway = serializer.validated_data['gateway']
-        sku = None
-        if package_order.coin_package.sku is not None:
-            sku = package_order.coin_package.sku
+        code = ''
+
+        for gw in AllowedGateway.get_gateways_by_version_name(package_order.version_name):
+            if gw['id'] == gateway:
+                package_order.gateway = gw['display_name']
+                code = gw['code']
+                break
+
+        if not code:
+            raise ValidationError(detail={'detail': _('no gateway has been found.')})
+
         try:
+            data = {
+                'gateway': gateway,
+                'price': package_order.price,
+                'service_reference': str(package_order.invoice_number),
+                'is_paid': package_order.is_paid,
+                "redirect_url": request.build_absolute_uri(reverse('payment-done')),
+
+            }
+            if code == 'BAZAAR':
+                if not package_order.coin_package.sku:
+                    raise ValidationError(detail={'detail': _('coin package has no sku.')})
+
+                data.update({
+                    "sku": package_order.coin_package.sku,
+                    "package_name": settings.CAFE_BAZAAR_PACKAGE_NAME
+                })
 
             _r = CustomService.payment_request(
                 'orders',
                 'post',
-                data={
-                    'gateway': gateway,
-                    'price': package_order.price,
-                    'service_reference': str(package_order.invoice_number),
-                    'is_paid': package_order.is_paid,
-                    "redirect_url": request.build_absolute_uri(reverse('payment-done')),
-                    "sku": sku,
-                    "package_name": settings.CAFE_BAZAAR_PACKAGE_NAME
-                }
+                data=data
             )
             transaction_id = _r.get('transaction_id')
-            try:
-                for gw in list(AllowedGateway.get_gateways_by_version_name(package_order.version_name)):
-                    if gw['id'] == gateway:
-                        package_order.gateway = gw['display_name']
-            except Exception as e:
-                logger.warning(f'could not fetch gateway for order {package_order.id}: {e}')
-                pass
-            package_order.transaction_id = transaction_id
-            package_order.save()
+
         except Exception as e:
             logger.error(f"error calling payment with endpoint orders and action post: {e}")
             raise ValidationError(detail={'detail': _('error in submitting order gateway')})
+
+        package_order.transaction_id = transaction_id
+        package_order.save()
 
         try:
             response = CustomService.payment_request(
@@ -362,10 +374,6 @@ class GatewayAPIView(views.APIView):
         version_name = request.query_params.get('version_name')
         if version_name is None:
             raise ValidationError(detail={'detail': _('version must be set in query params!')})
-        try:
-            gateways_list = list(AllowedGateway.get_gateways_by_version_name(version_name))
-        except Exception as e:
-            logger.error(f"error in getting gateways list: {e}")
-            gateways_list = []
+        gateways_list = AllowedGateway.get_gateways_by_version_name(version_name)
 
         return Response(gateways_list)

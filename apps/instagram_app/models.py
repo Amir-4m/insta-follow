@@ -174,7 +174,7 @@ class CoinPackage(models.Model):
     price = models.PositiveIntegerField(_('price'))
     price_offer = models.PositiveIntegerField(_('price offer'), null=True, blank=True)
     name = models.CharField(_('package title'), max_length=100)
-    sku = models.CharField(_('package sku'), max_length=40, unique=True, null=True)
+    sku = models.CharField(_('package sku'), max_length=40, blank=True)
     featured = models.DateTimeField(null=True, blank=True,
                                     help_text=_('if this date field is specified, the coin package will be featured until this date'))
     is_enable = models.BooleanField(default=True)
@@ -214,6 +214,7 @@ class CoinPackageOrder(models.Model):
     gateway = models.CharField(_('gateway'), max_length=50, blank=True, db_index=True)
     invoice_number = models.UUIDField(_('invoice number'), unique=True, default=uuid.uuid4, editable=False)
     transaction_id = models.CharField(_('transaction id'), unique=True, null=True, max_length=40)
+    reference_id = models.CharField(_('reference id'), blank=True, max_length=64, db_index=True)
     coin_package = models.ForeignKey(CoinPackage, on_delete=models.PROTECT)
     page = models.ForeignKey(InstaPage, on_delete=models.PROTECT, related_name='package_orders')
     is_paid = models.BooleanField(_("is paid"), null=True)
@@ -335,11 +336,17 @@ class AllowedGateway(models.Model):
     def get_gateways_by_version_name(cls, version_name):
         gateways = cache.get("gateways", [])
         allowed_gateways = []
-        for gw in cls.objects.all():
-            if re.match(gw.version_pattern, version_name):
-                allowed_gateways = gw.gateways_code
-                break
+        gateways_list = []
 
-        for gateway in gateways:
-            if gateway['code'] in allowed_gateways:
-                yield gateway
+        try:
+            for gw in cls.objects.all():
+                if re.match(gw.version_pattern, version_name):
+                    allowed_gateways = gw.gateways_code
+                    break
+            for gateway in gateways:
+                if gateway['code'] in allowed_gateways:
+                    gateways_list.append(gateway)
+        except Exception as e:
+            logger.error(f'getting gateways by version name {version_name} failed: {e}')
+
+        return gateways_list
