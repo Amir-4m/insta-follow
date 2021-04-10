@@ -46,6 +46,7 @@ class UserInquiryModelAdmin(admin.ModelAdmin):
     list_filter = ('status', 'order__action')
     search_fields = ('page__instagram_username',)
     raw_id_fields = ('order', 'page',)
+    date_hierarchy = 'created_time'
 
 
 @admin.register(InstaAction)
