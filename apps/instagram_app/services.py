@@ -98,10 +98,8 @@ class InstagramAppService(object):
                 url,
                 cookies={'sessionid': session_id},
                 headers={'User-Agent': f"{timezone.now().isoformat()}"})
-
             response.raise_for_status()
             result = response.json()['data']['user']['edge_followed_by']
-
             accounts += [_e['node']['username'] for _e in result['edges']]
 
             if result['page_info']['has_next_page']:

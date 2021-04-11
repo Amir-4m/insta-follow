@@ -40,10 +40,7 @@ def final_validate_user_inquiries():
             continue
 
         try:
-            order_usernames[page.instagram_username] = [
-                follower.username for follower in
-                InstagramAppService.get_user_followers(page.session_id, page.instagram_username)
-            ]
+            order_usernames[page.instagram_username] = InstagramAppService.get_user_followers(page.session_id, page.instagram_user_id)
         except Exception as e:
             logger.error(f"page followers `{page.instagram_username}` got exception: {type(e)} - {str(e)}")
             continue
