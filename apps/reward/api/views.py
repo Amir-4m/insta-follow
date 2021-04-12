@@ -21,6 +21,8 @@ from apps.reward.swagger_schemas import DAILY_REWARD_DOCS_RESPONSE, TAPSELL_REWA
 from conf import settings
 
 
+# This API is Decrypted and should be removed
+# It is only kept for old mobile applications that use the API
 class DailyRewardAPIView(views.APIView):
     authentication_classes = (PageAuthentication,)
     permission_classes = (PagePermission,)
