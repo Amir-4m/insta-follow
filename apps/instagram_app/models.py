@@ -253,7 +253,7 @@ class CoinTransaction(models.Model):
         (TYPE_PENALTY, _('Penalty')),
         (TYPE_DAILY_REWARD, _('Daily reward')),
         (TYPE_AD_REWARD, _('Ad reward')),
-        (TYPE_GIFT, _('GIFT')),
+        (TYPE_GIFT, _('Gift')),
     ]
 
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
