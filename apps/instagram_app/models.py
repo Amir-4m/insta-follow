@@ -243,6 +243,7 @@ class CoinTransaction(models.Model):
     TYPE_DAILY_REWARD = 'DAILY_REWARD'
     TYPE_AD_REWARD = 'AD_REWARD'
     TYPE_TRANSFER = 'TRANSFER'
+    TYPE_GIFT = 'GIFT'
 
     TRANSACTION_TYPE_CHOICES = [
         (TYPE_ORDER, _('Order')),
@@ -251,7 +252,8 @@ class CoinTransaction(models.Model):
         (TYPE_TRANSFER, _('Transfer')),
         (TYPE_PENALTY, _('Penalty')),
         (TYPE_DAILY_REWARD, _('Daily reward')),
-        (TYPE_AD_REWARD, _('Ad reward'))
+        (TYPE_AD_REWARD, _('Ad reward')),
+        (TYPE_GIFT, _('GIFT')),
     ]
 
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)

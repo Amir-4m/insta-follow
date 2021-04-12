@@ -32,19 +32,20 @@ class DailyRewardAPIView(views.APIView):
     def get(self, request, *args, **kwargs):
         page = request.auth['page']
         reward_amount = settings.COIN_DAILY_REWARD_AMOUNT
-        if CoinTransaction.objects.filter(
-                created_time__gte=timezone.now().replace(hour=0, minute=0, second=0),
-                transaction_type=CoinTransaction.TYPE_DAILY_REWARD,
-                page=page
-        ).exists():
-            rewarded = False
-        else:
-            CoinTransaction.objects.create(
-                page=page,
-                amount=reward_amount,
-                transaction_type=CoinTransaction.TYPE_DAILY_REWARD
-            )
-            rewarded = True
+        rewarded = False
+        # if CoinTransaction.objects.filter(
+        #         created_time__gte=timezone.now().replace(hour=0, minute=0, second=0),
+        #         transaction_type=CoinTransaction.TYPE_DAILY_REWARD,
+        #         page=page
+        # ).exists():
+        #     rewarded = False
+        # else:
+        #     CoinTransaction.objects.create(
+        #         page=page,
+        #         amount=reward_amount,
+        #         transaction_type=CoinTransaction.TYPE_DAILY_REWARD
+        #     )
+        #     rewarded = True
         return Response({'page': page.instagram_username, 'amount': reward_amount, 'rewarded': rewarded})
 
 
