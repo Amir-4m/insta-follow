@@ -61,12 +61,10 @@ class UserInquiryModelAdmin(admin.ModelAdmin):
 
     def order_status(self, obj):
         return obj.order.get_status_display()
-
     order_status.admin_order_field = 'order__status'
 
     def order_link(self, obj):
         return obj.order.link
-
     order_link.admin_order_field = 'order__link'
 
 
@@ -93,32 +91,7 @@ def make_paid(modeladmin, request, queryset):
     for obj in queryset.filter(is_paid__isnull=True):
         obj.is_paid = True
         obj.save()
-
-
 make_paid.short_description = _("Mark selected orders as paid")
-
-
-def approve_report_abuse(modeladmin, request, queryset):
-    for obj in queryset:
-        obj.status = ReportAbuse.STATUS_APPROVED
-        obj.save()
-
-
-approve_report_abuse.short_description = _("Mark selected reports as approved")
-
-
-def decline_report_abuse(modeladmin, request, queryset):
-    queryset.update(status=ReportAbuse.STATUS_REJECTED)
-
-
-decline_report_abuse.short_description = _("Mark selected reports as rejected")
-
-
-def junk_report_abuse(modeladmin, request, queryset):
-    queryset.update(status=ReportAbuse.STATUS_JUNK)
-
-
-junk_report_abuse.short_description = _("Mark selected reports as junk")
 
 
 @admin.register(CoinPackageOrder)
@@ -150,9 +123,27 @@ class CommentModelAdmin(admin.ModelAdmin):
     list_display = ('text', 'updated_time', 'created_time')
 
 
+def approve_report_abuse(modeladmin, request, queryset):
+    for obj in queryset:
+        obj.status = ReportAbuse.STATUS_APPROVED
+        obj.save()
+approve_report_abuse.short_description = _("Mark selected reports as approved")
+
+
+def decline_report_abuse(modeladmin, request, queryset):
+    queryset.update(status=ReportAbuse.STATUS_REJECTED)
+decline_report_abuse.short_description = _("Mark selected reports as rejected")
+
+
+def junk_report_abuse(modeladmin, request, queryset):
+    queryset.update(status=ReportAbuse.STATUS_JUNK)
+junk_report_abuse.short_description = _("Mark selected reports as junk")
+
+
 @admin.register(ReportAbuse)
 class ReportAbuseModelAdmin(admin.ModelAdmin):
-    list_display = ('reporter', 'text', 'abuser', 'status', 'order_action', 'order_link', 'created_time')
+    list_display = ('reporter', 'text', 'abuser', 'status', 'order', 'order_action', 'order_link', 'created_time')
+    list_select_related = ['order', 'reporter']
     list_filter = ('status',)
     raw_id_fields = ('reporter', 'abuser',)
     actions = (
@@ -164,12 +155,10 @@ class ReportAbuseModelAdmin(admin.ModelAdmin):
 
     def order_action(self, obj):
         return obj.abuser.action.get_action_type_display()
-
     order_action.admin_order_field = 'order__action'
 
     def order_link(self, obj):
         return obj.abuser.link
-
     order_link.admin_order_field = 'order__link'
 
 
