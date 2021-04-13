@@ -157,6 +157,9 @@ def check_order_validity(order_id):
                 if res['graphql']['user'].get('is_private', False):
                     order.status = Order.STATUS_DISABLE
                     order.description = "(Private Page) - Order is disabled due to page being private"
+                    order.user_inquiries.filter(
+                        validated_time__isnull=True, status=UserInquiry.STATUS_VALIDATED
+                    ).update(validated_time=timezone.now())
 
             else:
                 if order.action.action_type == InstaAction.ACTION_COMMENT and res['graphql']['shortcode_media']['comments_disabled']:
