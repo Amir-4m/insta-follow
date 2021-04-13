@@ -30,17 +30,21 @@ logger = logging.getLogger(__name__)
 class LoginVerificationSerializer(serializers.ModelSerializer):
     instagram_user_id = serializers.IntegerField()
     device_uuid = serializers.UUIDField(required=False)
+    user_agent = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = InstaPage
-        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', 'device_uuid',)
+        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', 'device_uuid', 'user_agent')
         read_only_fields = ('uuid',)
 
     def validate(self, attrs):
         username = attrs['instagram_username']
         user_id = attrs['instagram_user_id']
         session_id = attrs['session_id']
-        user_agent = "Instagram 10.15.0 Android (28/9; 411dpi; 1080x2220; samsung; SM-A650G; SM-A650G; Snapdragon 450; en_US)"
+        user_agent = attrs.get('user_agent', '')
+        if not user_agent:
+            user_agent = "Instagram 10.15.0 Android (28/9; 411dpi; 1080x2220; samsung; SM-A650G; SM-A650G; Snapdragon 450; en_US)"
+
         try:
             response = requests.get(
                 url=f'https://i.instagram.com/api/v1/users/{user_id}/info/',
