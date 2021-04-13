@@ -157,7 +157,12 @@ def check_order_validity(order_id):
                 if res['graphql']['user'].get('is_private', False):
                     order.status = Order.STATUS_DISABLE
                     order.description = "(Private Page) - Order is disabled due to page being private"
+
             else:
+                if order.action.action_type == InstaAction.ACTION_COMMENT and res['graphql']['shortcode_media']['comments_disabled']:
+                    order.status = Order.STATUS_DISABLE
+                    order.description = "(Post Comment) - Order is disabled due to disabled commenting"
+
                 order.media_properties['media_url'] = res['graphql']['shortcode_media']['display_url']
         except KeyError:
             order.status = Order.STATUS_DISABLE
