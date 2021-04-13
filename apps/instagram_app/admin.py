@@ -47,8 +47,7 @@ class OrderModelAdmin(admin.ModelAdmin):
 
 @admin.register(UserInquiry)
 class UserInquiryModelAdmin(admin.ModelAdmin):
-    list_display = (
-        'order', 'page', 'status', 'order_status', 'order_link', 'validated_time', 'updated_time', 'created_time')
+    list_display = ('page', 'status', 'order', 'order_status', 'order_link', 'validated_time', 'updated_time', 'created_time')
     list_select_related = ['order', 'page']
     readonly_fields = ('validated_time', 'page', 'order')
     list_filter = ('status', 'order__action', OrderAutocompleteFilter)
