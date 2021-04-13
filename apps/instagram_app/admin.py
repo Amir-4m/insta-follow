@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
 
+from admin_auto_filters.filters import AutocompleteFilter
+
 from .forms import InstagramAccountForm
 from .models import (
     InstaPage,
@@ -10,6 +12,11 @@ from .models import (
     ReportAbuse, BlockWordRegex,
     BlockedText, AllowedGateway, CoinTransaction
 )
+
+
+class OrderAutocompleteFilter(AutocompleteFilter):
+    title = 'Order'
+    field_name = 'order'
 
 
 @admin.register(InstaPage)
@@ -40,14 +47,26 @@ class OrderModelAdmin(admin.ModelAdmin):
 
 @admin.register(UserInquiry)
 class UserInquiryModelAdmin(admin.ModelAdmin):
-    list_display = ('order', 'page', 'status', 'validated_time', 'updated_time', 'created_time')
+    list_display = (
+        'order', 'page', 'status', 'order_status', 'order_link', 'validated_time', 'updated_time', 'created_time')
     list_select_related = ['order', 'page']
     readonly_fields = ('validated_time', 'page', 'order')
-    list_filter = ('status', 'order__action')
+    list_filter = ('status', 'order__action', OrderAutocompleteFilter)
+
     search_fields = ('page__instagram_username',)
     raw_id_fields = ('order', 'page',)
     date_hierarchy = 'created_time'
 
+    class Media:  # do not remove this, this use by Autocomplete Filter
+        pass
+
+    def order_status(self, obj):
+        return obj.order.get_status_display()
+    order_status.admin_order_field = 'order__status'
+
+    def order_link(self, obj):
+        return obj.order.link
+    order_link.admin_order_field = 'order__link'
 
 @admin.register(InstaAction)
 class InstaActionModelAdmin(admin.ModelAdmin):
