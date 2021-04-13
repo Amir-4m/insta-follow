@@ -41,9 +41,8 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
         username = attrs['instagram_username']
         user_id = attrs['instagram_user_id']
         session_id = attrs['session_id']
-        user_agent = attrs.get('user_agent', '')
-        if not user_agent:
-            user_agent = "Instagram 10.15.0 Android (28/9; 411dpi; 1080x2220; samsung; SM-A650G; SM-A650G; Snapdragon 450; en_US)"
+        default_user_agent = "Instagram 10.15.0 Android (28/9; 411dpi; 1080x2220; samsung; SM-A650G; SM-A650G; Snapdragon 450; en_US)"
+        user_agent = attrs.get('user_agent') or default_user_agent
 
         try:
             response = requests.get(
