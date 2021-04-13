@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     # 'django_celery_beat',
     'tinymce',
+    'admin_auto_filters',
 
     'django.contrib.admin',
     'django.contrib.auth',
