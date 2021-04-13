@@ -1,7 +1,7 @@
 import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import CoinPackageOrder, CoinTransaction
+from .models import CoinPackageOrder, CoinTransaction, ReportAbuse, Order
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,8 @@ def package_order_receiver(sender, instance, **kwargs):
             transaction_type=CoinTransaction.TYPE_PURCHASE,
         )
 
-# @receiver(post_save, sender=InstaPage)
-# def insta_page_receiver(sender, instance, created, raw=False, **kwargs):
-#     collect_page_info.delay(insta_page_id=instance.id, instagram_id=instance.instagram_username)
+
+@receiver(post_save, sender=ReportAbuse)
+def report_abuse_receiver(sender, instance, **kwargs):
+    if instance.status == ReportAbuse.STATUS_APPROVED:
+        Order.objects.filter(id=instance.abuser.id).update(status=Order.STATUS_DISABLE, description="(Abuse) - The page is disabled due to abuse")

@@ -286,11 +286,14 @@ class ReportAbuse(models.Model):
     STATUS_OPEN = 'OPEN'
     STATUS_APPROVED = 'APPROVED'
     STATUS_REJECTED = 'REJECTED'
+    STATUS_JUNK = 'JUNK'
 
     STATUS_CHOICES = [
         (STATUS_OPEN, _('Open')),
         (STATUS_APPROVED, _('Approved')),
         (STATUS_REJECTED, _('Rejected')),
+        (STATUS_JUNK, _('Junk')),
+
     ]
     created_time = models.DateTimeField(_("created time"), auto_now_add=True)
     reporter = models.ForeignKey(InstaPage, related_name='reports', on_delete=models.CASCADE)

@@ -62,11 +62,14 @@ class UserInquiryModelAdmin(admin.ModelAdmin):
 
     def order_status(self, obj):
         return obj.order.get_status_display()
+
     order_status.admin_order_field = 'order__status'
 
     def order_link(self, obj):
         return obj.order.link
+
     order_link.admin_order_field = 'order__link'
+
 
 @admin.register(InstaAction)
 class InstaActionModelAdmin(admin.ModelAdmin):
@@ -94,6 +97,29 @@ def make_paid(modeladmin, request, queryset):
 
 
 make_paid.short_description = _("Mark selected orders as paid")
+
+
+def approve_report_abuse(modeladmin, request, queryset):
+    for obj in queryset:
+        obj.status = ReportAbuse.STATUS_APPROVED
+        obj.save()
+
+
+approve_report_abuse.short_description = _("Mark selected reports as approved")
+
+
+def decline_report_abuse(modeladmin, request, queryset):
+    queryset.update(status=ReportAbuse.STATUS_REJECTED)
+
+
+decline_report_abuse.short_description = _("Mark selected reports as rejected")
+
+
+def junk_report_abuse(modeladmin, request, queryset):
+    queryset.update(status=ReportAbuse.STATUS_JUNK)
+
+
+junk_report_abuse.short_description = _("Mark selected reports as junk")
 
 
 @admin.register(CoinPackageOrder)
@@ -127,15 +153,25 @@ class CommentModelAdmin(admin.ModelAdmin):
 
 @admin.register(ReportAbuse)
 class ReportAbuseModelAdmin(admin.ModelAdmin):
-    list_display = ('reporter', 'text', 'abuser', 'status', 'created_time')
+    list_display = ('reporter', 'text', 'abuser', 'status', 'order_action', 'order_link', 'created_time')
     list_filter = ('status',)
     raw_id_fields = ('reporter', 'abuser',)
+    actions = (
+        approve_report_abuse,
+        decline_report_abuse,
+        junk_report_abuse
+    )
+    date_hierarchy = 'created_time'
 
-    def save_model(self, request, obj, form, change):
-        if obj.status == ReportAbuse.STATUS_APPROVED:
-            Order.objects.filter(id=obj.abuser.id).update(status=Order.STATUS_DISABLE,
-                                                          description="(Abuse) - The page is disabled due to abuse")
-        return super(ReportAbuseModelAdmin, self).save_model(request, obj, form, change)
+    def order_action(self, obj):
+        return obj.abuser.action.get_action_type_display()
+
+    order_action.admin_order_field = 'order__action'
+
+    def order_link(self, obj):
+        return obj.abuser.link
+
+    order_link.admin_order_field = 'order__link'
 
 
 @admin.register(BlockWordRegex)
