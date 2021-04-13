@@ -142,8 +142,8 @@ junk_report_abuse.short_description = _("Mark selected reports as junk")
 
 @admin.register(ReportAbuse)
 class ReportAbuseModelAdmin(admin.ModelAdmin):
-    list_display = ('reporter', 'text', 'abuser', 'status', 'order', 'order_action', 'order_link', 'created_time')
-    list_select_related = ['order', 'reporter']
+    list_display = ('reporter', 'text', 'status', 'abuser', 'order_action', 'order_link', 'created_time')
+    list_select_related = ['abuser', 'reporter']
     list_filter = ('status',)
     raw_id_fields = ('reporter', 'abuser',)
     actions = (
