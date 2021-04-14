@@ -14,6 +14,46 @@ from .models import (
 )
 
 
+def make_paid(modeladmin, request, queryset):
+    for obj in queryset.filter(is_paid__isnull=True):
+        obj.is_paid = True
+        obj.save()
+
+
+make_paid.short_description = _("Mark selected orders as paid")
+
+
+def approve_report_abuse(modeladmin, request, queryset):
+    for obj in queryset:
+        obj.status = ReportAbuse.STATUS_APPROVED
+        obj.save()
+
+
+approve_report_abuse.short_description = _("Mark selected reports as approved")
+
+
+def decline_report_abuse(modeladmin, request, queryset):
+    queryset.update(status=ReportAbuse.STATUS_REJECTED)
+
+
+decline_report_abuse.short_description = _("Mark selected reports as rejected")
+
+
+def junk_report_abuse(modeladmin, request, queryset):
+    queryset.update(status=ReportAbuse.STATUS_JUNK)
+
+
+junk_report_abuse.short_description = _("Mark selected reports as junk")
+
+
+def ban_report_abuse(modeladmin, request, queryset):
+    for obj in queryset:
+        InstaPage.objects.filter(id=obj.abuser.owner_id).update(is_enable=False)
+
+
+ban_report_abuse.short_description = _("Mark selected abusers as banned")
+
+
 class OrderAutocompleteFilter(AutocompleteFilter):
     title = 'Order'
     field_name = 'order'
@@ -21,8 +61,9 @@ class OrderAutocompleteFilter(AutocompleteFilter):
 
 @admin.register(InstaPage)
 class InstaPageModelAdmin(admin.ModelAdmin):
-    list_display = ('instagram_username', 'instagram_user_id', 'updated_time', 'created_time')
+    list_display = ('instagram_username', 'instagram_user_id', 'is_enable', 'updated_time', 'created_time')
     readonly_fields = ('uuid',)
+    list_filter = ('is_enable',)
     search_fields = ('instagram_username', 'instagram_user_id', 'device_uuids',)
 
     def has_change_permission(self, request, obj=None):
@@ -90,38 +131,6 @@ class InstagramAccountModelAdmin(admin.ModelAdmin):
     list_filter = ('is_enable',)
 
 
-def make_paid(modeladmin, request, queryset):
-    for obj in queryset.filter(is_paid__isnull=True):
-        obj.is_paid = True
-        obj.save()
-
-
-make_paid.short_description = _("Mark selected orders as paid")
-
-
-def approve_report_abuse(modeladmin, request, queryset):
-    for obj in queryset:
-        obj.status = ReportAbuse.STATUS_APPROVED
-        obj.save()
-
-
-approve_report_abuse.short_description = _("Mark selected reports as approved")
-
-
-def decline_report_abuse(modeladmin, request, queryset):
-    queryset.update(status=ReportAbuse.STATUS_REJECTED)
-
-
-decline_report_abuse.short_description = _("Mark selected reports as rejected")
-
-
-def junk_report_abuse(modeladmin, request, queryset):
-    queryset.update(status=ReportAbuse.STATUS_JUNK)
-
-
-junk_report_abuse.short_description = _("Mark selected reports as junk")
-
-
 @admin.register(CoinPackageOrder)
 class CoinPackageOrderModelAdmin(admin.ModelAdmin):
     list_display = (
@@ -159,7 +168,8 @@ class ReportAbuseModelAdmin(admin.ModelAdmin):
     actions = (
         approve_report_abuse,
         decline_report_abuse,
-        junk_report_abuse
+        junk_report_abuse,
+        ban_report_abuse
     )
     date_hierarchy = 'created_time'
 
