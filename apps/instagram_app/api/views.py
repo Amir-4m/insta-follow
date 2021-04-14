@@ -3,6 +3,7 @@ import logging
 from django.conf import settings
 from django.db import transaction
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
@@ -377,3 +378,14 @@ class GatewayAPIView(views.APIView):
         gateways_list = AllowedGateway.get_gateways_by_version_name(version_name)
 
         return Response(gateways_list)
+
+
+class ScoreBoardApiView(generics.GenericAPIView):
+    queryset = CoinTransaction.objects.filter(
+        transaction_type=CoinTransaction.TYPE_INQUIRY,
+        inquiry__validated_time__isnull=False,
+        created_time__gte=timezone.now().replace(hour=0, minute=0)
+    ).values('page__instagram_user_id', 'page__instagram_username').annotate(total=Sum('amount')).order_by('-total')[:50]
+
+    def get(self, request, *args, **kwargs):
+        return Response(self.get_queryset())
