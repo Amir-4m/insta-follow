@@ -46,19 +46,18 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
 
         try:
             response = requests.get(
-                url=f'https://i.instagram.com/api/v1/users/{user_id}/info/',
+                url=f'https://www.instagram.com/{username}/?__a=1',
                 cookies={'sessionid': session_id},
                 headers={'User-Agent': user_agent},
                 timeout=(3.05, 9)
             )
-            temp = response.json()['user']
+            temp = response.json()['graphql']['user']
         except Exception as e:
             logger.error(f"error in login verification for user id {user_id}: {e}")
             raise ValidationError(
                 detail={'detail': _('error occurred while logging in!')}
             )
-
-        if (temp['pk'] != user_id or temp['username'] != username) or temp.get('account_type') is None:
+        if int(temp['id']) != user_id or temp['username'] != username:
             raise ValidationError(
                 detail={'detail': _('invalid credentials provided!')}
             )
