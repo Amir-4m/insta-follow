@@ -77,6 +77,12 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
                 "session_id": session_id,
             }
         )
+        if _created:
+            CoinTransaction.objects.create(
+                page=page,
+                amount=settings.COIN_DAILY_REWARD_AMOUNT,
+                transaction_type=CoinTransaction.TYPE_GIFT
+            )
         if device_uuid not in page.device_uuids:
             page.device_uuids.append(device_uuid)
         page.save()
