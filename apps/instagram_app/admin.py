@@ -14,6 +14,46 @@ from .models import (
 )
 
 
+def make_paid(modeladmin, request, queryset):
+    for obj in queryset.filter(is_paid__isnull=True):
+        obj.is_paid = True
+        obj.save()
+
+
+make_paid.short_description = _("Mark selected orders as paid")
+
+
+def approve_report_abuse(modeladmin, request, queryset):
+    for obj in queryset:
+        obj.status = ReportAbuse.STATUS_APPROVED
+        obj.save()
+
+
+approve_report_abuse.short_description = _("Mark selected reports as approved")
+
+
+def decline_report_abuse(modeladmin, request, queryset):
+    queryset.update(status=ReportAbuse.STATUS_REJECTED)
+
+
+decline_report_abuse.short_description = _("Mark selected reports as rejected")
+
+
+def junk_report_abuse(modeladmin, request, queryset):
+    queryset.update(status=ReportAbuse.STATUS_JUNK)
+
+
+junk_report_abuse.short_description = _("Mark selected reports as junk")
+
+
+def ban_report_abuse(modeladmin, request, queryset):
+    for obj in queryset:
+        InstaPage.objects.filter(id=obj.abuser.owner_id).update(is_enable=False)
+
+
+ban_report_abuse.short_description = _("Mark selected abusers as banned")
+
+
 class OrderAutocompleteFilter(AutocompleteFilter):
     title = 'Order'
     field_name = 'order'
@@ -21,8 +61,9 @@ class OrderAutocompleteFilter(AutocompleteFilter):
 
 @admin.register(InstaPage)
 class InstaPageModelAdmin(admin.ModelAdmin):
-    list_display = ('instagram_username', 'instagram_user_id', 'updated_time', 'created_time')
+    list_display = ('instagram_username', 'instagram_user_id', 'is_enable', 'updated_time', 'created_time')
     readonly_fields = ('uuid',)
+    list_filter = ('is_enable',)
     search_fields = ('instagram_username', 'instagram_user_id', 'device_uuids',)
 
     def has_change_permission(self, request, obj=None):
@@ -61,10 +102,12 @@ class UserInquiryModelAdmin(admin.ModelAdmin):
 
     def order_status(self, obj):
         return obj.order.get_status_display()
+
     order_status.admin_order_field = 'order__status'
 
     def order_link(self, obj):
         return obj.order.link
+
     order_link.admin_order_field = 'order__link'
 
 
@@ -85,13 +128,6 @@ class InstagramAccountModelAdmin(admin.ModelAdmin):
     readonly_fields = ('login_attempt',)
     search_fields = ('username',)
     list_filter = ('is_enable',)
-
-
-def make_paid(modeladmin, request, queryset):
-    for obj in queryset.filter(is_paid__isnull=True):
-        obj.is_paid = True
-        obj.save()
-make_paid.short_description = _("Mark selected orders as paid")
 
 
 @admin.register(CoinPackageOrder)
@@ -123,23 +159,6 @@ class CommentModelAdmin(admin.ModelAdmin):
     list_display = ('text', 'updated_time', 'created_time')
 
 
-def approve_report_abuse(modeladmin, request, queryset):
-    for obj in queryset:
-        obj.status = ReportAbuse.STATUS_APPROVED
-        obj.save()
-approve_report_abuse.short_description = _("Mark selected reports as approved")
-
-
-def decline_report_abuse(modeladmin, request, queryset):
-    queryset.update(status=ReportAbuse.STATUS_REJECTED)
-decline_report_abuse.short_description = _("Mark selected reports as rejected")
-
-
-def junk_report_abuse(modeladmin, request, queryset):
-    queryset.update(status=ReportAbuse.STATUS_JUNK)
-junk_report_abuse.short_description = _("Mark selected reports as junk")
-
-
 @admin.register(ReportAbuse)
 class ReportAbuseModelAdmin(admin.ModelAdmin):
     list_display = ('reporter', 'text', 'status', 'abuser', 'order_action', 'order_link', 'created_time')
@@ -149,16 +168,19 @@ class ReportAbuseModelAdmin(admin.ModelAdmin):
     actions = (
         approve_report_abuse,
         decline_report_abuse,
-        junk_report_abuse
+        junk_report_abuse,
+        ban_report_abuse
     )
     date_hierarchy = 'created_time'
 
     def order_action(self, obj):
         return obj.abuser.action.get_action_type_display()
+
     order_action.admin_order_field = 'order__action'
 
     def order_link(self, obj):
         return obj.abuser.link
+
     order_link.admin_order_field = 'order__link'
 
 
