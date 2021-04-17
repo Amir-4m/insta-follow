@@ -285,13 +285,15 @@ class CoinTransaction(models.Model):
 
 class ReportAbuse(models.Model):
     STATUS_OPEN = 'OPEN'
-    STATUS_APPROVED = 'APPROVED'
+    STATUS_BAN_ORDER = 'BAN_ORDER'
+    STATUS_BAN_USER = 'BAN_USER'
     STATUS_REJECTED = 'REJECTED'
     STATUS_JUNK = 'JUNK'
 
     STATUS_CHOICES = [
         (STATUS_OPEN, _('Open')),
-        (STATUS_APPROVED, _('Approved')),
+        (STATUS_BAN_ORDER, _('Ban Order')),
+        (STATUS_BAN_USER, _('Ban User')),
         (STATUS_REJECTED, _('Rejected')),
         (STATUS_JUNK, _('Junk')),
 
@@ -300,7 +302,7 @@ class ReportAbuse(models.Model):
     reporter = models.ForeignKey(InstaPage, related_name='reports', on_delete=models.CASCADE)
     text = models.TextField(_("report text"), max_length=1024)
     abuser = models.ForeignKey(Order, related_name='reports', on_delete=models.PROTECT)
-    status = models.CharField(max_length=8, blank=False, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    status = models.CharField(max_length=9, blank=False, choices=STATUS_CHOICES, default=STATUS_OPEN)
 
     class Meta:
         verbose_name = _("Report Abuse")

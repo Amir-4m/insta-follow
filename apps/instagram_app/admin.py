@@ -23,13 +23,17 @@ def make_paid(modeladmin, request, queryset):
 make_paid.short_description = _("Mark selected orders as paid")
 
 
-def approve_report_abuse(modeladmin, request, queryset):
-    for obj in queryset:
-        obj.status = ReportAbuse.STATUS_APPROVED
-        obj.save()
+def ban_order_report_abuse(modeladmin, request, queryset):
+    queryset.update(status=ReportAbuse.STATUS_BAN_ORDER)
+    Order.objects.filter(
+        id__in=queryset.values_list('abuser_id', flat=True)
+    ).update(
+        status=Order.STATUS_DISABLE,
+        description="(Abuse) - The order is disabled due to abuse"
+    )
 
 
-approve_report_abuse.short_description = _("Mark selected reports as approved")
+ban_order_report_abuse.short_description = _("Mark selected reported orders as banned")
 
 
 def decline_report_abuse(modeladmin, request, queryset):
@@ -46,12 +50,18 @@ def junk_report_abuse(modeladmin, request, queryset):
 junk_report_abuse.short_description = _("Mark selected reports as junk")
 
 
-def ban_report_abuse(modeladmin, request, queryset):
-    for obj in queryset:
-        InstaPage.objects.filter(id=obj.abuser.owner_id).update(is_enable=False)
+def ban_user_report_abuse(modeladmin, request, queryset):
+    queryset.update(status=ReportAbuse.STATUS_BAN_USER)
+    Order.objects.filter(
+        id__in=queryset.values_list('abuser_id', flat=True)
+    ).update(
+        status=Order.STATUS_DISABLE,
+        description="(Abuse) - The order is disabled due to abuse"
+    )
+    InstaPage.objects.filter(id__in=queryset.values_list('abuser__owner_id', flat=True)).update(is_enable=False)
 
 
-ban_report_abuse.short_description = _("Mark selected abusers as banned")
+ban_user_report_abuse.short_description = _("Mark selected abuser pages as banned")
 
 
 class OrderAutocompleteFilter(AutocompleteFilter):
@@ -162,16 +172,19 @@ class CommentModelAdmin(admin.ModelAdmin):
 @admin.register(ReportAbuse)
 class ReportAbuseModelAdmin(admin.ModelAdmin):
     list_display = ('reporter', 'text', 'status', 'abuser', 'order_action', 'order_link', 'created_time')
+    readonly_fields = ('status',)
     list_select_related = ['abuser', 'reporter']
-    list_filter = ('status',)
     raw_id_fields = ('reporter', 'abuser',)
     actions = (
-        approve_report_abuse,
+        ban_order_report_abuse,
         decline_report_abuse,
         junk_report_abuse,
-        ban_report_abuse
+        ban_user_report_abuse
     )
     date_hierarchy = 'created_time'
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
     def order_action(self, obj):
         return obj.abuser.action.get_action_type_display()
