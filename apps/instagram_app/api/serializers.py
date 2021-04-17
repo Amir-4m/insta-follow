@@ -60,6 +60,7 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
                     detail={'detail': _('invalid credentials provided!')}
                 )
         except JSONDecodeError:
+            logger.warning(f"login verification for user id {user_id} got json decode error")
             if response.status_code == 200:
                 pass
 
