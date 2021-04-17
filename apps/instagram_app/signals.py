@@ -19,7 +19,3 @@ def package_order_receiver(sender, instance, **kwargs):
         )
 
 
-@receiver(post_save, sender=ReportAbuse)
-def report_abuse_receiver(sender, instance, **kwargs):
-    if instance.status == ReportAbuse.STATUS_APPROVED:
-        Order.objects.filter(id=instance.abuser.id).update(status=Order.STATUS_DISABLE, description="(Abuse) - The page is disabled due to abuse")
