@@ -1,5 +1,7 @@
 import logging
 import re
+from json import JSONDecodeError
+
 import requests
 
 from django.conf import settings
@@ -52,14 +54,20 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
                 timeout=(3.05, 9)
             )
             temp = response.json()['graphql']['user']
+
+            if int(temp['id']) != user_id or temp['username'] != username:
+                raise ValidationError(
+                    detail={'detail': _('invalid credentials provided!')}
+                )
+        except JSONDecodeError:
+            logger.warning(f"login verification for user id {user_id} got json decode error")
+            if response.status_code == 200:
+                pass
+
         except Exception as e:
             logger.error(f"error in login verification for user id {user_id}: {e}")
             raise ValidationError(
                 detail={'detail': _('error occurred while logging in!')}
-            )
-        if int(temp['id']) != user_id or temp['username'] != username:
-            raise ValidationError(
-                detail={'detail': _('invalid credentials provided!')}
             )
 
         return attrs
