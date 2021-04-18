@@ -26,7 +26,6 @@ def final_validate_user_inquiries():
         validated_time__isnull=True,
         status=UserInquiry.STATUS_VALIDATED,
         order__action__action_type=InstaAction.ACTION_FOLLOW,
-        order__status=Order.STATUS_ENABLE
     )
     insta_pages = InstaPage.objects.filter(
         instagram_user_id__in=user_inquiries.distinct('order__owner__instagram_user_id').values_list(
