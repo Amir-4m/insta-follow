@@ -68,7 +68,7 @@ def final_validate_user_inquiries():
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(minute='*')))
 def update_orders_achieved_number():
-    q = Order.objects.filter(status=Order.STATUS_ENABLE).annotate(
+    Order.objects.filter(status=Order.STATUS_ENABLE).annotate(
         achived_no=Sum(
             Case(
                 When(
@@ -77,27 +77,34 @@ def update_orders_achieved_number():
             ),
             output_field=IntegerField()
         ),
+    ).filter(
+        achived_no__gte=F('target_no')
+    ).update(
+        status=Order.STATUS_COMPLETE,
     )
-    try:
-        q.filter(
-            achived_no__gte=F('target_no')
-        ).update(
-            status=Order.STATUS_COMPLETE,
-        )
 
-        # reactivating orders, which lost their achieved followers
-        q.filter(
-            achived_no__lt=F('target_no') * settings.ORDER_TARGET_RATIO / 100,
-            status=Order.STATUS_COMPLETE,
-            action=InstaAction.ACTION_FOLLOW,
-            updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
-        ).update(
-            status=Order.STATUS_ENABLE,
-        )
-    except Exception as e:
-        logger.error(f"updating orders achieved number got exception: {e}")
+    # reactivating orders, which lost their achieved followers
 
-    return q.count()
+    Order.objects.filter(
+        status=Order.STATUS_COMPLETE,
+        action=InstaAction.ACTION_FOLLOW,
+        updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
+    ).annotate(
+        achived_no=Sum(
+            Case(
+                When(
+                    user_inquiries__status=UserInquiry.STATUS_VALIDATED,
+                    user_inquiries__validated_time___isnull=False,
+                    then=1
+                )
+            ),
+            output_field=IntegerField()
+        ),
+    ).filter(
+        achived_no__lt=F('target_no') * settings.ORDER_TARGET_RATIO / 100,
+    ).update(
+        status=Order.STATUS_ENABLE,
+    )
 
 
 # TODO: Review
