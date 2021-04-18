@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 # PERIODIC TASK
-@periodic_task(run_every=(crontab(hour='*/17', minute='30')))
+@periodic_task(run_every=(crontab(hour='*/8', minute='30')))
 def final_validate_user_inquiries():
     user_inquiries = UserInquiry.objects.select_related('order').filter(
         created_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
