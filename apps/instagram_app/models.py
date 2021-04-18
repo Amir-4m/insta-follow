@@ -123,12 +123,16 @@ class Order(models.Model):
 
     @property
     def achieved_number_approved(self):
+        if self.status == Order.STATUS_COMPLETE:
+            self._achieved = self.target_no
+
         if self._achieved is None:
             self._achieved = UserInquiry.objects.filter(
                 order=self,
                 status=UserInquiry.STATUS_VALIDATED,
                 # validated_time__isnull=False,
             ).count()
+
         return self._achieved
 
     def clean(self):
