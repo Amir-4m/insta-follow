@@ -93,7 +93,7 @@ def update_orders_achieved_number():
             Case(
                 When(
                     user_inquiries__status=UserInquiry.STATUS_VALIDATED,
-                    user_inquiries__validated_time___isnull=False,
+                    user_inquiries__validated_time__isnull=False,
                     then=1
                 )
             ),
