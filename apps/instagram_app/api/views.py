@@ -99,7 +99,7 @@ class OrderViewSet(viewsets.GenericViewSet,
 
         orders = CustomService.get_or_create_orders(page, action_type, limit)
 
-        serializer = self.serializer_class(orders, many=True)
+        serializer = self.serializer_class(orders, many=True, context={'request': request})
         return Response(serializer.data)
 
     @action(methods=["get"], detail=False, url_path="like")
@@ -385,7 +385,8 @@ class ScoreBoardApiView(generics.GenericAPIView):
         transaction_type=CoinTransaction.TYPE_INQUIRY,
         inquiry__validated_time__isnull=False,
         created_time__gte=timezone.now().replace(hour=0, minute=0)
-    ).values('page__instagram_user_id', 'page__instagram_username').annotate(total=Sum('amount')).order_by('-total')[:50]
+    ).values('page__instagram_user_id', 'page__instagram_username').annotate(total=Sum('amount')).order_by('-total')[
+               :50]
 
     def get(self, request, *args, **kwargs):
         return Response(self.get_queryset())
