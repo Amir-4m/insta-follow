@@ -154,8 +154,7 @@ class UserInquiry(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
 
-    status = models.PositiveSmallIntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_VALIDATED,
-                                              db_index=True)
+    status = models.PositiveSmallIntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_VALIDATED, db_index=True)
     validated_time = models.DateTimeField(_("validated time"), null=True, blank=True, db_index=True)
 
     order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='user_inquiries')

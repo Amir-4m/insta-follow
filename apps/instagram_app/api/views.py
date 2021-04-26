@@ -385,8 +385,10 @@ class ScoreBoardApiView(generics.GenericAPIView):
         transaction_type=CoinTransaction.TYPE_INQUIRY,
         inquiry__validated_time__isnull=False,
         created_time__gte=timezone.now().replace(hour=0, minute=0)
-    ).values('page__instagram_user_id', 'page__instagram_username').annotate(total=Sum('amount')).order_by('-total')[
-               :50]
+    ).values(
+        'page__instagram_user_id',
+        'page__instagram_username'
+    ).annotate(total=Sum('amount')).order_by('-total')[:50]
 
     def get(self, request, *args, **kwargs):
         return Response(self.get_queryset())
