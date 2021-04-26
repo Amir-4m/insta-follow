@@ -97,7 +97,9 @@ class InstagramAppService(object):
             response = requests.get(
                 url,
                 cookies={'sessionid': session_id},
-                headers={'User-Agent': f"{timezone.now().isoformat()}"})
+                headers={'User-Agent': f"{timezone.now().isoformat()}"},
+                timeout=(3.05, 9)
+            )
             response.raise_for_status()
             result = response.json()['data']['user']['edge_followed_by']
             accounts += [_e['node']['username'] for _e in result['edges']]

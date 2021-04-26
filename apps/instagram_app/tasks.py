@@ -27,6 +27,7 @@ def final_validate_user_inquiries():
         status=UserInquiry.STATUS_VALIDATED,
         order__action__action_type=InstaAction.ACTION_FOLLOW,
     )
+
     insta_pages = InstaPage.objects.filter(
         instagram_user_id__in=user_inquiries.distinct(
             'order__owner__instagram_user_id'
@@ -34,23 +35,30 @@ def final_validate_user_inquiries():
             'order__owner__instagram_user_id', flat=True
         )
     )
-    order_usernames = {}
+
+    page_followers = {}
+    page_checked = []
     for page in insta_pages:
+        if page.instagram_username in page_checked:
+            continue
+        page_checked.append(page.instagram_username)
+
         if InstagramAppService.page_private(page) is True:
             user_inquiries.filter(order__owner=page).update(validated_time=timezone.now())
             logger.warning(f"page `{page.instagram_username}` is private")
             continue
 
         try:
-            order_usernames[page.instagram_username] = InstagramAppService.get_user_followers(page.session_id, page.instagram_user_id)
+            page_followers[page.instagram_username] = InstagramAppService.get_user_followers(page.session_id, page.instagram_user_id)
         except Exception as e:
             logger.error(f"page followers `{page.instagram_username}` got exception: {type(e)} - {str(e)}")
 
     for inquiry in user_inquiries:
-        if inquiry.order.instagram_username not in order_usernames:
+        if inquiry.order.instagram_username not in page_followers:
             continue
+
         try:
-            if inquiry.page.instagram_username not in order_usernames[inquiry.order.instagram_username]:
+            if inquiry.page.instagram_username not in page_followers[inquiry.order.instagram_username]:
                 inquiry.status = UserInquiry.STATUS_REJECTED
                 amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
                 CoinTransaction.objects.create(
