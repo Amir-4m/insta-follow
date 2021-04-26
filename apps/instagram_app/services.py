@@ -129,7 +129,7 @@ class InstagramAppService(object):
             result = r_json['graphql']['user']['is_private']
         except Exception as e:
             logger.error(f"getting page info failed {page.instagram_username}: {e}")
-            return None
+            return True
         return result
 
 

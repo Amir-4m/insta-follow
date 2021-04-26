@@ -3,7 +3,6 @@ import requests
 from random import choice
 
 from datetime import timedelta
-from json import JSONDecodeError
 
 from celery import shared_task
 from celery.schedules import crontab
@@ -41,9 +40,6 @@ def final_validate_user_inquiries():
 
         try:
             order_usernames[page.instagram_username] = InstagramAppService.get_user_followers(page.session_id, page.instagram_user_id)
-        except JSONDecodeError:
-            user_inquiries.filter(order__owner=page).update(validated_time=timezone.now())
-            logger.warning(f"page `{page.instagram_username}` is could not read followers")
         except Exception as e:
             logger.error(f"page followers `{page.instagram_username}` got exception: {type(e)} - {str(e)}")
 
