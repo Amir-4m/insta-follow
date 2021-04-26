@@ -115,6 +115,10 @@ class OrderSerializer(serializers.ModelSerializer):
         shortcode = attrs.get('shortcode')
         instagram_username = attrs.get('instagram_username')
         comments = attrs.get('comments')
+        page = self.context['request'].auth['page']
+        page.refresh_from_db()
+        if not page.is_enable:
+            raise ValidationError(detail={'detail': _('you do not have the permission to do this action.')})
 
         if action_value.pk in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT] and not shortcode:
             raise ValidationError(detail={'detail': _('shortcode field is required for like and comment !')})
