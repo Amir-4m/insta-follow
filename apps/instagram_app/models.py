@@ -117,6 +117,7 @@ class Order(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._achieved = None
+        self._achieved_valid = None
 
     def __str__(self):
         return f"{self.id} - {self.action}"
@@ -134,6 +135,17 @@ class Order(models.Model):
             ).count()
 
         return self._achieved
+
+    @property
+    def achieved_number_validated(self):
+        if self._achieved_valid is None:
+            self._achieved_valid = UserInquiry.objects.filter(
+                order=self,
+                status=UserInquiry.STATUS_VALIDATED,
+                validated_time__isnull=False,
+            ).count()
+
+        return self._achieved_valid
 
     def clean(self):
         # TODO: What about the other way around??

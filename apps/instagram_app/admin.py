@@ -84,10 +84,10 @@ class InstaPageModelAdmin(admin.ModelAdmin):
 class OrderModelAdmin(admin.ModelAdmin):
     list_display = (
         'instagram_username', 'id', 'action', 'link', 'target_no',
-        'status', 'achieved_number_approved', 'created_time'
+        'status', 'achieved_number_validated', 'created_time'
     )
     list_filter = ('action', 'status')
-    readonly_fields = ('media_properties', 'instagram_username', 'entity_id', 'achieved_number_approved')
+    readonly_fields = ('media_properties', 'instagram_username', 'entity_id', 'achieved_number_approved', 'achieved_number_validated')
     search_fields = ('owner__instagram_username', 'id', 'link')
     raw_id_fields = ('owner',)
     date_hierarchy = 'created_time'

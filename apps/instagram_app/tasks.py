@@ -28,8 +28,11 @@ def final_validate_user_inquiries():
         order__action__action_type=InstaAction.ACTION_FOLLOW,
     )
     insta_pages = InstaPage.objects.filter(
-        instagram_user_id__in=user_inquiries.distinct('order__owner__instagram_user_id').values_list(
-            'order__owner__instagram_user_id', flat=True)
+        instagram_user_id__in=user_inquiries.distinct(
+            'order__owner__instagram_user_id'
+        ).values_list(
+            'order__owner__instagram_user_id', flat=True
+        )
     )
     order_usernames = {}
     for page in insta_pages:
@@ -153,7 +156,7 @@ def check_order_validity(order_id):
 
     except Exception as e:
         logger.error(f'[order check failed]-[id: {order.id}, url: {order.link}]-[exc: {type(e)}, {str(e)}]')
-        check_order_validity.delay(order_id)
+        return
 
     else:
         try:
