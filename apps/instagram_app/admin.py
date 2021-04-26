@@ -103,7 +103,7 @@ class UserInquiryModelAdmin(admin.ModelAdmin):
     readonly_fields = ('validated_time', 'page', 'order')
     list_filter = ('status', 'order__action', OrderAutocompleteFilter)
 
-    search_fields = ('page__instagram_username', 'order_id')
+    search_fields = ('page__instagram_username', 'order__link')
     raw_id_fields = ('order', 'page',)
     date_hierarchy = 'created_time'
 

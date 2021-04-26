@@ -29,10 +29,10 @@ def final_validate_user_inquiries():
     )
 
     insta_pages = InstaPage.objects.filter(
-        instagram_user_id__in=user_inquiries.distinct(
-            'order__owner__instagram_user_id'
+        id__in=user_inquiries.distinct(
+            'order__owner_id'
         ).values_list(
-            'order__owner__instagram_user_id', flat=True
+            'order__owner_id', flat=True
         )
     )
 
