@@ -77,7 +77,7 @@ def validate_user_inquiries():
     for order_link in order_links:
         page_username = InstagramAppService.get_page_id(order_link)
         try:
-            random_recent_insta_page = InstaPage.objects.filter(updated_time__gt=timezone.now().date()).order_by('?')[0]
+            random_recent_insta_page = InstaPage.objects.filter(updated_time__gt=timezone.now()-timedelta(hours=1)).order_by('?')[0]
             session_id = random_recent_insta_page.session_id
         except:
             continue
