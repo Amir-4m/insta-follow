@@ -44,7 +44,7 @@ def validate_user_inquiries_for_order_link(order_link, entity_id, session_id):
     break_point_users = qs.filter(validated_time__isnull=False).order_by('-pk').values_list('page__instagram_user_id', flat=True)[:20]
     try:
         page_followers = InstagramAppService.get_user_followers(session_id, entity_id, follower_limit, break_point_users=break_point_users)
-        logger.info(f"[validate_user_inquiries]-[getting followers for page: {page_username}]-[{len(page_followers)}]")
+        logger.info(f"[validate_user_inquiries]-[getting followers for page: {page_username}]-[limit: {follower_limit}]-[page_followers: {len(page_followers)}]")
     except Exception as e:
         logger.error(f"[validate_user_inquiries]-[getting followers for page: {page_username}]-[{type(e)}]-[err: {e}]")
         return
