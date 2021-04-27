@@ -70,19 +70,22 @@ def validate_user_inquiries():
         created_time__lte=timezone.now().date() - timedelta(days=7)
     ).update(validated_time=timezone.now())
 
-    orders = Order.objects.filter(
+    order_links = set(Order.objects.filter(
         id__in=qs.values_list('order_id', flat=True)
-    ).values('link').annotate(
-        session_id=Min('owner__session_id'),
-    )
+    ).values_list('link', flat=True))
 
-    for order in orders:
-        page_username = InstagramAppService.get_page_id(order['link'])
-        is_private = InstagramAppService.page_private(page_username, order['session_id'])
+    for order_link in order_links:
+        page_username = InstagramAppService.get_page_id(order_link)
+        try:
+            random_recent_insta_page = InstaPage.objects.filter(updated_time__gt=timezone.now().date()).order_by('?')[0]
+            session_id = random_recent_insta_page.session_id
+        except:
+            continue
 
+        is_private = InstagramAppService.page_private(page_username, session_id)
         if is_private is True:
             UserInquiry.objects.filter(
-                order__link=order['link'],
+                order__link=order_link,
                 status=UserInquiry.STATUS_VALIDATED,
                 validated_time__isnull=True,
             ).update(
@@ -93,7 +96,7 @@ def validate_user_inquiries():
     pages = set(qs.values_list('page_id', 'page__instagram_username', 'page__instagram_user_id', 'page__session_id'))
     for page_id, username, user_id, session_id in pages:
         logger.info(f"[validate_user_inquiries]-[page: {username}]")
-        validate_user_inquiries_for_order_link(page_id, username, user_id, session_id)
+        validate_user_inquiries_for_order_link.delay(page_id, username, user_id, session_id)
 
 
 @periodic_task(run_every=(crontab(minute='*')))

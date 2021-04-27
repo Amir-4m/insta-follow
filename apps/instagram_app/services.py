@@ -159,11 +159,10 @@ class InstagramAppService(object):
 
     @staticmethod
     def page_private(instagram_username, session_id):
-        url = f'https://www.instagram.com/{instagram_username}/?__a=1'
 
         try:
             response = requests.get(
-                url=url,
+                url=f'https://www.instagram.com/{instagram_username}/?__a=1',
                 cookies={'sessionid': session_id},
                 headers={'User-Agent': f'{timezone.now().isoformat()}'},
                 timeout=(3.05, 9)
@@ -177,7 +176,7 @@ class InstagramAppService(object):
             result = True
 
         except json.JSONDecodeError:
-            logger.warning(f"[page_private check]-[page: {instagram_username}]-[JSONDecodeError]")
+            logger.warning(f"[page_private check]-[page: {instagram_username}]-[JSONDecodeError]-[session: {session_id}]")
             result = None
 
         except requests.exceptions.HTTPError as e:
