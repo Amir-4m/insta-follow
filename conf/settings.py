@@ -255,7 +255,6 @@ PENALTY_CHECK_HOUR = config('PENALTY_CHECK_HOUR', default=48, cast=int)
 
 ORDER_TARGET_RATIO = config('ORDER_TARGET_RATIO', default=90, cast=int)
 
-FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=10, cast=int)
 MAXIMUM_COIN_TRANSFER = config('MAXIMUM_COIN_TRANSFER', default=1000, cast=int)
 DAILY_TRANSFER_LIMIT = config('DAILY_TRANSFER_LIMIT', default=2, cast=int)
 COIN_TRANSFER_FEE = config('COIN_TRANSFER_FEE', default=5, cast=int)
