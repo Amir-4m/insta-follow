@@ -85,18 +85,14 @@ class InstagramAppService(object):
     @staticmethod
     def get_user_followers(session_id, user_id, limit, next_page='', break_point_users=None):
 
-        followers_per_request = 50
-
         if break_point_users is None:
             break_point_users = []
 
-        count = (ceil(limit / 100) * 100) // followers_per_request
-
         accounts = []
-        for _i in range(count):
+        while len(accounts) < limit:
             variables = {
                 'id': user_id,
-                'first': followers_per_request,
+                'first': 50,
                 'after': next_page
             }
             endpoint = "https://www.instagram.com/graphql/query/?query_hash=c76146de99bb02f6415203be841dd25a&variables=%s"
