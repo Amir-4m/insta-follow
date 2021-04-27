@@ -19,46 +19,30 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task()
-def validate_user_inquiries_for_order_link(order_link, entity_id, session_id):
-    page_username = InstagramAppService.get_page_id(order_link)
-    is_private = InstagramAppService.page_private(page_username, session_id)
-
-    if is_private is True:
-        UserInquiry.objects.filter(
-            order__link=order_link,
-            status=UserInquiry.STATUS_VALIDATED,
-            validated_time__isnull=True,
-        ).update(
-            validated_time=timezone.now()
-        )
-        logger.info(f"[validate_user_inquiries]-[page `{page_username}` is private]")
-        return
-
-    elif is_private is None:
-        return
-
-    qs = UserInquiry.objects.filter(order__link=order_link, status=UserInquiry.STATUS_VALIDATED)
-    now = timezone.now()
-
-    follower_limit = qs.filter(created_time__gte=now - timedelta(hours=settings.PENALTY_CHECK_HOUR + 24)).count()
-    break_point_users = qs.filter(validated_time__isnull=False).order_by('-pk').values_list('page__instagram_user_id', flat=True)[:20]
+def validate_user_inquiries_for_order_link(page_id, username, user_id, session_id):
     try:
-        page_followers = InstagramAppService.get_user_followers(session_id, entity_id, follower_limit, break_point_users=break_point_users)
-        logger.info(f"[validate_user_inquiries]-[getting followers for page: {page_username}]-[limit: {follower_limit}]-[page_followers: {len(page_followers)}]")
+        page_followings = InstagramAppService.get_user_followings(session_id, user_id)
+        logger.info(f"[validate_user_inquiries]-[followings for page: {username}]-[following count: {len(page_followings)}]")
     except Exception as e:
-        logger.error(f"[validate_user_inquiries]-[getting followers for page: {page_username}]-[{type(e)}]-[err: {e}]")
+        logger.error(f"[validate_user_inquiries]-[followings for page: {username}]-[{type(e)}]-[err: {e}]")
         return
 
-    if not page_followers:
-        return
-
-    user_inquiries = qs.select_related('order__action').filter(
+    user_inquiries = UserInquiry.objects.select_related('order').filter(
+        created_time__lte=timezone.now().date() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
         validated_time__isnull=True,
-        created_time__lte=now - timedelta(hours=settings.PENALTY_CHECK_HOUR)
+        status=UserInquiry.STATUS_VALIDATED,
+        order__action__action_type=InstaAction.ACTION_FOLLOW,
+        page_id=page_id
     )
 
+    validated_ids = []
     for inquiry in user_inquiries:
-        if inquiry.page.instagram_user_id not in page_followers:
+        page_username = InstagramAppService.get_page_id(inquiry.order.link)
+        if page_username in page_followings:
+            logger.info(f"[validate_user_inquiries]-[page: {username}]-[{page_username} still followed]")
+            validated_ids.append(inquiry.id)
+        else:
+            logger.info(f"[validate_user_inquiries]-[page: {username}]-[{page_username} not followed]")
             inquiry.status = UserInquiry.STATUS_REJECTED
             amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
             CoinTransaction.objects.create(
@@ -67,35 +51,49 @@ def validate_user_inquiries_for_order_link(order_link, entity_id, session_id):
                 amount=amount,
                 transaction_type=CoinTransaction.TYPE_PENALTY
             )
-        else:
-            inquiry.validated_time = timezone.now()
-        inquiry.save()
+            inquiry.save()
 
-    qs.filter(
-        validated_time__isnull=True,
-        created_time__lte=now - timedelta(days=7)
-    ).update(validated_time=timezone.now())
+    UserInquiry.objects.filter(id__in=validated_ids).update(validated_time=timezone.now())
 
 
 @periodic_task(run_every=(crontab(hour='4', minute='30')))
 def validate_user_inquiries():
-    order_ids = UserInquiry.objects.filter(
-        created_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
+    qs = UserInquiry.objects.filter(
+        created_time__lte=timezone.now().date() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
         validated_time__isnull=True,
         status=UserInquiry.STATUS_VALIDATED,
         order__action__action_type=InstaAction.ACTION_FOLLOW,
-    ).values_list('order_id', flat=True)
+    )
+
+    # set validated for all inquiries after 7 days
+    qs.filter(
+        created_time__lte=timezone.now().date() - timedelta(days=7)
+    ).update(validated_time=timezone.now())
 
     orders = Order.objects.filter(
-        id__in=order_ids
+        id__in=qs.values_list('order_id', flat=True)
     ).values('link').annotate(
         session_id=Min('owner__session_id'),
-        entity_id=Min('entity_id')
     )
 
     for order in orders:
-        logger.info(f"[validate_user_inquiries]-[{order['link']}]")
-        validate_user_inquiries_for_order_link.delay(order['link'], order['entity_id'], order['session_id'])
+        page_username = InstagramAppService.get_page_id(order['link'])
+        is_private = InstagramAppService.page_private(page_username, order['session_id'])
+
+        if is_private is True:
+            UserInquiry.objects.filter(
+                order__link=order['link'],
+                status=UserInquiry.STATUS_VALIDATED,
+                validated_time__isnull=True,
+            ).update(
+                validated_time=timezone.now()
+            )
+            logger.info(f"[validate_user_inquiries]-[page `{page_username}` is private]")
+
+    pages = set(qs.values_list('page_id', 'page__instagram_username', 'page__instagram_user_id', 'page__session_id'))
+    for page_id, username, user_id, session_id in pages:
+        logger.info(f"[validate_user_inquiries]-[page: {username}]")
+        validate_user_inquiries_for_order_link(page_id, username, user_id, session_id)
 
 
 @periodic_task(run_every=(crontab(minute='*')))

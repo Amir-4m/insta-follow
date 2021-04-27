@@ -123,9 +123,9 @@ class InstagramAppService(object):
 
     @staticmethod
     def get_user_followings(session_id, user_id, next_page=''):
-        has_next_page = True
 
         accounts = []
+        has_next_page = True
         while has_next_page:
             variables = {
                 'id': user_id,
