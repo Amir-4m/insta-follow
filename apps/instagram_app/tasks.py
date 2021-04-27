@@ -39,7 +39,7 @@ def validate_user_inquiries_for_order_link(page_id, username, user_id, session_i
     for inquiry in user_inquiries:
         page_username = InstagramAppService.get_page_id(inquiry.order.link)
         if page_username in page_followings:
-            logger.info(f"[validate_user_inquiries]-[page: {username}]-[{page_username} still followed]")
+            logger.debug(f"[validate_user_inquiries]-[page: {username}]-[{page_username} still followed]")
             validated_ids.append(inquiry.id)
         else:
             logger.info(f"[validate_user_inquiries]-[page: {username}]-[{page_username} not followed]")
