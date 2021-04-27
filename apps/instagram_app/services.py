@@ -3,6 +3,7 @@ import logging
 import random
 import re
 import time
+from math import ceil
 
 import requests
 
@@ -82,13 +83,20 @@ class InstagramAppService(object):
         raise Exception("instagram login reached max retries !")
 
     @staticmethod
-    def get_user_followers(session_id, user_id, count=settings.FOLLOWER_LIMIT, end_cursor='', delayed=True):
-        next_page = end_cursor
+    def get_user_followers(session_id, user_id, limit, next_page='', break_point_users=None):
+
+        followers_per_request = 50
+
+        if break_point_users is None:
+            break_point_users = []
+
+        count = (ceil(limit / 100) * 100) // followers_per_request
+
         accounts = []
         for _i in range(count):
             variables = {
                 'id': user_id,
-                'first': str(count),
+                'first': followers_per_request,
                 'after': next_page
             }
             endpoint = "https://www.instagram.com/graphql/query/?query_hash=c76146de99bb02f6415203be841dd25a&variables=%s"
@@ -102,37 +110,71 @@ class InstagramAppService(object):
             )
             response.raise_for_status()
             result = response.json()['data']['user']['edge_followed_by']
-            accounts += [_e['node']['username'] for _e in result['edges']]
+            accounts += [_e['node']['id'] for _e in result['edges']]
+
+            if any(instagram_user_id in accounts for instagram_user_id in break_point_users):
+                break
 
             if result['page_info']['has_next_page']:
                 next_page = result['page_info']['end_cursor']
             else:
                 break
 
-            if delayed:
-                # Random wait between 1 and 3 sec to mimic browser
-                microsec = random.uniform(2.0, 6.0)
-                time.sleep(microsec)
+            # Random wait between 1 and 3 sec to mimic browser
+            time.sleep(random.randint(1, 3))
 
         return accounts
 
     @staticmethod
-    def page_private(page):
-        url = f'https://www.instagram.com/{page.instagram_username}/?__a=1'
+    def page_private(instagram_username, session_id):
+        url = f'https://www.instagram.com/{instagram_username}/?__a=1'
+
         try:
             response = requests.get(
                 url=url,
-                cookies={'sessionid': page.session_id},
+                cookies={'sessionid': session_id},
                 headers={'User-Agent': f'{timezone.now().isoformat()}'},
                 timeout=(3.05, 9)
             )
             response.raise_for_status()
             r_json = response.json()
             result = r_json['graphql']['user']['is_private']
+        except json.JSONDecodeError:
+            result = None
+
+        except requests.exceptions.HTTPError as e:
+            logger.warning(
+                f'[making request failed]-[response err: {e.response.text}]-[status code: {e.response.status_code}]'
+                f'-[URL: {url}]-[exc: {e}]'
+            )
+
+            result = None
+            if e.response.status_code == 404:
+                result = True
+
         except Exception as e:
-            logger.error(f"getting page info failed {page.instagram_username}: {e}")
-            return True
+            result = None
+            logger.error(f"getting page info failed {instagram_username}: {e}")
+
         return result
+
+    @staticmethod
+    def get_page_user_id(instagram_username, session_id):
+        url = f'https://www.instagram.com/{instagram_username}/?__a=1'
+        try:
+            response = requests.get(
+                url=url,
+                cookies={'sessionid': session_id},
+                headers={'User-Agent': f'{timezone.now().isoformat()}'},
+                timeout=(3.05, 9)
+            )
+            response.raise_for_status()
+            r_json = response.json()
+            user_id = r_json['graphql']['user']['id']
+        except Exception as e:
+            logger.error(f"getting page info failed {instagram_username}: {e}")
+            return None
+        return user_id
 
 
 class CustomService(object):

@@ -8,7 +8,7 @@ from celery import shared_task
 from celery.schedules import crontab
 from celery.task import periodic_task
 from django.core.cache import cache
-from django.db.models import F, Sum, Case, When, IntegerField
+from django.db.models import F, Sum, Case, When, IntegerField, Min
 from django.utils import timezone
 from django.conf import settings
 
@@ -20,45 +20,63 @@ logger = logging.getLogger(__name__)
 
 # PERIODIC TASK
 @periodic_task(run_every=(crontab(minute='*/10')))
-def final_validate_user_inquiries():
-    user_inquiries = UserInquiry.objects.select_related('order').filter(
+def validate_user_inquiries():
+    order_ids = UserInquiry.objects.filter(
         created_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
         validated_time__isnull=True,
         status=UserInquiry.STATUS_VALIDATED,
         order__action__action_type=InstaAction.ACTION_FOLLOW,
+    ).values_list('order_id', flat=True)
+
+    orders = Order.objects.filter(
+        id__in=order_ids
+    ).values('link').annotate(
+        session_id=Min('owner__session_id'),
+        entity_id=Min('entity_id')
     )
 
-    insta_pages = InstaPage.objects.filter(
-        id__in=user_inquiries.distinct(
-            'order__owner_id'
-        ).values_list(
-            'order__owner_id', flat=True
+    for order in orders:
+        validate_user_inquiries_for_order_link(order['link'], order['entity_id'], order['session_id'])
+
+
+def validate_user_inquiries_for_order_link(order_link, entity_id, session_id):
+    page_username = InstagramAppService.get_page_id(order_link)
+    is_private = InstagramAppService.page_private(page_username, session_id)
+
+    if is_private is True:
+        UserInquiry.objects.filter(
+            order__link=order_link,
+            status=UserInquiry.STATUS_VALIDATED,
+            validated_time__isnull=True,
+        ).update(
+            validated_time=timezone.now()
         )
+        logger.warning(f"page `{page_username}` is private")
+        return
+
+    elif is_private is None:
+        return
+
+    qs = UserInquiry.objects.filter(order__link=order_link, status=UserInquiry.STATUS_VALIDATED)
+
+    follower_limit = qs.filter(created_time__gte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR + 24)).count()
+
+    break_point_users = qs.filter(validated_time__isnull=False).order_by('-pk').values_list('page__instagram_user_id', flat=True)[:20]
+
+    try:
+        page_followers = InstagramAppService.get_user_followers(session_id, entity_id, follower_limit, break_point_users=break_point_users)
+    except Exception as e:
+        logger.error(f"page followers `{page_username}` got exception: {type(e)} - {str(e)}")
+        return
+
+    user_inquiries = qs.select_related('order__action').filter(
+        validated_time__isnull=True,
+        created_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR)
     )
-
-    page_followers = {}
-    page_checked = []
-    for page in insta_pages:
-        if page.instagram_username in page_checked:
-            continue
-        page_checked.append(page.instagram_username)
-
-        if InstagramAppService.page_private(page) is True:
-            user_inquiries.filter(order__owner=page).update(validated_time=timezone.now())
-            logger.warning(f"page `{page.instagram_username}` is private")
-            continue
-
-        try:
-            page_followers[page.instagram_username] = InstagramAppService.get_user_followers(page.session_id, page.instagram_user_id)
-        except Exception as e:
-            logger.error(f"page followers `{page.instagram_username}` got exception: {type(e)} - {str(e)}")
 
     for inquiry in user_inquiries:
-        if inquiry.order.instagram_username not in page_followers:
-            continue
-
         try:
-            if inquiry.page.instagram_username not in page_followers[inquiry.order.instagram_username]:
+            if inquiry.page.instagram_user_id not in page_followers:
                 inquiry.status = UserInquiry.STATUS_REJECTED
                 amount = -(inquiry.order.action.action_value * settings.USER_PENALTY_AMOUNT)
                 CoinTransaction.objects.create(
