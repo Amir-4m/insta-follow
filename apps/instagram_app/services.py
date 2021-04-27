@@ -122,6 +122,42 @@ class InstagramAppService(object):
         return accounts
 
     @staticmethod
+    def get_user_followings(session_id, user_id, next_page=''):
+        has_next_page = True
+
+        accounts = []
+        while has_next_page:
+            variables = {
+                'id': user_id,
+                'first': 50,
+                'after': next_page
+            }
+
+            endpoint = "https://www.instagram.com/graphql/query/?query_hash=3dec7e2c57367ef3da3d987d89f9dbc8&variables=%s"
+            url = endpoint % parse.quote_plus(json.dumps(variables, separators=(',', ':')))
+
+            response = requests.get(
+                url,
+                cookies={'sessionid': session_id},
+                headers={'User-Agent': f"{timezone.now().isoformat()}"},
+                timeout=(3.05, 9)
+            )
+            response.raise_for_status()
+            result = response.json()['data']['user']['edge_follow']
+            accounts += [_e['node']['username'] for _e in result['edges']]
+            has_next_page = result['page_info']['has_next_page']
+
+            if has_next_page:
+                next_page = result['page_info']['end_cursor']
+            else:
+                break
+
+            # Random wait between 1 and 3 sec to mimic browser
+            time.sleep(random.randint(1, 3))
+
+        return accounts
+
+    @staticmethod
     def page_private(instagram_username, session_id):
         url = f'https://www.instagram.com/{instagram_username}/?__a=1'
 
