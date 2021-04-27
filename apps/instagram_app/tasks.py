@@ -74,16 +74,23 @@ def validate_user_inquiries():
         id__in=qs.values_list('order_id', flat=True)
     ).values_list('link', flat=True))
 
+    session_id = None
     for order_link in order_links:
         page_username = InstagramAppService.get_page_id(order_link)
-        try:
-            random_recent_insta_page = InstaPage.objects.filter(updated_time__gt=timezone.now()-timedelta(hours=1)).order_by('?')[0]
-            session_id = random_recent_insta_page.session_id
-        except:
-            continue
+
+        # get random session id
+        if session_id is None:
+            try:
+                random_recent_insta_page = InstaPage.objects.filter(updated_time__gt=timezone.now().date()).order_by('?')[0]
+                session_id = random_recent_insta_page.session_id
+            except:
+                continue
 
         is_private = InstagramAppService.page_private(page_username, session_id)
-        if is_private is True:
+        if is_private is None:
+            # session_id is expired or useless
+            session_id = None
+        elif is_private is True:
             UserInquiry.objects.filter(
                 order__link=order_link,
                 status=UserInquiry.STATUS_VALIDATED,
