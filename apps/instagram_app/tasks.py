@@ -31,7 +31,7 @@ def validate_user_inquiries_for_order_link(order_link, entity_id, session_id):
         ).update(
             validated_time=timezone.now()
         )
-        logger.info(f"page `{page_username}` is private")
+        logger.info(f"[validate_user_inquiries]-[page `{page_username}` is private]")
         return
 
     elif is_private is None:
@@ -45,7 +45,7 @@ def validate_user_inquiries_for_order_link(order_link, entity_id, session_id):
     try:
         page_followers = InstagramAppService.get_user_followers(session_id, entity_id, follower_limit, break_point_users=break_point_users)
     except Exception as e:
-        logger.error(f"[validate_user_inquiries] - [page followers {page_username}] - [got exception: {type(e)} - {str(e)}]")
+        logger.error(f"[validate_user_inquiries]-[getting followers for page: {page_username}]-[{type(e)}]-[err: {e}]")
         return
 
     user_inquiries = qs.select_related('order__action').filter(

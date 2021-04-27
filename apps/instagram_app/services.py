@@ -139,22 +139,24 @@ class InstagramAppService(object):
             response.raise_for_status()
             r_json = response.json()
             result = r_json['graphql']['user']['is_private']
+
+        except KeyError as e:
+            logger.warning(f"[page_private check]-[page: {instagram_username}]-[KeyError]-[err: {e}]")
+            result = True
+
         except json.JSONDecodeError:
+            logger.warning(f"[page_private check]-[page: {instagram_username}]-[JSONDecodeError]")
             result = None
 
         except requests.exceptions.HTTPError as e:
-            logger.warning(
-                f'[making request failed]-[response err: {e.response.text}]-[status code: {e.response.status_code}]'
-                f'-[URL: {url}]-[exc: {e}]'
-            )
-
+            logger.warning(f"[page_private check]-[page: {instagram_username}]-[status code: {e.response.status_code}]")
             result = None
             if e.response.status_code == 404:
                 result = True
 
         except Exception as e:
+            logger.error(f"[page_private check]-[page: {instagram_username}]-[{type(e)}]-[err: {e}]")
             result = None
-            logger.error(f"getting page info failed {instagram_username}: {e}")
 
         return result
 
