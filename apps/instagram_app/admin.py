@@ -76,7 +76,7 @@ class InstaPageModelAdmin(admin.ModelAdmin):
         'is_test_user', 'updated_time', 'created_time'
     )
     readonly_fields = ('uuid',)
-    list_filter = ('is_enable',)
+    list_filter = ('is_enable', 'is_test_user')
     search_fields = ('instagram_username', 'instagram_user_id', 'device_uuids',)
 
     def has_change_permission(self, request, obj=None):
