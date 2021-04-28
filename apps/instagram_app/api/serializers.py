@@ -96,6 +96,12 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
         return page
 
 
+class TestInstaPageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InstaPage
+        fields = ('is_test_user',)
+
+
 class OrderSerializer(serializers.ModelSerializer):
     shortcode = serializers.CharField(required=False)
     description = serializers.ReadOnlyField(source='get_status_display')
