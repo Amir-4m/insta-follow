@@ -8,13 +8,14 @@ from .views import (
     PurchaseVerificationAPIView, CoinPackageOrderViewSet,
     LoginVerification, CommentViewSet, CoinTransferAPIView,
     ReportAbuseViewSet, CoinPackageViewSet, OrderGateWayAPIView,
-    GatewayAPIView, PrivateAccount, ScoreBoardApiView
+    GatewayAPIView, PrivateAccount, ScoreBoardApiView, TestInstagramPageAPIView
 )
 
 urlpatterns = [
     path('insta-action/', InstaActionAPIView.as_view(), name='insta-action'),
     path('purchase-verification/', PurchaseVerificationAPIView.as_view(), name='purchase-verification'),
     path('login-verification/', LoginVerification.as_view(), name='login-verification'),
+    path('test-page/<slug:instagram_user_id>/', TestInstagramPageAPIView.as_view(), name='test-page'),
     path('coin-transfer/', CoinTransferAPIView.as_view(), name='coin-transfer'),
     path('order-gateway/', OrderGateWayAPIView.as_view(), name='order-gateway'),
     path('gateways/', GatewayAPIView.as_view(), name='gateways-list'),

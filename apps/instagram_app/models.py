@@ -63,6 +63,7 @@ class InstaPage(models.Model):
     session_id = models.CharField(_('session id'), max_length=50)
     device_uuids = ArrayField(models.UUIDField(_('device uuids')), default=list)
     is_enable = models.BooleanField(_("is enable"), default=True)
+    is_test_user = models.BooleanField(_("is test user"), default=False)
 
     class Meta:
         db_table = "insta_pages"
@@ -166,7 +167,8 @@ class UserInquiry(models.Model):
     created_time = models.DateTimeField(_("created time"), auto_now_add=True, db_index=True)
     updated_time = models.DateTimeField(_("updated time"), auto_now=True)
 
-    status = models.PositiveSmallIntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_VALIDATED, db_index=True)
+    status = models.PositiveSmallIntegerField(_('status'), choices=STATUS_CHOICES, default=STATUS_VALIDATED,
+                                              db_index=True)
     validated_time = models.DateTimeField(_("validated time"), null=True, blank=True, db_index=True)
 
     order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='user_inquiries')
@@ -192,7 +194,8 @@ class CoinPackage(models.Model):
     name = models.CharField(_('package title'), max_length=100)
     sku = models.CharField(_('package sku'), max_length=40, blank=True)
     featured = models.DateTimeField(null=True, blank=True,
-                                    help_text=_('if this date field is specified, the coin package will be featured until this date'))
+                                    help_text=_(
+                                        'if this date field is specified, the coin package will be featured until this date'))
     is_enable = models.BooleanField(default=True)
 
     class Meta:
@@ -278,7 +281,8 @@ class CoinTransaction(models.Model):
     description = models.TextField(_("description"), blank=True)
     inquiry = models.ForeignKey(UserInquiry, on_delete=models.CASCADE, null=True, blank=True)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True, verbose_name=_('Insta Order'))
-    package = models.ForeignKey(CoinPackageOrder, on_delete=models.PROTECT, null=True, blank=True, verbose_name=_('Coin Package Order'))
+    package = models.ForeignKey(CoinPackageOrder, on_delete=models.PROTECT, null=True, blank=True,
+                                verbose_name=_('Coin Package Order'))
     from_page = models.ForeignKey(InstaPage, related_name='senders', on_delete=models.PROTECT, null=True, blank=True)
     to_page = models.ForeignKey(InstaPage, related_name='receivers', on_delete=models.PROTECT, null=True, blank=True)
     transaction_type = models.CharField(

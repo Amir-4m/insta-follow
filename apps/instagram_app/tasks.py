@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 def validate_user_inquiries_for_order_link(page_id, username, user_id, session_id):
     try:
         page_followings = InstagramAppService.get_user_followings(session_id, user_id)
-        logger.info(f"[validate_user_inquiries]-[followings for page: {username}]-[following count: {len(page_followings)}]")
+        logger.info(
+            f"[validate_user_inquiries]-[followings for page: {username}]-[following count: {len(page_followings)}]")
     except Exception as e:
         logger.error(f"[validate_user_inquiries]-[followings for page: {username}]-[{type(e)}]-[err: {e}]")
         return
@@ -63,6 +64,7 @@ def validate_user_inquiries():
         validated_time__isnull=True,
         status=UserInquiry.STATUS_VALIDATED,
         order__action__action_type=InstaAction.ACTION_FOLLOW,
+        page__is_test_user=False
     )
 
     # set validated for all inquiries after 7 days

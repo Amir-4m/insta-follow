@@ -71,7 +71,10 @@ class OrderAutocompleteFilter(AutocompleteFilter):
 
 @admin.register(InstaPage)
 class InstaPageModelAdmin(admin.ModelAdmin):
-    list_display = ('instagram_username', 'instagram_user_id', 'is_enable', 'updated_time', 'created_time')
+    list_display = (
+        'instagram_username', 'instagram_user_id', 'is_enable',
+        'is_test_user', 'updated_time', 'created_time'
+    )
     readonly_fields = ('uuid',)
     list_filter = ('is_enable',)
     search_fields = ('instagram_username', 'instagram_user_id', 'device_uuids',)
@@ -87,7 +90,8 @@ class OrderModelAdmin(admin.ModelAdmin):
         'status', 'achieved_number_validated', 'created_time'
     )
     list_filter = ('action', 'status')
-    readonly_fields = ('media_properties', 'instagram_username', 'entity_id', 'achieved_number_approved', 'achieved_number_validated')
+    readonly_fields = (
+        'media_properties', 'instagram_username', 'entity_id', 'achieved_number_approved', 'achieved_number_validated')
     search_fields = ('owner__instagram_username', 'id', 'link')
     raw_id_fields = ('owner',)
     date_hierarchy = 'created_time'
@@ -98,7 +102,8 @@ class OrderModelAdmin(admin.ModelAdmin):
 
 @admin.register(UserInquiry)
 class UserInquiryModelAdmin(admin.ModelAdmin):
-    list_display = ('page', 'status', 'order', 'order_status', 'order_link', 'validated_time', 'updated_time', 'created_time')
+    list_display = (
+        'page', 'status', 'order', 'order_status', 'order_link', 'validated_time', 'updated_time', 'created_time')
     list_select_related = ['order', 'page']
     readonly_fields = ('validated_time', 'page', 'order')
     list_filter = ('status', 'order__action', OrderAutocompleteFilter)

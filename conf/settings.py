@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 import logging
+import os
 from datetime import timedelta
 
 from decouple import config, Csv
@@ -35,6 +36,7 @@ SITE_ID = 1
 
 # Application definition
 INSTALLED_APPS = [
+    'apps.services',
     'apps.reward',
     'apps.contents',
     'apps.config',

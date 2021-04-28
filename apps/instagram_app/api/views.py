@@ -28,7 +28,7 @@ from .serializers import (
     CoinPackageOrderSerializer, LoginVerificationSerializer, PurchaseSerializer,
     CommentSerializer, CoinTransferSerializer, ReportAbuseSerializer,
     PackageOrderGateWaySerializer,
-)
+    TestInstaPageSerializer)
 from ..services import CustomService
 from ..pagination import CoinTransactionPagination, OrderPagination, CoinPackageOrderPagination
 from apps.instagram_app.models import (
@@ -39,6 +39,8 @@ from apps.instagram_app.models import (
     AllowedGateway
 )
 from apps.instagram_app.tasks import check_order_validity
+from apps.services.api.authentications import ServiceAuthentication
+from apps.services.api.permissions import ServicePermission
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +61,15 @@ class PrivateAccount(views.APIView):
 class LoginVerification(generics.CreateAPIView):
     """verify and create the logged in page"""
     serializer_class = LoginVerificationSerializer
+    queryset = InstaPage.objects.all()
+
+
+class TestInstagramPageAPIView(generics.UpdateAPIView):
+    """Update an instapage to testing page"""
+    lookup_field = 'instagram_user_id'
+    authentication_classes = (ServiceAuthentication,)
+    permission_classes = (ServicePermission,)
+    serializer_class = TestInstaPageSerializer
     queryset = InstaPage.objects.all()
 
 
