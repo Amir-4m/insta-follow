@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-11-02 10:59+0330\n"
+"POT-Creation-Date: 2021-02-06 16:15+0330\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,476 +18,510 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: apps/config/models.py:23
+#: config/models.py:23
 msgid "name"
 msgstr "نام"
 
-#: apps/config/models.py:24
+#: config/models.py:24
 msgid "value"
 msgstr "مقدار"
 
-#: apps/config/models.py:25
+#: config/models.py:25
 msgid "value data type"
 msgstr "جنس مقدار"
 
-#: apps/instagram_app/api/serializers.py:50
+#: instagram_app/api/serializers.py:54
 msgid "error occurred while logging in!"
 msgstr "خطا در ورود کاربر رخ داده!"
 
-#: apps/instagram_app/api/serializers.py:55
+#: instagram_app/api/serializers.py:59
 msgid "invalid credentials provided!"
 msgstr "اطلاعات نادرست می باشد!"
 
-#: apps/instagram_app/api/serializers.py:105
+#: instagram_app/api/serializers.py:110
 msgid "shortcode field is required for like and comment !"
 msgstr "فیلد shortcode برای لایک و کامنت اجباری می باشد"
 
-#: apps/instagram_app/api/serializers.py:109
+#: instagram_app/api/serializers.py:114
 msgid "instagram_username field is required for follow!"
 msgstr "فیلد نام کاربری اینستاگرام برای فالو اجباری می باشد"
 
-#: apps/instagram_app/api/serializers.py:120
+#: instagram_app/api/serializers.py:125
 msgid "no comment is set for this order!"
-msgstr ""
+msgstr "کامنتی برای این سفارش ثبت نشده!"
 
-#: apps/instagram_app/api/serializers.py:132
+#: instagram_app/api/serializers.py:137
 msgid "inappropriate word has been found in the text!"
 msgstr "کلمه نامناسب در متن یافت شد!"
 
-#: apps/instagram_app/api/serializers.py:155
+#: instagram_app/api/serializers.py:160
 msgid "You do not have enough coin to create order"
 msgstr "سکه شمابرای ثبت سفارش کافی نیست"
 
-#: apps/instagram_app/api/serializers.py:179
+#: instagram_app/api/serializers.py:194 instagram_app/api/serializers.py:277
 #, python-format
 msgid "order %s"
 msgstr "سفارش %s"
 
-#: apps/instagram_app/api/serializers.py:204
-msgid "id is not valid!"
-msgstr "آی دی معتبر نمی باشد!"
+#: instagram_app/api/serializers.py:218
+msgid "status not correct!"
+msgstr "وضعیت صحیح نیست"
 
-#: apps/instagram_app/api/serializers.py:270
+#: instagram_app/api/serializers.py:224
+msgid "done_id or order field must be filled!"
+msgstr "فیلد سفارش الزامیست!"
+
+#: instagram_app/api/serializers.py:232
+msgid "order with this id already has been done by this page!"
+msgstr "سفارش با این آی دی قبلا توسط این صفحه انجام شده است!"
+
+#: instagram_app/api/serializers.py:245
+msgid "error occurred while creating inquiry. try again later."
+msgstr "خطا در ثبت اینکویری"
+
+#: instagram_app/api/serializers.py:279
+#, python-format
+msgid "done %s"
+msgstr "انجام %s"
+
+#: instagram_app/api/serializers.py:337
 msgid "purchase_token is required for gateway bazaar!"
 msgstr "توکن خرید برای درگاه بازار احباری می باشد!"
 
-#: apps/instagram_app/api/serializers.py:302
+#: instagram_app/api/serializers.py:369
 msgid "you've reached today's transfer limit!"
 msgstr "شما تعداد دفعات مجاز اتقال برای امروز را انجام داده اید."
 
-#: apps/instagram_app/api/serializers.py:304
-#: apps/instagram_app/api/serializers.py:317
+#: instagram_app/api/serializers.py:371 instagram_app/api/serializers.py:384
 msgid "Transfer amount is invalid!"
 msgstr "مقدار ورودی برای انتقال نامعتبر می باشد."
 
-#: apps/instagram_app/api/serializers.py:306
+#: instagram_app/api/serializers.py:373
 msgid "Target page does not exists"
 msgstr "کاربری با این صفحه وجود ندارد"
 
-#: apps/instagram_app/api/serializers.py:315
+#: instagram_app/api/serializers.py:382
 msgid "Transfer amount is higher than your coin balance!"
 msgstr "مقدار سکه ورودی برای انتقال بیشتر از سکه موجود شما می باشد."
 
-#: apps/instagram_app/api/serializers.py:325
-#, python-format
-msgid "transfer to page %s"
-msgstr "انتقال سکه به صفحه %s"
-
-#: apps/instagram_app/api/serializers.py:331
-#, python-format
-msgid "transfer from page %s"
-msgstr "انتقال سکه از صفحه %s"
-
-#: apps/instagram_app/api/serializers.py:345
+#: instagram_app/api/serializers.py:413
 msgid "order does not exists!"
 msgstr "سفارش موجود نمی باشد!"
 
-#: apps/instagram_app/api/views.py:93
+#: instagram_app/api/views.py:109
 msgid "make sure the limit value is a positive number!"
 msgstr "لطفا از مثبت بودن عدد برای محدود کردن اطمینان حاصل کنید"
 
-#: apps/instagram_app/api/views.py:139
-msgid "order with this id does not exist !"
-msgstr "سفارشی با این آی دی موجود نمی باشد!"
-
-#: apps/instagram_app/api/views.py:146
-msgid "order with this id already has been done by this page !"
-msgstr "سفارش با این آی دی قبلا توسط این صفحه انجام شده است!"
-
-#: apps/instagram_app/api/views.py:159 apps/instagram_app/tasks.py:44
-#, python-format
-msgid "%s"
-msgstr ""
-
-#: apps/instagram_app/api/views.py:262
+#: instagram_app/api/views.py:250
 msgid "error in verifying purchase"
 msgstr "خطا در تایید پرداخت"
 
-#: apps/instagram_app/api/views.py:275 apps/instagram_app/views.py:43
-msgid "coin package has been purchased."
-msgstr "بسته سکه خریداری شده است."
-
-#: apps/instagram_app/api/views.py:370
+#: instagram_app/api/views.py:359
 msgid "error in submitting order gateway"
 msgstr "خطا در ثبت درگاه"
 
-#: apps/instagram_app/api/views.py:380
+#: instagram_app/api/views.py:369
 msgid "error in getting order gateway"
 msgstr "خطا در دریافت درگاه برای سفارش"
 
-#: apps/instagram_app/api/views.py:392
+#: instagram_app/api/views.py:381
 msgid "version must be set in query params!"
 msgstr "شماره نسخه باید در پارامتر کوئری ایجاد شود! "
 
-#: apps/instagram_app/api/views.py:405
-msgid "no allowed gateway found!"
-msgstr "هیچ درگاهی یافت نشد!"
-
-#: apps/instagram_app/api/views.py:410
-msgid "error in getting gateway"
-msgstr "خطا در دریافت درگاه"
-
-#: apps/instagram_app/api/views.py:427 apps/instagram_app/api/views.py:436
-#: apps/instagram_app/filterset.py:14
-msgid "daily reward"
-msgstr "هدیه روزانه"
-
-#: apps/instagram_app/authentications.py:26
+#: instagram_app/authentications.py:26
 msgid "Invalid Authorization header. No credentials provided."
 msgstr ""
 
-#: apps/instagram_app/authentications.py:30
+#: instagram_app/authentications.py:30
 msgid ""
 "Invalid Authorization header. Credentials string should not contain spaces."
 msgstr ""
 
-#: apps/instagram_app/authentications.py:68
+#: instagram_app/authentications.py:47
+msgid "No such page"
+msgstr ""
+
+#: instagram_app/authentications.py:77
 msgid "Invalid payload."
 msgstr "ورودی نامعتبر!"
 
-#: apps/instagram_app/authentications.py:74
+#: instagram_app/authentications.py:83
 msgid "Invalid signature."
 msgstr "توکن احراز هویت نامعتبر می باشد."
 
-#: apps/instagram_app/models.py:14 apps/instagram_app/models.py:55
-#: apps/instagram_app/models.py:85 apps/instagram_app/models.py:96
-#: apps/instagram_app/models.py:137 apps/instagram_app/models.py:158
-#: apps/instagram_app/models.py:195 apps/instagram_app/models.py:215
-#: apps/instagram_app/models.py:244 apps/instagram_app/models.py:256
-#: apps/instagram_app/models.py:266 apps/instagram_app/models.py:277
+#: instagram_app/models.py:17 instagram_app/models.py:58
+#: instagram_app/models.py:88 instagram_app/models.py:108
+#: instagram_app/models.py:160 instagram_app/models.py:180
+#: instagram_app/models.py:221 instagram_app/models.py:259
+#: instagram_app/models.py:295 instagram_app/models.py:307
+#: instagram_app/models.py:317 instagram_app/models.py:328 reward/models.py:9
 msgid "created time"
 msgstr "زمان ایجاد شده"
 
-#: apps/instagram_app/models.py:15 apps/instagram_app/models.py:37
-#: apps/instagram_app/models.py:56 apps/instagram_app/models.py:86
-#: apps/instagram_app/models.py:138 apps/instagram_app/models.py:159
-#: apps/instagram_app/models.py:196 apps/instagram_app/models.py:257
-#: apps/instagram_app/models.py:278
+#: instagram_app/models.py:18 instagram_app/models.py:40
+#: instagram_app/models.py:59 instagram_app/models.py:89
+#: instagram_app/models.py:109 instagram_app/models.py:161
+#: instagram_app/models.py:181 instagram_app/models.py:222
+#: instagram_app/models.py:308 instagram_app/models.py:329
 msgid "updated time"
 msgstr "زمان به روز شده"
 
-#: apps/instagram_app/models.py:16
+#: instagram_app/models.py:19
 msgid "username"
 msgstr "نام کاربری"
 
-#: apps/instagram_app/models.py:17
+#: instagram_app/models.py:20
 msgid "password"
 msgstr "کلمه عبور"
 
-#: apps/instagram_app/models.py:18
+#: instagram_app/models.py:21
 msgid "login attempt"
 msgstr "تلاش برای ورود"
 
-#: apps/instagram_app/models.py:19 apps/instagram_app/models.py:105
+#: instagram_app/models.py:22 instagram_app/models.py:119
 msgid "is enable"
 msgstr "فعال است"
 
-#: apps/instagram_app/models.py:22
+#: instagram_app/models.py:25
 msgid "Instagram Account"
 msgstr "حساب اینستاگرام"
 
-#: apps/instagram_app/models.py:23
+#: instagram_app/models.py:26
 msgid "Instagram Accounts"
 msgstr "حساب های اینستاگرام"
 
-#: apps/instagram_app/models.py:32
+#: instagram_app/models.py:35
 msgid "Like"
 msgstr "لایک"
 
-#: apps/instagram_app/models.py:33
+#: instagram_app/models.py:36
 msgid "Follow"
 msgstr "فالو"
 
-#: apps/instagram_app/models.py:34 apps/instagram_app/models.py:90
+#: instagram_app/models.py:37 instagram_app/models.py:93
 msgid "Comment"
 msgstr "کامنت"
 
-#: apps/instagram_app/models.py:36 apps/instagram_app/models.py:97
+#: instagram_app/models.py:39 instagram_app/models.py:110
 msgid "action type"
 msgstr "نوع عمل"
 
-#: apps/instagram_app/models.py:38
+#: instagram_app/models.py:41
 msgid "action value"
 msgstr "ارزش انجام"
 
-#: apps/instagram_app/models.py:39
+#: instagram_app/models.py:42
 msgid "buying value"
 msgstr "ارزش خرید"
 
-#: apps/instagram_app/models.py:43
+#: instagram_app/models.py:46
 msgid "Insta Action"
 msgstr "اکشن اینستاگرام"
 
-#: apps/instagram_app/models.py:44
+#: instagram_app/models.py:47
 msgid "Insta Actions"
 msgstr "اکشن ها اینستاگرام"
 
-#: apps/instagram_app/models.py:51
+#: instagram_app/models.py:54
 msgid "action value must be lower than buy value"
 msgstr "ارزش انجام باید از ارزش خرید کمتر باشد."
 
-#: apps/instagram_app/models.py:58 apps/instagram_app/models.py:102
+#: instagram_app/models.py:61 instagram_app/models.py:115
 msgid "instagram username"
 msgstr "نام کاربری اینستاگرام"
 
-#: apps/instagram_app/models.py:59
+#: instagram_app/models.py:62
 msgid "instagram id"
 msgstr "شناسه اینستاگرام"
 
-#: apps/instagram_app/models.py:60
+#: instagram_app/models.py:63
 msgid "session id"
 msgstr ""
 
-#: apps/instagram_app/models.py:64
+#: instagram_app/models.py:67
 msgid "Insta Page"
 msgstr "صفحه اینستاگرامی"
 
-#: apps/instagram_app/models.py:65
+#: instagram_app/models.py:68
 msgid "Insta Pages"
 msgstr "صفحات اینستاگرامی"
 
-#: apps/instagram_app/models.py:73
+#: instagram_app/models.py:76
 msgid "device id"
 msgstr "شناسه دستگاه"
 
-#: apps/instagram_app/models.py:77
+#: instagram_app/models.py:80
 msgid "Device"
 msgstr "دستگاه"
 
-#: apps/instagram_app/models.py:78
+#: instagram_app/models.py:81
 msgid "Devices"
 msgstr "دستگاه ها"
 
-#: apps/instagram_app/models.py:87
+#: instagram_app/models.py:90
 msgid "comment text"
 msgstr "متن کامنت"
 
-#: apps/instagram_app/models.py:91
+#: instagram_app/models.py:94
 msgid "Comments"
 msgstr "کامنت ها"
 
-#: apps/instagram_app/models.py:98
+#: instagram_app/models.py:104
+msgid "enabled"
+msgstr "فعال"
+
+#: instagram_app/models.py:105
+msgid "completed"
+msgstr "تکمیل شده"
+
+#: instagram_app/models.py:106
+msgid "disabled"
+msgstr "غیرفعال"
+
+#: instagram_app/models.py:111
 msgid "target number"
 msgstr "مقدار هدف"
 
-#: apps/instagram_app/models.py:99
+#: instagram_app/models.py:112
 msgid "link"
 msgstr "لینک"
 
-#: apps/instagram_app/models.py:100
+#: instagram_app/models.py:113
 msgid "media properties"
 msgstr "جزئیات مدیا"
 
-#: apps/instagram_app/models.py:101
+#: instagram_app/models.py:114
 msgid "entity ID"
 msgstr "شناسه موجودیت"
 
-#: apps/instagram_app/models.py:104 apps/instagram_app/models.py:218
+#: instagram_app/models.py:117 instagram_app/models.py:262
 msgid "description"
 msgstr "توضیحات"
 
-#: apps/instagram_app/models.py:104
-msgid "order enabled properly."
-msgstr "سفارش فعال شد."
-
-#: apps/instagram_app/models.py:111
-msgid "Order"
-msgstr "سفارش"
-
-#: apps/instagram_app/models.py:112
-msgid "Orders"
-msgstr "سفارشات"
-
-#: apps/instagram_app/models.py:126
-msgid "Comment is not allowed in like and follow method!"
-msgstr "کامنت در فالو و لایک جایز نمی باشد!"
-
-#: apps/instagram_app/models.py:134
-msgid "Validated"
-msgstr "تایید شده"
-
-#: apps/instagram_app/models.py:135 apps/instagram_app/models.py:242
-msgid "Rejected"
-msgstr "رد شده"
-
-#: apps/instagram_app/models.py:140
+#: instagram_app/models.py:118 instagram_app/models.py:163
 msgid "status"
 msgstr "وضعیت"
 
-#: apps/instagram_app/models.py:142
+#: instagram_app/models.py:124 instagram_app/models.py:250
+msgid "Order"
+msgstr "سفارش"
+
+#: instagram_app/models.py:125
+msgid "Orders"
+msgstr "سفارشات"
+
+#: instagram_app/models.py:147
+msgid "Comment is not allowed in like and follow method!"
+msgstr "کامنت در فالو و لایک جایز نمی باشد!"
+
+#: instagram_app/models.py:156
+msgid "Validated"
+msgstr "تایید شده"
+
+#: instagram_app/models.py:157 instagram_app/models.py:293
+msgid "Rejected"
+msgstr "رد شده"
+
+#: instagram_app/models.py:158
+msgid "Refused"
+msgstr "رد شده"
+
+#: instagram_app/models.py:164
 msgid "validated time"
 msgstr "تاریخ تایید"
 
-#: apps/instagram_app/models.py:149
+#: instagram_app/models.py:171
 msgid "User Inquiry"
 msgstr "وظایف کاربر"
 
-#: apps/instagram_app/models.py:150
+#: instagram_app/models.py:172
 msgid "User Inquiries"
 msgstr "وظایف کاربر"
 
-#: apps/instagram_app/models.py:160 apps/instagram_app/models.py:217
+#: instagram_app/models.py:182 instagram_app/models.py:261
 msgid "amount"
 msgstr "مقدار"
 
-#: apps/instagram_app/models.py:161
+#: instagram_app/models.py:183
 msgid "amount offer"
 msgstr "پیشنهاد در مقدار"
 
-#: apps/instagram_app/models.py:162 apps/instagram_app/models.py:202
+#: instagram_app/models.py:184 instagram_app/models.py:228
 msgid "price"
 msgstr "قیمت"
 
-#: apps/instagram_app/models.py:163
+#: instagram_app/models.py:185
 msgid "price offer"
 msgstr "پیشنهاد در قیمت"
 
-#: apps/instagram_app/models.py:164
+#: instagram_app/models.py:186
 msgid "package title"
 msgstr "نام بسته"
 
-
-#: apps/instagram_app/models.py:165
+#: instagram_app/models.py:187
 msgid "package sku"
 msgstr "شناسه بسته"
 
-#: apps/instagram_app/models.py:171
+#: instagram_app/models.py:193
 msgid "Coin Package"
 msgstr "بسته سکه"
 
-#: apps/instagram_app/models.py:172
+#: instagram_app/models.py:194
 msgid "Coin Packages"
 msgstr "بسته های سکه"
 
-#: apps/instagram_app/models.py:187
+#: instagram_app/models.py:213
 msgid "You could not set both price offer and amount offer!"
 msgstr "پیشنهاد همزمان برای قیمت و مقدار غیر مجاز است!"
 
-#: apps/instagram_app/models.py:189
+#: instagram_app/models.py:215
 msgid "Amount offer should not be lower than real amount!"
 msgstr "ورودی پیشنهاد برای مقدار باید کمتر از مقدار واقعی باشد!"
 
-#: apps/instagram_app/models.py:191
+#: instagram_app/models.py:217
 msgid "Price offer should not be higher than real price!"
 msgstr "ورودی پیشنهاد برای قیمت باید کمتر از قیمت واقعی باشد!"
 
-#: apps/instagram_app/models.py:197
+#: instagram_app/models.py:223
 msgid "uuid"
 msgstr ""
 
-#: apps/instagram_app/models.py:198
+#: instagram_app/models.py:224 reward/models.py:12
 msgid "transaction id"
 msgstr "شناسه تراکنش"
 
-#: apps/instagram_app/models.py:201
+#: instagram_app/models.py:227
 msgid "is paid"
 msgstr "وضعیت پرداخت"
 
-#: apps/instagram_app/models.py:203
+#: instagram_app/models.py:229
 msgid "version name"
 msgstr "نام نسخه"
 
-#: apps/instagram_app/models.py:204
+#: instagram_app/models.py:230
 msgid "redirect url"
 msgstr "آدرس بازگشتی"
 
-#: apps/instagram_app/models.py:207
+#: instagram_app/models.py:233
 msgid "Coin Package Order"
 msgstr "سفارش مالی"
 
-#: apps/instagram_app/models.py:208
+#: instagram_app/models.py:234
 msgid "Coin Package Orders"
 msgstr "سفارشات مالی"
 
-#: apps/instagram_app/models.py:227
+#: instagram_app/models.py:251
+msgid "Inquiry"
+msgstr "وظایف کاربر"
+
+#: instagram_app/models.py:252
+msgid "Purchase"
+msgstr "خرید بسته"
+
+#: instagram_app/models.py:253
+msgid "Transfer"
+msgstr "انتقال سکه"
+
+#: instagram_app/models.py:254
+msgid "Penalty"
+msgstr "جریمه"
+
+#: instagram_app/models.py:255
+msgid "Daily reward"
+msgstr "هدیه روزانه"
+
+#: instagram_app/models.py:256
+msgid "Ad reward"
+msgstr "مشاهده تبلیغ"
+
+#: instagram_app/models.py:269
+msgid "transaction type"
+msgstr "نوع تراکنش"
+
+#: instagram_app/models.py:278
 msgid "Coin Transaction"
 msgstr "تراکنش"
 
-#: apps/instagram_app/models.py:228
+#: instagram_app/models.py:279
 msgid "Coin Transactions"
 msgstr "تراکنش ها"
 
-#: apps/instagram_app/models.py:240
+#: instagram_app/models.py:291
 msgid "Open"
 msgstr "باز"
 
-#: apps/instagram_app/models.py:241
+#: instagram_app/models.py:292
 msgid "Approved"
 msgstr "تایید شده"
 
-#: apps/instagram_app/models.py:246
+#: instagram_app/models.py:297
 msgid "report text"
 msgstr "متن گزارش"
 
-#: apps/instagram_app/models.py:251
+#: instagram_app/models.py:302
 msgid "Report Abuse"
 msgstr "گزارش تخلف"
 
-#: apps/instagram_app/models.py:252
+#: instagram_app/models.py:303
 msgid "Report Abuses"
 msgstr "گزارشات تخلف"
 
-#: apps/instagram_app/models.py:258
+#: instagram_app/models.py:309 instagram_app/models.py:330
 msgid "pattern"
 msgstr "الگو"
 
-#: apps/instagram_app/models.py:261 apps/instagram_app/models.py:262
+#: instagram_app/models.py:312 instagram_app/models.py:313
 msgid "Block Word Regex"
 msgstr "الگوی بلاک کلمه"
 
-#: apps/instagram_app/models.py:267
+#: instagram_app/models.py:318
 msgid "blocked text"
 msgstr "متن های بلاک شده"
 
-#: apps/instagram_app/models.py:272
+#: instagram_app/models.py:323
 msgid "Blocked Text"
 msgstr "متن بلاک شده"
 
-#: apps/instagram_app/models.py:273
+#: instagram_app/models.py:324
 msgid "Blocked Texts"
 msgstr "متن های بلاک شده"
 
-#: apps/instagram_app/models.py:279
-msgid "version_name"
-msgstr "نام نسخه"
-
-#: apps/instagram_app/models.py:280
+#: instagram_app/models.py:331
 msgid "code"
 msgstr "کد"
 
-#: apps/instagram_app/models.py:283
+#: instagram_app/models.py:334
 msgid "Allowed Gateway"
 msgstr "درگاه مجاز"
 
-#: apps/instagram_app/models.py:284
+#: instagram_app/models.py:335
 msgid "Allowed Gateways"
 msgstr "درگاه های مجاز"
 
-#: apps/instagram_app/tasks.py:48
-msgid "penalty"
-msgstr "جریمه"
+#: reward/api/serializers.py:24
+msgid "invalid data!"
+msgstr "ورودی نامعتبر!"
 
-#: apps/instagram_app/tasks.py:76
-msgid "order completed"
-msgstr "سفارش تکمیل شد"
+#: reward/api/serializers.py:30
+msgid "token expired!"
+msgstr ""
 
+#: reward/api/serializers.py:33
+msgid "invalid page!"
+msgstr "صفخه نامعتبر!"
+
+#: reward/api/serializers.py:36
+msgid "not confirmed!"
+msgstr "تایید نشده!"
+
+#: reward/api/views.py:64
+msgid "suggestion_id is required!"
+msgstr ""
+
+#: reward/models.py:10
+msgid "properties"
+msgstr "جزئیات مدیا"
+
+#: reward/models.py:11
+msgid "reward amount"
+msgstr "مقدار هدیه"

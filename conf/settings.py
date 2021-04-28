@@ -29,18 +29,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config("SECRET_KEY")
+
 # This is used so that application data can hook into specific sites.
 SITE_ID = 1
+
 # Application definition
 INSTALLED_APPS = [
     'apps.reward',
     'apps.contents',
     'apps.config',
     'apps.instagram_app',
+
     'rest_framework',
     'drf_yasg',
-    'django_celery_beat',
+    # 'django_celery_beat',
     'tinymce',
+    'admin_auto_filters',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -61,7 +65,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
+    # 'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
 ]
 
 ROOT_URLCONF = 'conf.urls'
@@ -85,39 +89,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'conf.wsgi.application'
-REST_FRAMEWORK = {
-    'EXCEPTION_HANDLER': 'apps.instagram_app.utils.custom_exception_handler'
-}
-SIMPLE_JWT = {
-    'ROTATE_REFRESH_TOKENS': True,
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('ACCESS_TOKEN_LIFETIME', default=56000, cast=int)),
-    'REFRESH_TOKEN_LIFETIME': timedelta(minutes=config('REFRESH_TOKEN_LIFETIME', default=90, cast=int)),
-}
-
-SWAGGER_SETTINGS = {
-    'USE_SESSION_AUTH': False,
-    'SECURITY_DEFINITIONS': {
-        'JWT': {
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header'
-        }
-    },
-}
-
-# Database
-# https://docs.djangoproject.com/en/3.0/ref/settings/#databases
-DATABASES = {
-    'default': {
-        'ENGINE': config('DB_ENGINE'),
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASS'),
-        'HOST': config('DB_HOST', default=""),
-        'PORT': config('DB_PORT', default=""),
-    },
-}
-# DATABASE_ROUTERS = ['apps.instagram_app.dbrouters.MongoRouter', ]
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
@@ -136,6 +107,20 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Database
+# https://docs.djangoproject.com/en/3.0/ref/settings/#databases
+DATABASES = {
+    'default': {
+        'ENGINE': config('DB_ENGINE'),
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASS'),
+        'HOST': config('DB_HOST', default=""),
+        'PORT': config('DB_PORT', default=""),
+    },
+}
+# DATABASE_ROUTERS = ['apps.instagram_app.dbrouters.MongoRouter', ]
+
 CACHES = {
     'default': {
         'BACKEND': config('CACHE_BACKEND', default='django.core.cache.backends.locmem.LocMemCache'),
@@ -149,6 +134,26 @@ CELERY_BROKER_URL = 'amqp://%(USER)s:%(PASS)s@%(HOST)s' % {
     'USER': config('CELERY_USER'),
     'PASS': config('CELERY_PASS'),
     'HOST': config('CELERY_HOST'),
+}
+
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'apps.instagram_app.utils.custom_exception_handler'
+}
+SIMPLE_JWT = {
+    'ROTATE_REFRESH_TOKENS': True,
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('ACCESS_TOKEN_LIFETIME', default=56000, cast=int)),
+    'REFRESH_TOKEN_LIFETIME': timedelta(minutes=config('REFRESH_TOKEN_LIFETIME', default=90, cast=int)),
+}
+
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
+    'SECURITY_DEFINITIONS': {
+        'JWT': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    },
 }
 
 # Internationalization
@@ -172,7 +177,7 @@ FIXTURE_DIRS = [
 ]
 
 LOCALE_PATHS = [
-    BASE_DIR / 'locale',
+    BASE_DIR / 'apps' / 'locale',
 ]
 
 LOG_DIR = BASE_DIR / 'logs'
@@ -248,9 +253,8 @@ MONITOR_TOKEN = config('MONITOR_TOKEN', default='')
 USER_PENALTY_AMOUNT = config('USER_PENALTY_AMOUNT', default=2, cast=int)
 PENALTY_CHECK_HOUR = config('PENALTY_CHECK_HOUR', default=48, cast=int)
 
-ORDER_TARGET_RATIO = config('ORDER_TARGET_RATIO', default=100, cast=int)
+ORDER_TARGET_RATIO = config('ORDER_TARGET_RATIO', default=90, cast=int)
 
-FOLLOWER_LIMIT = config('FOLLOWER_LIMIT', default=1000, cast=int)
 MAXIMUM_COIN_TRANSFER = config('MAXIMUM_COIN_TRANSFER', default=1000, cast=int)
 DAILY_TRANSFER_LIMIT = config('DAILY_TRANSFER_LIMIT', default=2, cast=int)
 COIN_TRANSFER_FEE = config('COIN_TRANSFER_FEE', default=5, cast=int)

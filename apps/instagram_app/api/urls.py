@@ -4,11 +4,11 @@ from rest_framework import routers
 from .views import (
     UserInquiryViewSet,
     OrderViewSet, CoinTransactionAPIView,
-    InstaActionAPIView, DeviceViewSet,
+    InstaActionAPIView,
     PurchaseVerificationAPIView, CoinPackageOrderViewSet,
     LoginVerification, CommentViewSet, CoinTransferAPIView,
     ReportAbuseViewSet, CoinPackageViewSet, OrderGateWayAPIView,
-    GatewayAPIView
+    GatewayAPIView, PrivateAccount, ScoreBoardApiView
 )
 
 urlpatterns = [
@@ -18,6 +18,8 @@ urlpatterns = [
     path('coin-transfer/', CoinTransferAPIView.as_view(), name='coin-transfer'),
     path('order-gateway/', OrderGateWayAPIView.as_view(), name='order-gateway'),
     path('gateways/', GatewayAPIView.as_view(), name='gateways-list'),
+    path('account-private/', PrivateAccount.as_view(), name='account-private'),
+    path('scoreboard/', ScoreBoardApiView.as_view(), name='scoreboard')
 
 ]
 
@@ -25,7 +27,6 @@ router = routers.DefaultRouter()
 router.register('inquiries', UserInquiryViewSet)
 router.register('orders', OrderViewSet)
 router.register('coin-transaction', CoinTransactionAPIView)
-router.register('device', DeviceViewSet)
 router.register('package-order', CoinPackageOrderViewSet)
 router.register('comments', CommentViewSet)
 router.register('report-abuse', ReportAbuseViewSet)

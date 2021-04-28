@@ -1,105 +1,124 @@
 import logging
 import re
+from json import JSONDecodeError
 
 import requests
+
 from django.conf import settings
-from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
+from django.core.cache import cache
 from django.utils.translation import ugettext_lazy as _
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError, ParseError
 
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+
+from apps.instagram_app.tasks import check_order_validity
 from apps.instagram_app.models import (
     UserInquiry, CoinTransaction, Order,
-    InstaAction, Device, CoinPackage,
+    InstaAction, CoinPackage,
     CoinPackageOrder, InstaPage, Comment,
     ReportAbuse, BlockWordRegex, BlockedText,
     AllowedGateway
 )
-from apps.instagram_app.services import CustomService
+
+# from apps.instagram_app.services import CustomService
 
 logger = logging.getLogger(__name__)
 
 
 class LoginVerificationSerializer(serializers.ModelSerializer):
     instagram_user_id = serializers.IntegerField()
+    device_uuid = serializers.UUIDField(required=False)
+    user_agent = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = InstaPage
-        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid')
+        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', 'device_uuid', 'user_agent')
         read_only_fields = ('uuid',)
 
     def validate(self, attrs):
         username = attrs['instagram_username']
         user_id = attrs['instagram_user_id']
         session_id = attrs['session_id']
-        user_agent = "Instagram 10.15.0 Android (28/9; 411dpi; 1080x2220; samsung; SM-A650G; SM-A650G; Snapdragon 450; en_US)"
+        default_user_agent = "Instagram 10.15.0 Android (28/9; 411dpi; 1080x2220; samsung; SM-A650G; SM-A650G; Snapdragon 450; en_US)"
+        user_agent = attrs.get('user_agent') or default_user_agent
+
         try:
             response = requests.get(
-                url=f'https://i.instagram.com/api/v1/users/{user_id}/info/',
+                url=f'https://www.instagram.com/{username}/?__a=1',
                 cookies={'sessionid': session_id},
-                headers={'User-Agent': user_agent}
+                headers={'User-Agent': user_agent},
+                timeout=(3.05, 9)
             )
-            temp = response.json()['user']
+            temp = response.json()['graphql']['user']
+
+            if int(temp['id']) != user_id or temp['username'] != username:
+                raise ValidationError(
+                    detail={'detail': _('invalid credentials provided!')}
+                )
+        except JSONDecodeError:
+            logger.warning(f"login verification for user id {user_id} got json decode error")
+            if response.status_code == 200:
+                pass
+
         except Exception as e:
             logger.error(f"error in login verification for user id {user_id}: {e}")
             raise ValidationError(
                 detail={'detail': _('error occurred while logging in!')}
             )
 
-        if (temp['pk'] != user_id or temp['username'] != username) or temp.get('account_type') is None:
-            raise ValidationError(
-                detail={'detail': _('invalid credentials provided!')}
-            )
-
         return attrs
 
     def create(self, validated_data):
-        username = validated_data['instagram_username']
+        username = validated_data['instagram_username'].lower()
         user_id = validated_data['instagram_user_id']
         session_id = validated_data['session_id']
-        page, _created = InstaPage.objects.get_or_create(
+        device_uuid = validated_data.get('device_uuid')
+        page, _created = InstaPage.objects.update_or_create(
             instagram_user_id=user_id,
             defaults={
                 "instagram_username": username,
-                "session_id": session_id
+                "session_id": session_id,
             }
         )
+        if _created:
+            CoinTransaction.objects.create(
+                page=page,
+                amount=settings.COIN_DAILY_REWARD_AMOUNT,
+                transaction_type=CoinTransaction.TYPE_GIFT
+            )
+        if device_uuid not in page.device_uuids:
+            page.device_uuids.append(device_uuid)
+        page.save()
         return page
-
-
-class DeviceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Device
-        fields = ('device_id',)
-
-    def create(self, validated_data):
-        page = validated_data.get('page')
-        device_id = validated_data.get('device_id')
-        return Device.objects.create(page=page, device_id=device_id)
 
 
 class OrderSerializer(serializers.ModelSerializer):
     shortcode = serializers.CharField(required=False)
+    description = serializers.ReadOnlyField(source='get_status_display')
 
     class Meta:
         model = Order
         fields = (
             'id', 'entity_id', 'action',
             'target_no', 'achieved_number_approved', 'link',
-            'instagram_username', 'is_enable', 'description',
+            'instagram_username', 'is_enable', 'description', 'status',
             'comments', 'shortcode', 'media_properties', 'created_time'
         )
-        read_only_fields = ('is_enable', 'achieved_number_approved', 'description', 'link', 'created_time')
+        read_only_fields = ('is_enable', 'achieved_number_approved', 'description', 'status', 'link', 'created_time')
 
     def validate(self, attrs):
         action_value = attrs.get('action')
         shortcode = attrs.get('shortcode')
         instagram_username = attrs.get('instagram_username')
         comments = attrs.get('comments')
+        page = self.context['request'].auth['page']
+        page.refresh_from_db()
+        if not page.is_enable:
+            raise ValidationError(detail={'detail': _('you do not have the permission to do this action.')})
 
         if action_value.pk in [InstaAction.ACTION_LIKE, InstaAction.ACTION_COMMENT] and not shortcode:
             raise ValidationError(detail={'detail': _('shortcode field is required for like and comment !')})
@@ -138,7 +157,7 @@ class OrderSerializer(serializers.ModelSerializer):
         insta_action = validated_data.get('action')
         target_no = validated_data.get('target_no')
         comments = validated_data.get('comments')
-        instagram_username = validated_data.get('instagram_username')
+        instagram_username = validated_data['instagram_username'].lower()
         media_properties = validated_data.get('media_properties')
 
         if insta_action.pk == InstaAction.ACTION_FOLLOW:
@@ -159,26 +178,18 @@ class OrderSerializer(serializers.ModelSerializer):
                 amount=-(insta_action.buy_value * target_no),
                 transaction_type=CoinTransaction.TYPE_ORDER
             )
+            # remove order check
+            order = Order.objects.create(
+                entity_id=entity_id,
+                action=insta_action,
+                link=link,
+                target_no=target_no,
+                media_properties=media_properties,
+                instagram_username=instagram_username,
+                owner=page,
+                comments=comments
+            )
 
-            if Order.objects.filter(owner=page, entity_id=entity_id, is_enable=True, action=insta_action).exists():
-                order = Order.objects.select_related('owner', 'action').select_for_update().filter(
-                    owner=page, entity_id=entity_id, is_enable=True, action=insta_action
-                ).first()
-
-                order.target_no += target_no
-                order.comments = comments
-                order.save()
-            else:
-                order = Order.objects.create(
-                    entity_id=entity_id,
-                    action=insta_action,
-                    link=link,
-                    target_no=target_no,
-                    media_properties=media_properties,
-                    instagram_username=instagram_username,
-                    owner=page,
-                    comments=comments
-                )
             ct.order = order
             ct.description = _("order %s") % insta_action.get_action_type_display()
             ct.save()
@@ -187,6 +198,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class UserInquirySerializer(serializers.ModelSerializer):
+    check = serializers.BooleanField(default=False, write_only=True)
     page = serializers.ReadOnlyField(source='page.instagram_username')
     earned_coin = serializers.ReadOnlyField(source='order.action.action_value')
     done_id = serializers.PrimaryKeyRelatedField(
@@ -198,8 +210,13 @@ class UserInquirySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserInquiry
-        fields = ('page', 'order', 'done_id', 'status', 'earned_coin')
+        fields = ('page', 'order', 'done_id', 'status', 'earned_coin', 'check')
         extra_kwargs = {'order': {'required': False}}
+
+    def validate_status(self, value):
+        if value not in (UserInquiry.STATUS_REFUSED, UserInquiry.STATUS_VALIDATED):
+            raise ValidationError(detail={'detail': _('status not correct!')})
+        return value
 
     def validate(self, attrs):
         order = attrs.get('order', attrs.pop('done_id', None))
@@ -212,26 +229,30 @@ class UserInquirySerializer(serializers.ModelSerializer):
                 order__entity_id=order.entity_id,
                 page=page
         ).exists():
-            raise ValidationError(detail={'detail': _('order with this id already has been done by this page !')})
+            logger.warning(f'(Duplicate Inquiry) page: {page}, order: {order.id}, entity_id: {order.entity_id}')
+            raise ValidationError(detail={'detail': _('order with this id already has been done by this page!')})
         attrs.update({'order': order, 'page_id': page.id})
         return attrs
 
     def create(self, validated_data):
         page = self.context['request'].auth['page']
         order = validated_data['order']
+        check = validated_data.pop('check')
 
         try:
-            user_inquiry = super(UserInquirySerializer, self).create(validated_data)
+            user_inquiry = super().create(validated_data)
         except Exception as e:
             logger.error(f'error in creating inquiry for page {page.id} with order {order.id}: {e}')
             raise ValidationError(detail={'detail': _(f'error occurred while creating inquiry. try again later.')})
 
-        if order.owner != page and order.instagram_username != page.instagram_username:
+        if check is True:
+            check_order_validity.delay(order.pk)
+
+        if user_inquiry.status == UserInquiry.STATUS_VALIDATED and order.owner != page and order.instagram_username != page.instagram_username:
             CoinTransaction.objects.create(
                 page=user_inquiry.page,
                 inquiry=user_inquiry,
                 amount=user_inquiry.order.action.action_value,
-                description=_("%s") % user_inquiry.order.action.get_action_type_display(),
                 transaction_type=CoinTransaction.TYPE_INQUIRY
             )
 
@@ -239,13 +260,28 @@ class UserInquirySerializer(serializers.ModelSerializer):
                 user_inquiry.validated_time = timezone.now()
                 user_inquiry.save()
 
+        # _ck = f"order_{order.id}_assigned"
+        # try:
+        #     cache.decr(_ck)
+        # except Exception:
+        #     logger.warning(f'cache with key {_ck} does not exists!')
+
         return user_inquiry
 
 
 class CoinTransactionSerializer(serializers.ModelSerializer):
+    description = serializers.SerializerMethodField()
+
     class Meta:
         model = CoinTransaction
         exclude = ('page',)
+
+    def get_description(self, obj):
+        if obj.transaction_type == obj.TYPE_ORDER:
+            return _("order %s") % obj.order.action.get_action_type_display()
+        elif obj.transaction_type == obj.TYPE_INQUIRY:
+            return _("done %s") % obj.inquiry.order.action.get_action_type_display()
+        return obj.get_transaction_type_display()
 
 
 class InstaActionSerializer(serializers.ModelSerializer):
@@ -257,7 +293,11 @@ class InstaActionSerializer(serializers.ModelSerializer):
 class CoinPackageSerializer(serializers.ModelSerializer):
     class Meta:
         model = CoinPackage
-        fields = ('id', 'name', 'sku', 'amount', 'price', 'is_enable', 'featured', 'price_offer', 'amount_offer')
+        fields = (
+            'id', 'name', 'sku', 'amount',
+            'price', 'is_enable', 'is_featured',
+            'featured', 'price_offer', 'amount_offer',
+        )
 
 
 class CoinPackageOrderSerializer(serializers.ModelSerializer):
@@ -269,9 +309,10 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'invoice_number', 'coin_package',
             'page', 'is_paid', 'price', 'package_detail',
-            'version_name', 'gateways', 'created_time', 'redirect_url'
+            'version_name', 'gateways', 'created_time', 'redirect_url',
+            'amount'
         )
-        read_only_fields = ('page',)
+        read_only_fields = ('page', 'price', 'amount',)
 
     def get_package_detail(self, obj):
         if obj.coin_package:
@@ -281,18 +322,13 @@ class CoinPackageOrderSerializer(serializers.ModelSerializer):
         gateways_list = []
         if self.context['view'].action != 'create':
             return gateways_list
-
-        try:
-            codes = cache.get("gateway_codes")
-            allowed_gateways = AllowedGateway.objects.get(version_name=obj.version_name)
-            for code in codes:
-                if code in allowed_gateways.gateways_code:
-                    gateways_list.append(code)
-        except Exception as e:
-            logger.error(f"error calling payment with endpoint gateways/ and action get: {e}")
-            gateways_list.clear()
-
+        gateways_list = AllowedGateway.get_gateways_by_version_name(obj.version_name)
         return gateways_list
+
+    def create(self, validated_data):
+        validated_data['price'] = validated_data['coin_package'].package_price
+        validated_data['amount'] = validated_data['coin_package'].package_amount
+        return super().create(validated_data)
 
 
 class PurchaseSerializer(serializers.Serializer):
@@ -339,14 +375,14 @@ class CoinTransferSerializer(serializers.ModelSerializer):
             raise ValidationError(detail={'detail': _("you've reached today's transfer limit!")})
         if amount > settings.MAXIMUM_COIN_TRANSFER or amount <= 0:
             raise ValidationError(detail={'detail': _("Transfer amount is invalid!")})
-        if not InstaPage.objects.filter(instagram_username=username).exists():
+        if not InstaPage.objects.filter(instagram_username__iexact=username).exists():
             raise ValidationError(detail={'detail': _('Target page does not exists')})
         return attrs
 
     def create(self, validated_data):
         sender = validated_data.get('sender')
         real_amount = validated_data['amount']
-        target = validated_data['to_page']
+        target = validated_data['to_page'].lower()
         fee_amount = real_amount + settings.COIN_TRANSFER_FEE
         if sender.coin_transactions.all().aggregate(wallet=Coalesce(Sum('amount'), 0))['wallet'] < fee_amount:
             raise ValidationError(detail={'detail': _("Transfer amount is higher than your coin balance!")})
@@ -359,14 +395,12 @@ class CoinTransferSerializer(serializers.ModelSerializer):
             sender_transaction = CoinTransaction.objects.create(
                 page=sender_page,
                 amount=-fee_amount,
-                description=_("transfer to page %s") % target_page,
                 to_page=target_page,
                 transaction_type=CoinTransaction.TYPE_TRANSFER
             )
             CoinTransaction.objects.create(
                 page=target_page,
                 amount=real_amount,
-                description=_("transfer from page %s") % sender_page,
                 from_page=sender_page,
                 transaction_type=CoinTransaction.TYPE_TRANSFER
 

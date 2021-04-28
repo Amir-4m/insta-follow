@@ -21,6 +21,8 @@ from apps.reward.swagger_schemas import DAILY_REWARD_DOCS_RESPONSE, TAPSELL_REWA
 from conf import settings
 
 
+# This API is Decrypted and should be removed
+# It is only kept for old mobile applications that use the API
 class DailyRewardAPIView(views.APIView):
     authentication_classes = (PageAuthentication,)
     permission_classes = (PagePermission,)
@@ -32,20 +34,20 @@ class DailyRewardAPIView(views.APIView):
     def get(self, request, *args, **kwargs):
         page = request.auth['page']
         reward_amount = settings.COIN_DAILY_REWARD_AMOUNT
-        if CoinTransaction.objects.filter(
-                created_time__gte=timezone.now().replace(hour=0, minute=0, second=0),
-                transaction_type=CoinTransaction.TYPE_DAILY_REWARD,
-                page=page
-        ).exists():
-            rewarded = False
-        else:
-            CoinTransaction.objects.create(
-                page=page,
-                description=_("daily reward"),
-                amount=reward_amount,
-                transaction_type=CoinTransaction.TYPE_DAILY_REWARD
-            )
-            rewarded = True
+        rewarded = False
+        # if CoinTransaction.objects.filter(
+        #         created_time__gte=timezone.now().replace(hour=0, minute=0, second=0),
+        #         transaction_type=CoinTransaction.TYPE_DAILY_REWARD,
+        #         page=page
+        # ).exists():
+        #     rewarded = False
+        # else:
+        #     CoinTransaction.objects.create(
+        #         page=page,
+        #         amount=reward_amount,
+        #         transaction_type=CoinTransaction.TYPE_DAILY_REWARD
+        #     )
+        #     rewarded = True
         return Response({'page': page.instagram_username, 'amount': reward_amount, 'rewarded': rewarded})
 
 
@@ -76,7 +78,6 @@ class TapsellRewardAPIView(views.APIView):
             CoinTransaction.objects.create(
                 page=page,
                 amount=reward,
-                description=_('ad reward'),
                 transaction_type=CoinTransaction.TYPE_AD_REWARD
             )
             AdReward.objects.create(
@@ -98,7 +99,7 @@ class AdViewVerificationViewsSet(viewsets.ViewSet):
         text = f'{page.uuid}-%25{timezone.now().timestamp()}-%25'
         text += str(get_random_string(64 - len(text)))
         encrypted_text = CryptoService(dt + dt).encrypt(text)
-        cache.set(f'{page.uuid}-ad-{encrypted_text}', encrypted_text.decode('utf-8'), settings.AD_CACHE_EXPIRY)
+        cache.set(f'{page.uuid}-ad-{encrypted_text.decode("utf-8")}', str(encrypted_text.decode('utf-8')), settings.AD_CACHE_EXPIRY)
         return Response({'data': encrypted_text})
 
     @action(methods=['post'], detail=False, url_path='verify')
@@ -109,7 +110,6 @@ class AdViewVerificationViewsSet(viewsets.ViewSet):
         CoinTransaction.objects.create(
             page=page,
             amount=settings.COIN_AD_VIEW_REWARD_AMOUNT,
-            description=_('ad reward'),
             transaction_type=CoinTransaction.TYPE_AD_REWARD
         )
         AdReward.objects.create(

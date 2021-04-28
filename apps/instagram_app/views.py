@@ -36,16 +36,6 @@ class PaymentView(View):
             order.is_paid = False
 
         order.save()
-        if order.is_paid is True:
-            coin_package = order.coin_package
-            ct_amount = coin_package.amount if coin_package.amount_offer is None else coin_package.amount_offer
-            CoinTransaction.objects.create(
-                page=order.page,
-                amount=ct_amount,
-                package=order,
-                transaction_type=CoinTransaction.TYPE_PURCHASE,
-                description=_("coin package has been purchased.")
-            )
         context = {
             "redirect_url": order.redirect_url,
             "purchase_verified": purchase_verified

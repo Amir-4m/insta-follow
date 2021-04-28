@@ -1,285 +1,371 @@
+import json
 import logging
+import random
+import string
 
+from django.utils.encoding import smart_text
+from psycopg2._psycopg import IntegrityError
+
+from apps.instagram_app.api.serializers import InstaActionSerializer, LoginVerificationSerializer
+from apps.instagram_app.services import CryptoService
+from datetime import datetime, timedelta
 from django.db.models import Sum
 from django.test import override_settings
 from django.urls import reverse
 from django.test.client import RequestFactory
 
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APITestCase, APIClient
 
-from apps.accounts.models import User
-from apps.instagram_app.models import UserPage, CoinTransaction, InstaAction, Order, UserInquiry
-from apps.instagram_app.api.serializers import ProfileSerializer, OrderSerializer, UserInquirySerializer, \
-    DeviceSerializer
+# Testcases for Order and UserInquiry
+from apps.instagram_app.models import InstaPage, Order, InstaAction, UserInquiry, CoinTransaction
 
 
-@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-class InstagramAPITestCase(APITestCase):
-    fixtures = ['instagram']
+# creating some serializers for test cases
+class InstaPageTestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InstaPage
+        fields = '__all__'
+
+
+class OrderTestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = '__all__'
+
+
+def create_enable_order(page, action=InstaAction.ACTION_LIKE):
+    order = None
+    # first try to get a random InstaAction
+    insta_action, created = InstaAction.objects.get_or_create(
+        action_type=action,
+        action_value=10,
+        buy_value=200
+    )
+    order = Order.objects.create(
+        action=insta_action,
+        # one hundred like, follow or comment request
+        target_no=100,
+        link="https://instagram.com/some-random-hash/",
+        media_properties={
+            'video_address': 'some_video_address',
+        },
+        entity_id=2153612,
+        instagram_username="some-username",
+        comments=[
+            f"comment 1 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
+            f"comment 2 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
+            f"comment 3 {''.join(random.choices(string.ascii_uppercase + string.digits, k=6))}",
+        ],
+        description="Some description",
+        status=Order.STATUS_ENABLE,
+        is_enable=True,
+        owner=page
+    )
+    return order
+
+
+def create_page():
+    return InstaPage.objects.create(
+                instagram_username=f"instagram_{''.join(random.choices(string.ascii_uppercase + string.digits, k=3))}",
+                instagram_user_id=random.randint(10000, 999999),
+                session_id="test-session"
+            )
+
+
+class BaseAuthenticatedTestCase(APITestCase):
+    def setUp(self):
+        # randomly select an order
+        self.page = create_page()
+
+        self.orders = dict()
+        self.orders[Order.STATUS_ENABLE] = []
+        self.orders[Order.STATUS_ENABLE].append(create_enable_order(page=self.page))
+        repeated_page = create_page()
+        self.orders[Order.STATUS_ENABLE].append(create_enable_order(page=repeated_page))
+        self.orders[Order.STATUS_ENABLE].append(create_enable_order(page=repeated_page))
+
+        self.request = RequestFactory()
+        self.request.user = self.page
+        # generate a token for authentication
+        dt = datetime.utcnow()
+        self.token = CryptoService(dt.strftime("%d%m%y%H") + dt.strftime("%d%m%y%H")).encrypt(str(self.page.uuid))
+        # Authenticate the client :
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + smart_text(self.token))
+
+        self.register_order_data = {
+            'entity_id': random.randint(200, 1000),
+            'page': self.page.id,
+            'action': None,
+            'target_no': 10,
+            'comments': ['comment 1', 'comment 2', 'comment 3'],
+            'instagram_username': 'some_username',
+            'link': 'https//instagram.com/link/',
+            'media_properties': {
+                'link': 'https//instagram.com/link/'
+            },
+            # this is necessary for all actions except InstaAction.ACTION_COMMENT and LIKE
+            'shortcode': '65asvxav',
+        }
+        logging.disable(logging.CRITICAL)
+
+
+class UserInquiryTestCases(BaseAuthenticatedTestCase):
+    # fixtures = ['instagram']
 
     def setUp(self):
-        self.user = User.objects.get(id=1)
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.user)
-        logging.disable(logging.CRITICAL)
+        super(UserInquiryTestCases, self).setUp()
 
     def tearDown(self):
         logging.disable(logging.NOTSET)
 
-    def test_get_profile(self):
-        url = reverse('profile-list')
-        response = self.client.get(url, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data.get('id'), self.user.id)
-
-    def test_post_profile(self):
-        url = reverse('profile-list')
+    def test_eo_inquiries_page_user_condition_and_done(self):
+        """
+            Consider that eo stands for enable orders
+        """
+        url = reverse('userinquiry-list')
         data = {
-            'instagram_username': 'hello_world',
+            'page': self.page.id,
+            'order': self.orders[Order.STATUS_ENABLE][0].id,
+            'status': UserInquiry.STATUS_VALIDATED,
+            'earned_coin': '50',
+            'check': False
         }
-        response = self.client.post(url, data=data, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(UserPage.objects.filter(
-            page__instagram_username=data['instagram_username'],
-            user=self.user
-        ).exists()
-                        )
-
-    def test_delete_profile(self):
-        url = reverse('profile-detail', kwargs={'pk': 1})
-        response = self.client.delete(url, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(UserPage.objects.get(pk=1).is_active)
-
-    def test_get_order(self):
-        url = reverse('order-list')
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_post_order(self):
-        url = reverse('order-list')
-        CoinTransaction(user=self.user, amount=20)
-        data = {
-            'action': 'L',
-            'link': 'http://instagram.com/',
-            'target_no': 1
-        }
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(
-            Order.objects.filter(action=data['action'], link=data['link'], target_no=data['target_no']).exists()
-        )
 
-    def test_recheck_order_not_enable(self):
-        url = reverse('order-recheck', kwargs={'pk': 5})
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user_inquiry = UserInquiry.objects.get(order=self.orders[Order.STATUS_ENABLE][0], page=self.page)
+        self.assertEqual(user_inquiry.status, UserInquiry.STATUS_VALIDATED)
+        # the list of orders are filtered before so checking this condition is not necessary
+        # self.assertNotEqual(user_inquiry.page.id, self.orders[Order.STATUS_ENABLE].owner.id)
+        # check that an inquiry operation should not be done twice
+        second_response = self.client.post(url, data=data, format='json')
+        self.assertIn('order with this id already has been done by this page!', smart_text(second_response.content))
 
-    def test_recheck_order_enable(self):
-        url = reverse('order-recheck', kwargs={'pk': 4})
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # this scenario should give an error status not correct
+        data = {
+            'page': self.page.id,
+            'order': self.orders[Order.STATUS_ENABLE][0].id,
+            'status': UserInquiry.STATUS_CHOICES,
+            'earned_coin': '50',
+            'check': False
+        }
+        third_response = self.client.post(url, data=data, format='json')
+        self.assertIn('is not a valid choice', smart_text(third_response.content))
 
-    def test_get_user_inquiry_comment(self):
-        url = reverse('userinquiry-comment')
-        response = self.client.get(url, {'page_id': 1}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_get_user_inquiry_comment_duplicate_order(self):
-        url = reverse('userinquiry-comment')
-        response = self.client.get(url, {'page_id': 2}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_get_user_inquiry_like(self):
-        url = reverse('userinquiry-like')
-        response = self.client.get(url, {'page_id': 1}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_get_user_inquiry_follow(self):
-        url = reverse('userinquiry-follow')
-        response = self.client.get(url, {'page_id': 1}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_get_user_inquiry_no_page_id(self):
-        url = reverse('userinquiry-like')
-        response = self.client.get(url, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {'Error': 'page_id is required'})
-
-    def test_get_user_inquiry_invalid_page(self):
-        url = reverse('userinquiry-like')
-        response = self.client.get(url, {'page_id': 10}, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertRaisesMessage(ValidationError, {'Error': 'user and page does not match!'})
-
-    def test_post_user_inquiry(self):
+    def test_inquiries_done(self):
         url = reverse('userinquiry-done')
         data = {
-            'done_ids': [1],
+            'order': self.orders[Order.STATUS_ENABLE][0].id
         }
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(UserInquiry.objects.filter(id=1, status=UserInquiry.STATUS_PENDING))
-
-    def test_get_coin_transaction(self):
-        url = reverse('cointransaction-list')
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_get_coin_transaction_total(self):
-        url = reverse('cointransaction-total')
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.data['wallet'],
-            self.user.coin_transactions.all().aggregate(wallet=Sum('amount')).get('wallet') or 0
-        )
-
-    def test_post_device_id(self):
-        url = reverse('device-list')
-        data = {
-            'device_id': 2,
-        }
-        response = self.client.post(url, data=data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
 
-class InstagramSerializerTestCase(APITestCase):
-    fixtures = ['instagram']
+class OrderTestCases(BaseAuthenticatedTestCase):
+    # fixtures = ['instagram']
 
     def setUp(self):
-        self.user = User.objects.get(id=1)
-        self.request = RequestFactory()
-        self.request.user = self.user
-        logging.disable(logging.CRITICAL)
+        super(OrderTestCases, self).setUp()
 
-    def tearDown(self):
-        logging.disable(logging.NOTSET)
+    def test_order_get(self):
+        url = reverse('order-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_profile_serializer(self):
-        data = {
-            'instagram_username': 'hello_world',
-            'user_id': 123456
-        }
-        serializer = ProfileSerializer(data=data)
-
-        self.assertTrue(serializer.is_valid())
-
-    def test_insta_page_not_active(self):
-        data = {
-            "instagram_username": 'test3',
-            "user_id": 12312378
-        }
-        serializer = ProfileSerializer(data=data, context={'user': self.user})
-        user_page = UserPage.objects.get(page__instagram_user_id=12312378)
-
-        self.assertTrue(serializer.is_valid())
-        serializer.save()
-        user_page.refresh_from_db()
-        self.assertTrue(user_page.is_active)
-
-    def test_order_serializer_valid_lc_data(self):
-        data = {
-            "action": InstaAction(pk=InstaAction.ACTION_LIKE),
-            "target_no": 70,
-            "link": "http://127.0.0.1:8000/api/v1/instagram/orders/"
-        }
-        serializer = OrderSerializer(data=data)
-
-        self.assertTrue(serializer.is_valid())
-
-    def test_order_serializer_invalid_lc_data(self):
-        data = {
-            "action": InstaAction(pk=InstaAction.ACTION_LIKE),
-            "target_no": 70,
-        }
-        serializer = OrderSerializer(data=data)
-
-        self.assertFalse(serializer.is_valid())
-        self.assertRaisesMessage(
-            ValidationError,
-            'link field is required for like and comment !',
-            serializer.validate,
-            data
+    def test_order_post(self):
+        url = reverse('order-list')
+        CoinTransaction.objects.create(page=self.page, amount=50)
+        action_type = random.choice([
+            InstaAction.ACTION_LIKE,
+            InstaAction.ACTION_FOLLOW,
+            InstaAction.ACTION_COMMENT
+        ])
+        instagram_action, created = InstaAction.objects.get_or_create(
+            # action type is considered as primary key in this table
+            action_type=action_type,
+            action_value=2,
+            buy_value=2
+        )
+        self.register_order_data['action'] = instagram_action.action_type
+        response = self.client.post(url, data=self.register_order_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # the link is changed based on action type so if put it here result in test failure
+        self.assertTrue(
+            Order.objects.filter(action=instagram_action,
+                                 target_no=self.register_order_data['target_no']).count() > 0
         )
 
-    def test_order_serializer_invalid_follow_data(self):
-        data = {
-            "action": InstaAction(pk=InstaAction.ACTION_FOLLOW),
-            "target_no": 70,
-        }
-        serializer = OrderSerializer(data=data)
-
-        self.assertFalse(serializer.is_valid())
-        self.assertRaisesMessage(
-            ValidationError,
-            'instagram_username field is required for follow!',
-            serializer.validate,
-            data
+    def test_order_post_action_code_for_like_follow(self):
+        url = reverse('order-list')
+        CoinTransaction.objects.create(page=self.page, amount=50)
+        action_type = random.choice([
+            InstaAction.ACTION_LIKE,
+            InstaAction.ACTION_COMMENT,
+        ])
+        instagram_action, created = InstaAction.objects.get_or_create(
+            # action type is considered as primary key in this table
+            action_type=action_type,
+            action_value=2,
+            buy_value=2
         )
+        # override actions because it is different in some scenarios
+        self.register_order_data['action'] = instagram_action.action_type
+        del self.register_order_data['shortcode']
+        response = self.client.post(url, data=self.register_order_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_order_serializer_create_follow_invalid_coin(self):
-        data = {
-            "action": InstaAction(pk=InstaAction.ACTION_FOLLOW),
-            "target_no": 70,
-            "link": None,
-            "instagram_username": "test"
-        }
-        serializer = OrderSerializer(data=data)
+    def test_order_post_action_follow_no_username(self):
+        url = reverse('order-list')
+        CoinTransaction.objects.create(page=self.page, amount=50)
+        action_type = InstaAction.ACTION_FOLLOW
 
-        self.assertTrue(serializer.is_valid())
-        self.assertRaisesMessage(
-            ValidationError,
-            'You do not have enough coin to create order',
-            serializer.save,
-            user=self.user
+        instagram_action, created = InstaAction.objects.get_or_create(
+            # action type is considered as primary key in this table
+            action_type=action_type,
+            action_value=2,
+            buy_value=2
         )
+        self.register_order_data['action'] = instagram_action.action_type
+        del self.register_order_data['instagram_username']
+        response = self.client.post(url, data=self.register_order_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_order_serializer_create_follow_valid_coin(self):
-        data = {
-            "action": InstaAction(pk=InstaAction.ACTION_FOLLOW),
-            "target_no": 1,
-            'link': None,
-            "instagram_username": "test"
+    def test_order_post_comment_none_like_follow(self):
+        url = reverse('order-list')
+        CoinTransaction.objects.create(page=self.page, amount=50)
+        action_type = random.choice([
+            InstaAction.ACTION_FOLLOW,
+            InstaAction.ACTION_LIKE,
+        ])
+
+        instagram_action, created = InstaAction.objects.get_or_create(
+            # action type is considered as primary key in this table
+            action_type=action_type,
+            action_value=2,
+            buy_value=2
+        )
+        self.register_order_data['action'] = instagram_action.action_type
+        response = self.client.post(url, data=self.register_order_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        order = Order.objects.exclude(id=self.orders[Order.STATUS_ENABLE][0].id).first()
+        self.assertEqual(order.comments, None)
+
+    def test_order_post_previous_order_target_no_increase(self):
+        url = reverse('order-list')
+        CoinTransaction.objects.create(page=self.page, amount=50)
+        action_type = random.choice([
+            InstaAction.ACTION_FOLLOW,
+            InstaAction.ACTION_LIKE,
+        ])
+
+        instagram_action, created = InstaAction.objects.get_or_create(
+            # action type is considered as primary key in this table
+            action_type=action_type,
+            action_value=2,
+            buy_value=2
+        )
+        self.register_order_data['action'] = instagram_action.action_type
+        target_no = 10
+        response = self.client.post(url, data=self.register_order_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.post(url, data=self.register_order_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        order = Order.objects.exclude(id=self.orders[Order.STATUS_ENABLE][0].id).first()
+        self.assertEqual(order.target_no, target_no * 2)
+
+    # def test_orders_comments_get(self):
+    #     url = reverse('order-comment')
+    #     create_url = reverse('order-list')
+    #     response = self.client.post(create_url, data=self.register_order_data, format='json')
+    #     response = self.client.get(url, format='json')
+    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_orders_comment(self):
+        url = reverse('order-comment')
+        # Here we have two orders with different pages however we get min error again
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_order_like(self):
+        url = reverse('order-like')
+        # Here we have two orders with different pages however we get min error again
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class LoginTestCase(BaseAuthenticatedTestCase):
+
+    def setUp(self):
+        self.page = create_page()
+
+    def test_authentication_using_token(self):
+        # generate a token for authentication
+        dt = datetime.utcnow()
+        self.token = CryptoService(dt.strftime("%d%m%y%H") + dt.strftime("%d%m%y%H")).encrypt(str(self.page.uuid))
+        # Authenticate the client :
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + smart_text(self.token))
+        url = reverse('order-list')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class RegisterTestCase(BaseAuthenticatedTestCase):
+
+    def test_registration_no_username_no_user_id(self):
+        # register user with some fake information
+        url = reverse('login-verification')
+        register_data = {
+            "session_id": 716537612357,
         }
-        CoinTransaction.objects.create(user=self.user, amount=100)
-        serializer = OrderSerializer(data=data)
-        self.assertTrue(serializer.is_valid(raise_exception=True))
-        serializer.save(user=self.user)
-        self.assertEqual(self.user.user_orders.last().id, serializer.data['id'])
+        response = self.client.post(url, data=register_data, format='json')
+        self.assertRaises(ValidationError)
 
-    def test_user_inquiry_valid_data(self):
-        data = {
-            'done_ids': [1],
+    def test_registration_invalid_session_id(self):
+        # register user with some fake information
+        url = reverse('login-verification')
+        register_data = {
+            "instagram_user_id": "some-user-id",
+            "instagram_username": "instagram-username",
+            "session_id": 716537612357,
         }
-        serializer = UserInquirySerializer(data=data, context={'request': self.request})
-        self.assertTrue(serializer.is_valid())
+        response = self.client.post(url, data=register_data, format='json')
+        self.assertRaises(ValidationError)
 
-    # def test_user_inquiry_invalid_inquiry_data(self):
-    #     data = {
-    #         'done_ids': [8],
-    #     }
-    #     serializer = UserInquirySerializer(data=data, context={'request': self.request})
-    #     self.assertFalse(serializer.is_valid())
-    #     self.assertRaisesMessage(
-    #         ParseError,
-    #         'list is not valid!',
-    #         serializer.validate,
-    #         data
-    #     )
-
-    def test_device_id_create(self):
-        data = {
-            "device_id": '1'
+    def test_registration_serializer_with_uuid(self):
+        register_data = {
+            "instagram_user_id": 27354623,
+            "instagram_username": "instagram-username",
+            "session_id": 716537612357,
         }
-        serializer = DeviceSerializer(data=data)
-        self.assertTrue(serializer.is_valid(raise_exception=True))
-        serializer.save(user=self.user)
-        self.assertEqual(self.user.devices.last().device_id, serializer.data['device_id'])
+        register_serializer = LoginVerificationSerializer(data=register_data)
+        page = register_serializer.create(validated_data=register_data)
+        self.assertNotEqual(page, None)
+
+    def test_registration_serializer_with_uuid_none(self):
+        register_data = {
+            "instagram_user_id": 27354623,
+            "instagram_username": "instagram-username",
+            "session_id": 716537612357,
+            "device_uuid": None
+        }
+        register_serializer = LoginVerificationSerializer(data=register_data)
+        page = register_serializer.create(validated_data=register_data)
+        self.assertNotEqual(page, None)
+
+    def test_registration_serializer_without_uuid(self):
+        device_uuid = "538a5b12-a019-44c8-88b1-e14f36412c0f"
+        register_data = {
+            "instagram_user_id": 27354623,
+            "instagram_username": "instagram-username",
+            "session_id": 716537612357,
+            "device_uuid": device_uuid
+        }
+        register_serializer = LoginVerificationSerializer(data=register_data)
+        page = register_serializer.create(validated_data=register_data)
+        print(page.device_uuids)
+        self.assertNotEqual(len(page.device_uuids), 0)
+        self.assertEqual(page.device_uuids[0], device_uuid)
+
