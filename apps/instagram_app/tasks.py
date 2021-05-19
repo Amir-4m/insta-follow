@@ -155,7 +155,7 @@ def update_orders_achieved_number():
 
     with transaction.atomic():
         for order in reactivate_orders:
-            order.status = Order.STATUS_COMPLETE
+            order.status = Order.STATUS_ENABLE
             order.save()
 
 # TODO: Review
