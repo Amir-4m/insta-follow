@@ -8,6 +8,7 @@ from celery import shared_task
 from celery.schedules import crontab
 from celery.task import periodic_task
 from django.core.cache import cache
+from django.db import transaction
 from django.db.models import F, Sum, Case, When, IntegerField, Min
 from django.utils import timezone
 from django.conf import settings
@@ -110,7 +111,7 @@ def validate_user_inquiries():
 
 @periodic_task(run_every=(crontab(minute='*')))
 def update_orders_achieved_number():
-    Order.objects.filter(status=Order.STATUS_ENABLE).annotate(
+    completed_order_ids = Order.objects.filter(status=Order.STATUS_ENABLE).annotate(
         achived_no=Sum(
             Case(
                 When(
@@ -121,12 +122,17 @@ def update_orders_achieved_number():
         ),
     ).filter(
         achived_no__gte=F('target_no')
-    ).update(
-        status=Order.STATUS_COMPLETE,
-    )
+    ).values_list('id', flat=True)
+
+    completed_orders = Order.objects.select_for_update(of=('self',), skip_locked=True).filter(id__in=completed_order_ids)
+
+    with transaction.atomic():
+        for completed_order in completed_orders:
+            completed_order.status = Order.STATUS_COMPLETE
+            completed_order.save()
 
     # reactivating orders, which lost their achieved followers
-    Order.objects.filter(
+    reactivate_order_ids = Order.objects.filter(
         status=Order.STATUS_COMPLETE,
         action=InstaAction.ACTION_FOLLOW,
         updated_time__lte=timezone.now() - timedelta(hours=settings.PENALTY_CHECK_HOUR),
@@ -143,10 +149,14 @@ def update_orders_achieved_number():
         ),
     ).filter(
         achived_no__lt=F('target_no') * settings.ORDER_TARGET_RATIO / 100,
-    ).update(
-        status=Order.STATUS_ENABLE,
-    )
+    ).values_list('id', flat=True)
 
+    reactivate_orders = Order.objects.select_for_update(of=('self',), skip_locked=True).filter(id__in=reactivate_order_ids)
+
+    with transaction.atomic():
+        for order in reactivate_orders:
+            order.status = Order.STATUS_COMPLETE
+            order.save()
 
 # TODO: Review
 """
