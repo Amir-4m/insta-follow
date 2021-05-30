@@ -60,6 +60,7 @@ class InstaPage(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False)
     instagram_username = models.CharField(_("instagram username"), max_length=50)
     instagram_user_id = models.BigIntegerField(_("instagram id"), unique=True)
+    picture_url = models.TextField(_('picture url'), null=True, blank=True)
     session_id = models.CharField(_('session id'), max_length=50)
     device_uuids = ArrayField(models.UUIDField(_('device uuids')), default=list)
     is_enable = models.BooleanField(_("is enable"), default=True)

@@ -36,7 +36,12 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = InstaPage
-        fields = ('instagram_user_id', 'instagram_username', 'session_id', 'uuid', 'device_uuid', 'user_agent')
+        fields = (
+            'instagram_user_id', 'instagram_username',
+            'session_id', 'uuid',
+            'device_uuid', 'user_agent',
+            'picture_url'
+        )
         read_only_fields = ('uuid',)
 
     def validate(self, attrs):
@@ -77,11 +82,13 @@ class LoginVerificationSerializer(serializers.ModelSerializer):
         user_id = validated_data['instagram_user_id']
         session_id = validated_data['session_id']
         device_uuid = validated_data.get('device_uuid')
+        picture_url = validated_data.get('picture_url')
         page, _created = InstaPage.objects.update_or_create(
             instagram_user_id=user_id,
             defaults={
                 "instagram_username": username,
                 "session_id": session_id,
+                "picture_url": picture_url
             }
         )
         if _created:
@@ -441,3 +448,16 @@ class PackageOrderGateWaySerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         raise NotImplementedError('`update()` must be implemented.')
+
+# class ScoreboardSerializer(serializers.ModelSerializer):
+#     instagram_username = serializers.ReadOnlyField(source='page.instagram_username')
+#     instagram_user_id = serializers.ReadOnlyField(source='page.instagram_user_id')
+#     total = serializers.SerializerMethodField()
+#
+#     class Meta:
+#         model = CoinTransaction
+#         fields = ('instagram_username', 'instagram_user_id', 'total')
+#
+#
+#     def get_total(self, obj):
+#
