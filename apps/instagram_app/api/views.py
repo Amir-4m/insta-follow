@@ -5,7 +5,7 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from django.db.models import Sum
+from django.db.models import Sum, F
 from django.db.models.functions import Coalesce
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -400,17 +400,34 @@ class ScoreBoardApiView(generics.GenericAPIView):
         created_time__gte=timezone.now().replace(hour=0, minute=0)
     ).values(
         'page__instagram_user_id',
-        'page__instagram_username'
-    ).annotate(total=Sum('amount')).order_by('-total')[:50]
+        'page__instagram_username',
+        'page__picture_url'
+    ).annotate(
+        total=Sum('amount'),
+    ).order_by('-total')[:50]
 
     def get(self, request, *args, **kwargs):
         page = self.request.auth['page']
+        score_list = list(self.get_queryset())
+        score_list[0].update({'reward': 1000})
+        score_list[1].update({'reward': 700})
+        score_list[2].update({'reward': 500})
+
+        for score in score_list[3: 10]:
+            score.update({'reward': 300})
+
+        for score in score_list[10: 20]:
+            score.update({'reward': 200})
+
+        for score in score_list[20: 50]:
+            score.update({'reward': 100})
+
         data = {
-            'score_list': self.get_queryset(),
+            'score_list': score_list,
             'user_score': page.coin_transactions.filter(
                 transaction_type=CoinTransaction.TYPE_INQUIRY,
                 inquiry__validated_time__isnull=False,
                 created_time__gte=timezone.now().replace(hour=0, minute=0)
-            ).aggregate(total=Coalesce(Sum('amount'), 0)).get('total')
+            ).aggregate(total=Coalesce(Sum('amount'), 0)).get('total'),
         }
         return Response(data=data)
