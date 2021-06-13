@@ -425,12 +425,15 @@ class ScoreBoardApiView(generics.GenericAPIView):
         for score in score_list[20: 50]:
             score.update({'reward': 100})
 
+        # user score
+        user_score = page.coin_transactions.filter(
+                    transaction_type=CoinTransaction.TYPE_INQUIRY,
+                    inquiry__validated_time__isnull=False,
+                    created_time__gte=timezone.now().replace(hour=0, minute=0)
+                ).aggregate(total=Coalesce(Sum('amount'), 0)).get('total')
+
         data = {
             'score_list': score_list,
-            'user_score': page.coin_transactions.filter(
-                transaction_type=CoinTransaction.TYPE_INQUIRY,
-                inquiry__validated_time__isnull=False,
-                created_time__gte=timezone.now().replace(hour=0, minute=0)
-            ).aggregate(total=Coalesce(Sum('amount'), 0)).get('total'),
+            'user': dict(score=user_score, page__picture_url=page.page__picture_url),
         }
         return Response(data=data)
