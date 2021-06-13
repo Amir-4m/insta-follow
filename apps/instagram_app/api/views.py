@@ -434,6 +434,6 @@ class ScoreBoardApiView(generics.GenericAPIView):
 
         data = {
             'score_list': score_list,
-            'user': dict(score=user_score, page__picture_url=page.page__picture_url),
+            'user': dict(score=user_score, page__picture_url=page.picture_url),
         }
         return Response(data=data)
