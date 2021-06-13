@@ -409,9 +409,12 @@ class ScoreBoardApiView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         page = self.request.auth['page']
         score_list = list(self.get_queryset())
-        score_list[0].update({'reward': 1000})
-        score_list[1].update({'reward': 700})
-        score_list[2].update({'reward': 500})
+        try:
+            score_list[0].update({'reward': 1000})
+            score_list[1].update({'reward': 700})
+            score_list[2].update({'reward': 500})
+        except IndexError:
+            pass
 
         for score in score_list[3: 10]:
             score.update({'reward': 300})
