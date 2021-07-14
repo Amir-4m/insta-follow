@@ -47,3 +47,14 @@ TAPSELL_REWARD_DOCS = openapi.Schema(
 
     }
 )
+
+GIFT_CODE_DOCS_RESPONSE = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    required=['code'],
+    properties={
+        'code': openapi.Schema(
+            type=openapi.TYPE_INTEGER,
+            description='gift code'
+        )
+    }
+)
