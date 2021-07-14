@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import ugettext_lazy as _
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import views, viewsets
+from rest_framework import views, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -15,9 +15,11 @@ from apps.instagram_app.authentications import PageAuthentication
 from apps.instagram_app.models import CoinTransaction, InstaPage
 from apps.instagram_app.permissions import PagePermission
 from apps.instagram_app.services import CryptoService
-from apps.reward.api.serializers import AdViewVerificationSerializer
+from apps.reward.api.serializers import AdViewVerificationSerializer, GiftCodeSerializer
 from apps.reward.models import AdReward
-from apps.reward.swagger_schemas import DAILY_REWARD_DOCS_RESPONSE, TAPSELL_REWARD_DOCS, TAPSELL_REWARD_DOCS_RESPONSE
+from apps.reward.swagger_schemas import (
+    DAILY_REWARD_DOCS_RESPONSE, TAPSELL_REWARD_DOCS, TAPSELL_REWARD_DOCS_RESPONSE, GIFT_CODE_DOCS_RESPONSE
+)
 from conf import settings
 
 
@@ -119,3 +121,24 @@ class AdViewVerificationViewsSet(viewsets.ViewSet):
         )
         cache.delete(f'{page.uuid}-ad-{serializer.validated_data["data"]}')
         return Response({'valid': True})
+
+
+class GiftCodeAPIView(views.APIView):
+    authentication_classes = (PageAuthentication,)
+    permission_classes = (PagePermission,)
+
+    @swagger_auto_schema(
+        operation_description='Receiving gift code to set coins for insta page.',
+        responses={200: GIFT_CODE_DOCS_RESPONSE}
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = GiftCodeSerializer(
+            data=dict(code=request.data.get('code')),
+            context=dict(page=request.auth['page'])
+        )
+
+        if serializer.is_valid(raise_exception=True):
+            instance = serializer.save()
+            return Response({'page': instance.page.instagram_username, 'amount': instance.amount})
+
+        return Response(dict(serializer.errors), status=status.HTTP_400_BAD_REQUEST)

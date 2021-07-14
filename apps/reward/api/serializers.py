@@ -6,8 +6,9 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from apps.instagram_app.models import InstaPage
+from apps.instagram_app.models import InstaPage, CoinTransaction
 from apps.instagram_app.services import CryptoService
+from apps.reward.models import GiftCode
 
 
 class AdViewVerificationSerializer(serializers.Serializer):
@@ -43,3 +44,32 @@ class AdViewVerificationSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         raise NotImplementedError()
+
+
+class GiftCodeSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=6)
+
+    def validate(self, attrs):
+        try:
+            attrs['gift_code'] = GiftCode.objects.get(code=attrs['code'])
+        except GiftCode.DoesNotExist:
+            raise ValidationError(detail={'code': 'Gift code is invalid.'})
+
+        if attrs['gift_code'].page:
+            raise ValidationError(detail={'code': 'Gift code used.'})
+
+        return attrs
+
+    def create(self, validated_data):
+        gift_code = validated_data['gift_code']
+        page = self.context.get('page')
+
+        ct = CoinTransaction.objects.create(
+            page=page,
+            transaction_type=CoinTransaction.TYPE_GIFT,
+            amount=gift_code.amount
+        )
+        gift_code.page = page
+        gift_code.save()
+
+        return gift_code
