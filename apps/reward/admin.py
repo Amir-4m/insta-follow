@@ -12,7 +12,7 @@ class AdRewardAdmin(admin.ModelAdmin):
 
 @admin.register(GiftCode)
 class GiftCodeAdmin(admin.ModelAdmin):
-    list_display = ('code', 'amount', 'created_time')
+    list_display = ('code', 'amount', 'created_time', 'page')
     search_fields = ('page__instagram_username', 'code')
     readonly_fields = ['page', 'created_time', 'updated_time']
 
